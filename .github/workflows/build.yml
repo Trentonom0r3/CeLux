@@ -24,8 +24,10 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         runVcpkgInstall: true
-        vcpkgJsonGlob: '**/vcpkg.json'   # This looks for vcpkg.json in the root directory or subdirectories
+        vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
+        vcpkgJsonGlob: '**/vcpkg.json'
+
 
     - name: Set up CUDA (Windows only)
       if: runner.os == 'Windows'
