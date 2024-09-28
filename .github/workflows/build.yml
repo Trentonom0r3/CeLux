@@ -24,8 +24,15 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         runVcpkgInstall: true
-        vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
+        vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
+        vcpkgArguments: '--triplet x64-windows'
+    
+    - name: Install vcpkg dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # Initialize vcpkg if it's a submodule in your repository
+        git submodule update --init --recursive
 
     - name: Set up CUDA (Windows only)
       if: runner.os == 'Windows'
@@ -61,7 +68,13 @@ jobs:
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
       run: |
-        cmake -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake -B build -S .
+        cmake -DCMAKE_TOOLCHAIN_FILE=C:/Users/runneradmin/vcpkg/scripts/buildsystems/vcpkg.cmake -B build -S .
+
+    # Linux-specific CMake configuration
+    - name: Configure CMake (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        cmake -B build -S .
 
     # Build for both Windows and Linux
     - name: Build with CMake
