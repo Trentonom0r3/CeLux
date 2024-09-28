@@ -26,7 +26,6 @@ jobs:
         runVcpkgInstall: true
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
         vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
-        vcpkgArguments: '--triplet x64-windows'
     
     - name: Install vcpkg dependencies (Windows)
       if: runner.os == 'Windows'
@@ -44,7 +43,12 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswresample-dev cmake g++
+        sudo apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswresample-dev cmake g++ needrestart
+
+    - name: Configure needrestart (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        echo "NEEDRESTART_MODE=a" | sudo tee /etc/needrestart/needrestart.conf
 
     - name: Install CUDA (Linux)
       if: runner.os == 'Linux'
