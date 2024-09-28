@@ -2,9 +2,9 @@ name: CMake Build
 
 on:
   push:
-    branches: [test-github-actions]
+    branches: [ test-github-actions ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build:
@@ -22,8 +22,13 @@ jobs:
     - name: Download and Install CUDA (Windows only)
       if: runner.os == 'Windows'
       run: |
-        curl -LO https://developer.download.nvidia.com/compute/cuda/12.1.0/windows/network-installers/cuda_12.1.0_windows_network.exe
-        Start-Process -FilePath cuda_12.1.0_windows_network.exe -ArgumentList '-s','--toolkit','--installpath="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"' -NoNewWindow -Wait
+        curl -LO --retry 3 https://developer.download.nvidia.com/compute/cuda/12.1.0/windows/network-installers/cuda_12.1.0_windows_network.exe
+        if (Test-Path -Path "cuda_12.1.0_windows_network.exe") {
+          Start-Process -FilePath cuda_12.1.0_windows_network.exe -ArgumentList '-s','--toolkit','--installpath="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"' -NoNewWindow -Wait
+        } else {
+          Write-Error "Failed to download CUDA installer."
+          exit 1
+        }
         echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
         echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
         echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\include" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
@@ -59,7 +64,7 @@ jobs:
         sudo dpkg -i cuda-keyring_1.0-1_all.deb
         sudo apt-get update
         sudo apt-get -y install cuda
-      timeout-minutes: 60  # Extend the timeout to prevent cancellation
+      timeout-minutes: 90  # Increased the timeout to 90 minutes to accommodate longer installation times
 
     - name: Add CUDA to PATH (Linux)
       if: runner.os == 'Linux'
