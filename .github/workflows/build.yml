@@ -19,11 +19,11 @@ jobs:
       uses: actions/checkout@v2
 
     # Windows-specific setup
-    - name: Set up CUDA (Windows only)
+    - name: Download and Install CUDA (Windows only)
       if: runner.os == 'Windows'
       run: |
-        choco install cuda --version=12.1 --yes
-        # Add CUDA to the PATH
+        curl -LO https://developer.download.nvidia.com/compute/cuda/12.1.0/windows/network-installers/cuda_12.1.0_windows_network.exe
+        start /wait cuda_12.1.0_windows_network.exe -s -n --installpath="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"
         echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin" >> $Env:GITHUB_PATH
         echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp" >> $Env:GITHUB_PATH
         echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\include" >> $Env:GITHUB_PATH
@@ -36,7 +36,7 @@ jobs:
         vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
         vcpkgJsonGlob: '**/vcpkg.json'
-        doNotCache: true # Disable caching if causing issues
+        doNotCache: true
 
     # Linux-specific setup
     - name: Install dependencies (Linux)
