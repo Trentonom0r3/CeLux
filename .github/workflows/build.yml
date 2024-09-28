@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -24,19 +23,21 @@ jobs:
       if: runner.os == 'Windows'
       uses: lukka/run-vcpkg@v11
       with:
-        vcpkgArguments: '--triplet x64-windows'
+        runVcpkgInstall: true
+        vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
+        vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
 
     - name: Set up CUDA (Windows only)
       if: runner.os == 'Windows'
       run: |
-        choco install cuda --version=12.1
+        choco install cuda --version=12.1 --yes
 
     # Linux-specific setup
     - name: Install dependencies (Linux)
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswresample-dev cmake g++ 
+        sudo apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswresample-dev cmake g++
 
     - name: Install CUDA (Linux)
       if: runner.os == 'Linux'
@@ -45,7 +46,7 @@ jobs:
         sudo dpkg -i cuda-repo-ubuntu2004_12.1.0-1_amd64.deb
         sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
         sudo apt-get update
-        sudo apt-get install -y cuda-12-1
+        sudo apt-get install -y cuda
 
     - name: Add CUDA to PATH (Linux)
       if: runner.os == 'Linux'
