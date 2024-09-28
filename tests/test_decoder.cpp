@@ -26,7 +26,7 @@ void testVideoDecoding(FFmpeg::MediaFormat& mediaFormat, const std::string& code
         int fps = frameCount / timer.elapsed();
 
         std::cout << "Video decoding test passed!" << std::endl;
-        std::cout << "Decoded " << frameCount << " frames in " << timer.elapsed() << " seconds (" << fps << " fps)" << ""
+        std::cout << "Decoded " << frameCount << " frames in " << timer.elapsed() << " seconds (" << fps << " fps)" << " "
             << "Using codec: " << codec << std::endl;
         av_frame_free(&frame);
 
