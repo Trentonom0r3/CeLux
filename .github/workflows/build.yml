@@ -1,0 +1,97 @@
+name: CMake Build
+
+on:
+  push:
+    branches: [ test-github-actions ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Windows-specific setup
+    - name: Download and Install CUDA (Windows only)
+      if: runner.os == 'Windows'
+      run: |
+        curl -LO --retry 3 https://developer.download.nvidia.com/compute/cuda/12.1.0/windows/network-installers/cuda_12.1.0_windows_network.exe
+        if (Test-Path -Path "cuda_12.1.0_windows_network.exe") {
+          Start-Process -FilePath cuda_12.1.0_windows_network.exe -ArgumentList '-s','--toolkit','--installpath="C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1"' -NoNewWindow -Wait
+        } else {
+          Write-Error "Failed to download CUDA installer."
+          exit 1
+        }
+        echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+        echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\include" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Set up vcpkg (Windows only)
+      if: runner.os == 'Windows'
+      uses: lukka/run-vcpkg@v11
+      with:
+        runVcpkgInstall: true
+        vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
+        vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
+        vcpkgJsonGlob: '**/vcpkg.json'
+        doNotCache: true
+
+    # Linux-specific setup
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswresample-dev cmake g++ needrestart
+
+    - name: Configure needrestart (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        echo "NEEDRESTART_MODE=a" | sudo tee /etc/needrestart/needrestart.conf
+
+    - name: Install CUDA (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+        sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
+        sudo dpkg -i cuda-keyring_1.0-1_all.deb
+        sudo apt-get update
+        sudo apt-get -y install cuda
+      timeout-minutes: 90  # Increased the timeout to 90 minutes to accommodate longer installation times
+
+    - name: Add CUDA to PATH (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        echo "/usr/local/cuda-12.1/lib64" >> $GITHUB_ENV
+        echo "/usr/local/cuda-12.1/bin" >> $GITHUB_PATH
+
+    - name: Create build directory
+      run: cmake -B build -S .
+
+    # Windows-specific CMake configuration
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        cmake -DCMAKE_TOOLCHAIN_FILE=C:/Users/runneradmin/vcpkg/scripts/buildsystems/vcpkg.cmake -B build -S .
+
+    # Linux-specific CMake configuration
+    - name: Configure CMake (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        cmake -B build -S .
+
+    # Build for both Windows and Linux
+    - name: Build with CMake
+      run: cmake --build build
+
+    # Run tests (optional)
+    - name: Run tests
+      run: |
+        cd build && ctest

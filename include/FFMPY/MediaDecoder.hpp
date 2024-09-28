@@ -14,7 +14,7 @@ namespace FFmpeg {
         ~MediaDecoder();
 
         // Initialize the decoder
-        void initializeVideoDecoder(int streamIndex);
+        void initializeVideoDecoder(int streamIndex, const std::string& preferredCodecName);
         void initializeAudioDecoder(int streamIndex);
 
         // Decode next video frame
