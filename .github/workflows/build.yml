@@ -24,14 +24,8 @@ jobs:
       uses: lukka/run-vcpkg@v11
       with:
         runVcpkgInstall: true
+        vcpkgJsonGlob: '**/vcpkg.json'   # This looks for vcpkg.json in the root directory or subdirectories
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
-        vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
-    
-    - name: Install vcpkg dependencies (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        # Initialize vcpkg if it's a submodule in your repository
-        git submodule update --init --recursive
 
     - name: Set up CUDA (Windows only)
       if: runner.os == 'Windows'
