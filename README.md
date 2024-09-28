@@ -22,7 +22,7 @@ The library is designed to make it easier to integrate advanced media processing
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/FFMPyLib.git
+   git clone https://github.com/Trentonom0r3/FFMPY.git
    cd FFMPyLib
    ```
 
