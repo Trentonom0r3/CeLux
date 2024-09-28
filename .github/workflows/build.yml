@@ -19,6 +19,15 @@ jobs:
       uses: actions/checkout@v2
 
     # Windows-specific setup
+    - name: Set up CUDA (Windows only)
+      if: runner.os == 'Windows'
+      run: |
+        choco install cuda --version=12.1 --yes
+        # Add CUDA to the PATH
+        echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin" >> $Env:GITHUB_PATH
+        echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp" >> $Env:GITHUB_PATH
+        echo "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\include" >> $Env:GITHUB_PATH
+
     - name: Set up vcpkg (Windows only)
       if: runner.os == 'Windows'
       uses: lukka/run-vcpkg@v11
@@ -27,12 +36,7 @@ jobs:
         vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
         vcpkgJsonGlob: '**/vcpkg.json'
-        retry : 3
-
-    - name: Set up CUDA (Windows only)
-      if: runner.os == 'Windows'
-      run: |
-        choco install cuda --version=12.1 --yes
+        doNotCache: true # Disable caching if causing issues
 
     # Linux-specific setup
     - name: Install dependencies (Linux)
@@ -55,7 +59,7 @@ jobs:
         sudo dpkg -i cuda-keyring_1.0-1_all.deb
         sudo apt-get update
         sudo apt-get -y install cuda
-
+      timeout-minutes: 60  # Extend the timeout to prevent cancellation
 
     - name: Add CUDA to PATH (Linux)
       if: runner.os == 'Linux'
