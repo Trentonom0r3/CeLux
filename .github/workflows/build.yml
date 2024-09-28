@@ -27,7 +27,7 @@ jobs:
         vcpkgConfigurationJsonGlob: '**/vcpkg-configuration.json'
         vcpkgDirectory: 'C:/Users/runneradmin/vcpkg'
         vcpkgJsonGlob: '**/vcpkg.json'
-
+        retry : 3
 
     - name: Set up CUDA (Windows only)
       if: runner.os == 'Windows'
@@ -49,11 +49,13 @@ jobs:
     - name: Install CUDA (Linux)
       if: runner.os == 'Linux'
       run: |
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-repo-ubuntu2004_12.1.0-1_amd64.deb
-        sudo dpkg -i cuda-repo-ubuntu2004_12.1.0-1_amd64.deb
-        sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
+        sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
+        sudo dpkg -i cuda-keyring_1.0-1_all.deb
         sudo apt-get update
-        sudo apt-get install -y cuda
+        sudo apt-get -y install cuda
+
 
     - name: Add CUDA to PATH (Linux)
       if: runner.os == 'Linux'
