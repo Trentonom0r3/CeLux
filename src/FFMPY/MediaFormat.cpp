@@ -11,17 +11,10 @@ namespace FFmpeg {
 		: formatCtx_(nullptr), videoCodecParams_(nullptr), audioCodecParams_(nullptr),
 		videoStreamIndex_(-1), audioStreamIndex_(-1), filepath_(filepath) {}
 
-	/**
-	 * @brief Destroys the MediaFormat object and releases resources.
-	 */
 	MediaFormat::~MediaFormat() {
 		release();
 	}
 
-	/**
-	 * @brief Opens the media file and retrieves stream information.
-	 * @throws FFException if the media file cannot be opened or stream information cannot be found.
-	 */
 	void MediaFormat::open() {
 		FF_CHECK(avformat_open_input(&formatCtx_, filepath_.c_str(), nullptr, nullptr));
 		FF_CHECK(avformat_find_stream_info(formatCtx_, nullptr));
@@ -40,6 +33,36 @@ namespace FFmpeg {
 				audioCodecParams_ = codecParams;
 			}
 		}
+
+		if (videoStreamIndex_ == -1 && audioStreamIndex_ == -1) {
+			throw Error::FFException("No video or audio stream found in the media file.");
+		}
+	}
+
+	// Function to select the best decoder, prioritizing hardware acceleration
+	const AVCodec* MediaFormat::selectBestDecoder() {
+		if (!videoCodecParams_) {
+			throw Error::FFException("No video stream selected.");
+		}
+
+		const AVCodec* codec = avcodec_find_decoder(videoCodecParams_->codec_id);
+		if (!codec) {
+			throw Error::FFException("Could not find decoder for the selected video codec.");
+		}
+
+		// Attempt to use hardware-accelerated codec if available
+		const AVCodecHWConfig* hwConfig = getSuitableHWConfig(codec);
+		if (hwConfig) {
+			std::cout << "Using hardware-accelerated codec: "
+				<< av_hwdevice_get_type_name(hwConfig->device_type) << std::endl;
+			return codec;
+		}
+		else {
+			// Fallback to software decoding if no hardware acceleration is available
+			std::cout << "No hardware acceleration available, falling back to software decoding." << std::endl;
+		}
+
+		return codec;
 	}
 
 	/**
@@ -206,6 +229,72 @@ namespace FFmpeg {
 	int MediaFormat::getAudioStreamIndex() const {
 		return audioStreamIndex_;
 	}
+
+	/**
+	 * @brief Lists the available video codecs.
+	 * @return A vector of strings containing the names of the available video codecs.
+	 */
+	std::vector<std::string> MediaFormat::listAvailableVideoCodecs() const {
+		std::vector<std::string> codecs;
+		void* iter = nullptr;
+		const AVCodec* codec = nullptr;
+		while ((codec = av_codec_iterate(&iter))) {
+			if (av_codec_is_decoder(codec) && codec->type == AVMEDIA_TYPE_VIDEO) {
+				codecs.push_back(codec->name);
+			}
+		}
+		return codecs;
+	}
+
+	/**
+	 * @brief Lists the available audio codecs.
+	 * @return A vector of strings containing the names of the available audio codecs.
+	 */
+	std::vector<std::string> MediaFormat::listAvailableAudioCodecs() const {
+		std::vector<std::string> codecs;
+		void* iter = nullptr;
+		const AVCodec* codec = nullptr;
+		while ((codec = av_codec_iterate(&iter))) {
+			if (av_codec_is_decoder(codec) && codec->type == AVMEDIA_TYPE_AUDIO) {
+				codecs.push_back(codec->name);
+			}
+		}
+		return codecs;
+	}
+
+	/**
+	 * @brief Lists the available hardware configurations for the selected video codec.
+	 * @return A vector of strings containing the names of the available hardware configurations.
+	 * @throws FFException if no video stream is selected or the codec does not support hardware acceleration.
+	 */
+	std::vector<std::string> MediaFormat::getSupportedHardwareConfigs() const {
+		if (!videoCodecParams_) {
+			throw Error::FFException("No video stream selected.");
+		}
+
+		const AVCodec* codec = avcodec_find_decoder(videoCodecParams_->codec_id);
+		if (!codec) {
+			throw Error::FFException("Could not find decoder for the selected video codec.");
+		}
+
+		std::vector<std::string> hwConfigs;
+		const AVCodecHWConfig* hwConfig = nullptr;
+		int index = 0;
+
+		// Iterate through all hardware configurations supported by the codec
+		while ((hwConfig = avcodec_get_hw_config(codec, index++))) {
+			// Add only the configurations that support hardware device context creation
+			if (hwConfig->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) {
+				const char* deviceTypeName = av_hwdevice_get_type_name(hwConfig->device_type);
+				if (deviceTypeName) {
+					hwConfigs.push_back(deviceTypeName);
+				}
+			}
+		}
+
+		return hwConfigs;
+	}
+
 
 
 	/**

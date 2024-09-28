@@ -10,10 +10,20 @@ project(FFMPy)
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 
+# Add CUDA support
+set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
+find_package(CUDA REQUIRED)
+
+# Include CUDA headers
+include_directories(${CUDA_INCLUDE_DIRS})
+
+# Add CUDA to the link libraries
+set(CUDA_LIBRARIES ${CUDA_CUDART_LIBRARY})
+
 # Find FFmpeg package
 find_package(ffmpeg REQUIRED)
 
-# Include directories for FFmpeg and your custom headers
+# Include directories for FFmpeg and custom headers
 include_directories(${FFMPEG_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include/FFMPY)
 
@@ -29,38 +39,37 @@ add_library(FFMPyLib ${SOURCES})
 # Specify include directories for FFMPyLib
 target_include_directories(FFMPyLib PRIVATE ${CMAKE_SOURCE_DIR}/include/FFMPY)
 
-# Link FFmpeg libraries to the main project
+# Link FFmpeg libraries and CUDA to the main project
 if (WIN32)
     # Windows-specific libraries
-    target_link_libraries(FFMPyLib ${FFMPEG_LIBRARIES} swresample  ws2_32 bcrypt secur32 mfplat)
+    target_link_libraries(FFMPyLib ${FFMPEG_LIBRARIES} avcodec swresample ws2_32 bcrypt secur32 mfplat ${CUDA_LIBRARIES})
 else()
     # Linux-specific libraries (if any, like pthread)
-    target_link_libraries(FFMPyLib ${FFMPEG_LIBRARIES} swresample pthread)
+    target_link_libraries(FFMPyLib ${FFMPEG_LIBRARIES} avcodec swresample pthread ${CUDA_LIBRARIES})
 endif()
 
 # Create the main executable target
-add_executable(FFMPy src/main.cpp) # Assuming you have a main.cpp file for the main executable
+add_executable(FFMPy src/main.cpp)
 
 # Link the main executable with the library
 target_link_libraries(FFMPy FFMPyLib)
 
 # Add individual test executables
-# Test for MediaFormat
 add_executable(TestMediaFormat tests/test_media_format.cpp)
 target_include_directories(TestMediaFormat PRIVATE ${CMAKE_SOURCE_DIR}/include/FFMPY)
 if (WIN32)
-    target_link_libraries(TestMediaFormat FFMPyLib ${FFMPEG_LIBRARIES} ws2_32 bcrypt secur32 mfplat)
+    target_link_libraries(TestMediaFormat FFMPyLib ${FFMPEG_LIBRARIES} ws2_32 bcrypt secur32 mfplat ${CUDA_LIBRARIES})
 else()
-    target_link_libraries(TestMediaFormat FFMPyLib ${FFMPEG_LIBRARIES} pthread)
+    target_link_libraries(TestMediaFormat FFMPyLib ${FFMPEG_LIBRARIES} pthread ${CUDA_LIBRARIES})
 endif()
 
-# Test for Decoder (example)
+# Test for Decoder
 add_executable(TestDecoder tests/test_decoder.cpp)
 target_include_directories(TestDecoder PRIVATE ${CMAKE_SOURCE_DIR}/include/FFMPY)
 if (WIN32)
-    target_link_libraries(TestDecoder FFMPyLib ${FFMPEG_LIBRARIES} ws2_32 bcrypt secur32 mfplat)
+    target_link_libraries(TestDecoder FFMPyLib ${FFMPEG_LIBRARIES} ws2_32 bcrypt secur32 mfplat ${CUDA_LIBRARIES})
 else()
-    target_link_libraries(TestDecoder FFMPyLib ${FFMPEG_LIBRARIES} pthread)
+    target_link_libraries(TestDecoder FFMPyLib ${FFMPEG_LIBRARIES} pthread ${CUDA_LIBRARIES})
 endif()
 
 # Add a new target for the resampler test
@@ -71,15 +80,14 @@ target_include_directories(FFMPyResamplerTest PRIVATE ${CMAKE_SOURCE_DIR}/includ
 
 # Link libraries for the resampler test
 if (WIN32)
-    target_link_libraries(FFMPyResamplerTest FFMPyLib ${FFMPEG_LIBRARIES} ws2_32 bcrypt secur32 mfplat)
+    target_link_libraries(FFMPyResamplerTest FFMPyLib ${FFMPEG_LIBRARIES} ws2_32 bcrypt secur32 mfplat ${CUDA_LIBRARIES})
 else()
-    target_link_libraries(FFMPyResamplerTest FFMPyLib ${FFMPEG_LIBRARIES} pthread)
+    target_link_libraries(FFMPyResamplerTest FFMPyLib ${FFMPEG_LIBRARIES} pthread ${CUDA_LIBRARIES})
 endif()
-
-
 
 # Set properties for C++ standard
 set_property(TARGET FFMPyLib PROPERTY CXX_STANDARD 17)
 set_property(TARGET FFMPy PROPERTY CXX_STANDARD 17)
 set_property(TARGET TestMediaFormat PROPERTY CXX_STANDARD 17)
 set_property(TARGET TestDecoder PROPERTY CXX_STANDARD 17)
+set_property(TARGET FFMPyResamplerTest PROPERTY CXX_STANDARD 17)

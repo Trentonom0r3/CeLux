@@ -3,7 +3,6 @@
 
 #include "FFCore.hpp"
 #include "FFException.hpp"
-#include <string>
 
 namespace FFmpeg {
 
@@ -14,6 +13,7 @@ namespace FFmpeg {
 
         // Open and release functions
         void open();
+        const AVCodec* selectBestDecoder();
         void release();
 
         // Get general stream information
@@ -40,7 +40,9 @@ namespace FFmpeg {
         AVFormatContext* get() const; // Now public to allow access
         int getVideoStreamIndex() const; // New function to get the video stream index
         int getAudioStreamIndex() const; // New function to get the audio stream index
-
+        std::vector<std::string> listAvailableVideoCodecs() const;
+        std::vector<std::string> listAvailableAudioCodecs() const;
+        std::vector<std::string> getSupportedHardwareConfigs() const;
     private:
         AVFormatContext* formatCtx_;
         AVCodecParameters* videoCodecParams_; // Store codec parameters for video stream
