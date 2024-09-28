@@ -44,7 +44,7 @@ The library is designed to make it easier to integrate advanced media processing
 
 ### Usage Example
 
-Here’s an example of how to use FFMPyLib for resampling audio from a media file:
+Hereâ€™s an example of how to use FFMPyLib for resampling audio from a media file:
 
 ```cpp
 #include "MediaFormat.hpp"
@@ -102,7 +102,7 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 4. Submit a pull request.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the AGPL3.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 - **FFmpeg:** This project is built on top of the powerful FFmpeg library.
