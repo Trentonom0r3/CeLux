@@ -41,6 +41,11 @@ ffmpy boasts some of the, if not the, fastest decode times for full HD video *in
    ctest
    ```
 
+### Running the Project
+- Download the most recent release.
+  - .zip will contain all dependencies.
+- Append directory to python path, and use as normal! (Torch MUST be imported first)
+
 ### Usage Example
 
 ```py
