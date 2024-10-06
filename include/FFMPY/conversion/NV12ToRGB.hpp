@@ -1,43 +1,58 @@
+// NV12ToRGB.hpp
+
 #pragma once
 
 #include "conversion.hpp"
 #include "Frame.hpp"
 #include <cuda_runtime.h>
+#include <type_traits>
+
 extern "C"
 {
-    /**
-     * @brief Converts NV12 format to RGB using CUDA.
-     *
-     * @param yPlane Pointer to the Y plane of the NV12 data.
-     * @param uvPlane Pointer to the UV plane of the NV12 data.
-     * @param width Width of the frame.
-     * @param height Height of the frame.
-     * @param yStride Stride of the Y plane.
-     * @param uvStride Stride of the UV plane.
-     * @param rgbOutput Pointer to the output RGB data.
-     * @param rgbStride Stride of the RGB output.
-     * @param stream CUDA stream to be used for conversion.
-     */
+    // Host functions for different data types
     void nv12_to_rgb(const unsigned char* yPlane, const unsigned char* uvPlane,
                      int width, int height, int yStride, int uvStride,
                      unsigned char* rgbOutput, int rgbStride, cudaStream_t stream);
+
+    void nv12_to_rgb_float(const unsigned char* yPlane, const unsigned char* uvPlane,
+                           int width, int height, int yStride, int uvStride,
+                           float* rgbOutput, int rgbStride, cudaStream_t stream);
+
+    void nv12_to_rgb_half(const unsigned char* yPlane, const unsigned char* uvPlane,
+                          int width, int height, int yStride, int uvStride,
+                          __half* rgbOutput, int rgbStride, cudaStream_t stream);
 }
 namespace ffmpy
 {
 namespace conversion
 {
+
 template <typename T> class NV12ToRGB : public ConverterBase<T>
 {
   public:
-    using ConverterBase<T>::ConverterBase; // Inherit constructors
+    NV12ToRGB();
+    NV12ToRGB(cudaStream_t stream);
+    ~NV12ToRGB();
 
-    void convert(Frame& frame, T* buffer);
+    void convert(ffmpy::Frame& frame, void* buffer) override;
 };
 
 // Template Definitions
 
-// Convert Method for uint8_t
-template <> inline void NV12ToRGB<uint8_t>::convert(Frame& frame, uint8_t* buffer)
+template <typename T> NV12ToRGB<T>::NV12ToRGB() : ConverterBase<T>()
+{
+}
+
+template <typename T>
+NV12ToRGB<T>::NV12ToRGB(cudaStream_t stream) : ConverterBase<T>(stream)
+{
+}
+
+template <typename T> NV12ToRGB<T>::~NV12ToRGB()
+{
+}
+
+template <typename T> void NV12ToRGB<T>::convert(ffmpy::Frame& frame, void* buffer)
 {
     const unsigned char* yPlane = frame.getData(0);
     const unsigned char* uvPlane = frame.getData(1);
@@ -47,39 +62,39 @@ template <> inline void NV12ToRGB<uint8_t>::convert(Frame& frame, uint8_t* buffe
     int height = frame.getHeight();
     int rgbStride = width * 3;
 
-    // Launch CUDA kernel
-    nv12_to_rgb(yPlane, uvPlane, width, height, yStride, uvStride, buffer, rgbStride,
-                this->conversionStream);
+    if constexpr (std::is_same<T, uint8_t>::value)
+    {
+        // Call the kernel for uint8_t
+        nv12_to_rgb(yPlane, uvPlane, width, height, yStride, uvStride,
+                    static_cast<uint8_t*>(buffer), rgbStride, this->conversionStream);
+    }
+    else if constexpr (std::is_same<T, float>::value)
+    {
+        // Call the kernel for float
+        nv12_to_rgb_float(yPlane, uvPlane, width, height, yStride, uvStride,
+                          static_cast<float*>(buffer), rgbStride,
+                          this->conversionStream);
+    }
+    else if constexpr (std::is_same<T, __half>::value)
+    {
+        // Call the kernel for __half
+        nv12_to_rgb_half(yPlane, uvPlane, width, height, yStride, uvStride,
+                         static_cast<__half*>(buffer), rgbStride,
+                         this->conversionStream);
+    }
+    else
+    {
+        static_assert(sizeof(T) == 0, "Unsupported data type for NV12ToRGB");
+    }
+
+    // Check for kernel launch errors
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+        throw std::runtime_error("CUDA kernel launch failed: " +
+                                 std::string(cudaGetErrorString(err)));
+    }
 }
 
-// Convert Method for float
-template <> inline void NV12ToRGB<float>::convert(Frame& frame, float* buffer)
-{
-    const unsigned char* yPlane = frame.getData(0);
-    const unsigned char* uvPlane = frame.getData(1);
-    int yStride = frame.getLineSize(0);
-    int uvStride = frame.getLineSize(1);
-    int width = frame.getWidth();
-    int height = frame.getHeight();
-    int rgbStride = width * 3;
-
-    // Conversion logic for float buffer
-    // Implement CUDA kernel or other logic as needed
-}
-
-// Convert Method for __half
-template <> inline void NV12ToRGB<__half>::convert(Frame& frame, __half* buffer)
-{
-    const unsigned char* yPlane = frame.getData(0);
-    const unsigned char* uvPlane = frame.getData(1);
-    int yStride = frame.getLineSize(0);
-    int uvStride = frame.getLineSize(1);
-    int width = frame.getWidth();
-    int height = frame.getHeight();
-    int rgbStride = width * 3;
-
-    // Conversion logic for __half buffer
-    // Implement CUDA kernel or other logic as needed
-}
-} // namespace conversions
+} // namespace conversion
 } // namespace ffmpy

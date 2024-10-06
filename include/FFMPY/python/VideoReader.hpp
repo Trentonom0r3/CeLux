@@ -10,7 +10,6 @@
 #include <pybind11/pybind11.h>
 #include <NV12ToRGB.hpp>
 
-
 namespace py = pybind11;
 
 // Enum for copy types
@@ -32,7 +31,7 @@ class VideoReader
      * @param config Configuration for frame processing.
      */
     VideoReader(const std::string& filePath, bool useHardware = true,
-                const std::string& hwType = "cuda", bool as_numpy = false);
+                const std::string& hwType = "cuda", bool as_numpy = false, const std::string& dtype = "uint8");
 
     /**
      * @brief Destructor for VideoReader.
@@ -106,6 +105,7 @@ class VideoReader
     void exit(const py::object& exc_type, const py::object& exc_value,
               const py::object& traceback);
     int length() const;
+
   private:
     /**
      * @brief Copy data from source to destination based on the copy type.
@@ -115,7 +115,7 @@ class VideoReader
      * @param size Number of bytes to copy.
      * @param type Type of copy (HOST or DEVICE).
      */
-    void copyTo(uint8_t* src, uint8_t* dst, size_t size, CopyType type);
+    void copyTo(void* src, void* dst, size_t size, CopyType type);
 
     /**
      * @brief Close the video reader and release resources.
@@ -126,13 +126,13 @@ class VideoReader
     std::unique_ptr<ffmpy::Decoder> decoder;
     ffmpy::Decoder::VideoProperties properties;
     bool as_numpy;
-    ffmpy::conversion::NV12ToRGB<uint8_t> convert;
+
+    std::unique_ptr<ffmpy::conversion::IConverter> convert;
 
     // Buffers
-    torch::Tensor rgb_tensor;      // For RGB conversion (GPU)
-    torch::Tensor tensorBuffer;    // For Tensor Output (CPU or GPU)
-    py::array_t<uint8_t> npBuffer; // For NumPy Output
-    ffmpy::Frame frame;            // Decoded frame
+    torch::Tensor rgb_tensor; // For RGB conversion (GPU)
+    py::array npBuffer;       // For NumPy Output
+    ffmpy::Frame frame;       // Decoded frame
 
     // Iterator state
     int currentIndex;
