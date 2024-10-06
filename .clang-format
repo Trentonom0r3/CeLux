@@ -1,0 +1,22 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+BreakBeforeBraces: Allman  # Place braces on a new line for readability.
+AllowShortIfStatementsOnASingleLine: Never  # Always use braces to avoid ambiguity.
+AllowShortLoopsOnASingleLine: false  # Same as if-statements, always use braces.
+AllowShortFunctionsOnASingleLine: None  # Avoid packing functions into single lines.
+ColumnLimit: 88  # Similar to PEP 8's 79-99 column limit range for readability.
+SpaceBeforeParens: ControlStatements  # Add space before parentheses in control statements.
+PointerAlignment: Left  # Align pointers to the left for consistency and clarity.
+AlignAfterOpenBracket: Align  # Align parameters in multi-line function calls.
+SpacesInAngles: false  # Avoid extra spaces in template angles.
+SortIncludes: true  # Keep includes sorted for better organization.
+IncludeBlocks: Preserve  # Maintain original include grouping for readability.
+ReflowComments: true  # Reflow comments to fit within the column limit.
+SpaceBeforeRangeBasedForLoopColon: true  # Add space for clarity.
+BraceWrapping:
+  AfterFunction: true  # Always place braces on a new line for functions.
+  AfterClass: true  # Same for classes, enhancing clarity.
+  AfterControlStatement: true  # Braces on a new line for control statements.
+  BeforeElse: true  # Align `else` with the previous closing brace.

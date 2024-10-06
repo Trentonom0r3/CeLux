@@ -1,9 +1,0 @@
-{
-  "name": "ffmpy",
-  "version-string": "1.0.0",
-  "dependencies": [
-    "ffmpeg",
-    "cuda"
-  ],
-  "builtin-baseline": "76d153790caf0592fce8fc4484aa6db18c7d00d4"
-}
