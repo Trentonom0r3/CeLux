@@ -5,7 +5,7 @@ ffmpy is a python video processing library built on top of FFMPEG.
 ffmpy boasts some of the, if not the, fastest decode times for full HD video *in the world!*
 
 ## Features
-- **Video Decoding Directly to Numpy/Tensors:** Decode video directly into numpy arrays or torch tensors (both 'cuda' and 'cpu')
+- **Video Decoding Directly to Numpy/Tensors:** Decode video directly into numpy arrays or torch tensors.
 
 ## Getting Started
 
@@ -51,7 +51,7 @@ def process_frame(frame):
     pass
 
     with ffmpy.VideoReader("path/to/input/video.mp4", useHardware=True, hwType="cuda", as_numpy=False) as reader:
-        for frame in reader:
+        for frame in reader: #Frame will be in HWC Format, uint8
             process_frame(frame)
 
 ```
