@@ -56,7 +56,7 @@ def process_frame(frame):
     pass
 
     with ffmpy.VideoReader("path/to/input/video.mp4", useHardware=True, hwType="cuda", as_numpy=False) as reader:
-        for frame in reader: #Frame will be in HWC Format, uint8
+        for frame in reader: #Frame will be in HWC Format, uint8, [0,255]
             process_frame(frame)
 
 ```
