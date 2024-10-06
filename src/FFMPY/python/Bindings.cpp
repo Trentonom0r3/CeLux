@@ -8,9 +8,9 @@ namespace py = pybind11;
 PYBIND11_MODULE(ffmpy, m)
 {
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, bool, const std::string&, bool>(),
+        .def(py::init<const std::string&, bool, const std::string&, bool, std::string&>(),
              py::arg("filePath"), py::arg("useHardware") = true,
-             py::arg("hwType") = "cuda", py::arg("as_numpy") = false)
+             py::arg("hwType") = "cuda", py::arg("as_numpy") = false, py::arg("dtype") = "uint8")
         .def("readFrame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
         .def("supportedCodecs", &VideoReader::supportedCodecs)

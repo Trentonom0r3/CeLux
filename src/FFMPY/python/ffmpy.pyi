@@ -4,48 +4,14 @@ from typing import Any, Optional, List, Dict, Union
 import numpy as np
 import torch
 
-class Frame:
-    def getData(self, plane: int) -> bytes:
-        """
-        Get data for a specific plane.
-
-        :param plane: Plane index (e.g., 0 for Y, 1 for UV).
-        :return: Raw bytes of the plane data.
-        """
-        ...
-
-    def getLineSize(self, plane: int) -> int:
-        """
-        Get the line size for a specific plane.
-
-        :param plane: Plane index.
-        :return: Line size in bytes.
-        """
-        ...
-
-    def getWidth(self) -> int:
-        """
-        Get the width of the frame.
-
-        :return: Width in pixels.
-        """
-        ...
-
-    def getHeight(self) -> int:
-        """
-        Get the height of the frame.
-
-        :return: Height in pixels.
-        """
-        ...
-
 class VideoReader:
     def __init__(
         self, 
         filePath: str, 
         useHardware: bool = True, 
         hwType: str = "cuda", 
-        as_numpy: bool = False
+        as_numpy: bool = False,
+        dtype: str = "uint8"
     ) -> None:
         """
         Initialize a VideoReader instance.
@@ -54,6 +20,7 @@ class VideoReader:
         :param useHardware: Whether to use hardware acceleration.
         :param hwType: Type of hardware acceleration (e.g., "cuda").
         :param as_numpy: Whether to return frames as NumPy arrays.
+        :param dtype: Data type of the frames (e.g., "uint8"). If "float" or "half", frames are normalized to [0, 1].
         """
         ...
 

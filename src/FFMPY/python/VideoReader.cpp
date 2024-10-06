@@ -4,19 +4,47 @@
 #include <torch/extension.h>
 
 VideoReader::VideoReader(const std::string& filePath, bool useHardware,
-                         const std::string& hwType, bool as_numpy)
+                         const std::string& hwType, bool as_numpy,
+                         const std::string& dataType)
     : decoder(std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType)),
-      properties(decoder->getVideoProperties()), as_numpy(as_numpy),
-      convert(ffmpy::conversion::NV12ToRGB<uint8_t>()), currentIndex(0)
+      properties(decoder->getVideoProperties()), as_numpy(as_numpy), currentIndex(0)
 {
     try
     {
-        // Initialize RGB Tensor on CUDA by default
+        // Determine the data types based on the dataType argument
+        torch::Dtype torchDataType;
+        py::dtype npDataType;
+
+        if (dataType == "uint8")
+        {
+            torchDataType = torch::kUInt8;
+            npDataType = py::dtype::of<uint8_t>();
+            convert = std::make_unique<ffmpy::conversion::NV12ToRGB<uint8_t>>();
+        }
+        else if (dataType == "float")
+        {
+            torchDataType = torch::kFloat32;
+            npDataType = py::dtype::of<float>();
+            convert = std::make_unique<ffmpy::conversion::NV12ToRGB<float>>();
+        }
+        else if (dataType == "half")
+        {
+            torchDataType = torch::kFloat16;
+            npDataType = py::dtype("float16");
+            convert = std::make_unique<ffmpy::conversion::NV12ToRGB<__half>>();
+        }
+        else
+        {
+            throw std::invalid_argument("Unsupported dataType: " + dataType);
+        }
+
+        // Initialize RGB Tensor on CUDA with the appropriate data type
         rgb_tensor = torch::empty(
             {properties.height, properties.width, 3},
-            torch::TensorOptions().dtype(torch::kUInt8).device(torch::kCUDA));
+            torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
 
-        npBuffer = py::array_t<uint8_t>({properties.height, properties.width, 3});
+        // Initialize numpy buffer with the appropriate data type
+        npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
     }
     catch (const std::exception& ex)
     {
@@ -32,12 +60,16 @@ VideoReader::~VideoReader()
 
 void VideoReader::close()
 {
+    if (convert)
+    {
+        convert->synchronize();
+        convert.reset();
+    }
     if (decoder)
     {
         decoder->close(); // Assuming Decoder has a close method
         decoder.reset();
     }
-    // Additional resource cleanup if necessary
 }
 
 py::object VideoReader::readFrame()
@@ -45,14 +77,14 @@ py::object VideoReader::readFrame()
     if (decoder->decodeNextFrame(frame))
     { // Frame decoded successfully
         // Convert frame to RGB
-        convert.convert(frame, rgb_tensor.data_ptr<uint8_t>());
+        convert->convert(frame, rgb_tensor.data_ptr());
 
         if (as_numpy)
-        { // User wants NumPy array
+        {                                      // User wants NumPy array
+            size_t size = rgb_tensor.nbytes(); // Get the size in bytes
 
-            // Data is already on CPU
-            copyTo(rgb_tensor.data_ptr<uint8_t>(), npBuffer.mutable_data(),
-                   npBuffer.size(), CopyType::HOST);
+            copyTo(rgb_tensor.data_ptr(), npBuffer.mutable_data(), size,
+                   CopyType::HOST);
 
             return npBuffer;
         }
@@ -126,10 +158,10 @@ void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
     close(); // Close the video reader and free resources
 }
 
-void VideoReader::copyTo(uint8_t* src, uint8_t* dst, size_t size, CopyType type)
+void VideoReader::copyTo(void* src, void* dst, size_t size, CopyType type)
 {
     cudaError_t err;
-    err = cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, convert.getStream());
+    err = cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, convert->getStream());
 }
 
 int VideoReader::length() const

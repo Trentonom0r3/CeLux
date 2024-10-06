@@ -207,7 +207,7 @@ target_link_libraries(FFMPyLib PUBLIC
 #10
 #FFMPyLib
 #add executable that links to FFMPyLib
-add_executable(FFMPyApp src/FFMPY/tests/main.cpp)
+add_executable(FFMPyApp tests/main.cpp)
 target_link_libraries(FFMPyApp PUBLIC FFMPyLib)
 
 # ------------------------------

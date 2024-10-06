@@ -1,5 +1,8 @@
+// ConverterBase.hpp
+
 #pragma once
 
+#include "IConverter.hpp"
 #include <cuda_runtime.h>
 #include <stdexcept>
 
@@ -7,15 +10,16 @@ namespace ffmpy
 {
 namespace conversion
 {
-template <typename T> class ConverterBase
+
+template <typename T> class ConverterBase : public IConverter
 {
   public:
     ConverterBase();
     ConverterBase(cudaStream_t stream);
-    ~ConverterBase();
+    virtual ~ConverterBase();
 
-    void synchronize();
-    cudaStream_t getStream();
+    void synchronize() override;
+    cudaStream_t getStream() const override;
 
   protected:
     cudaStream_t conversionStream;
@@ -52,6 +56,7 @@ template <typename T> ConverterBase<T>::~ConverterBase()
 {
     if (conversionStream)
     {
+        synchronize();
         cudaStreamDestroy(conversionStream);
     }
 }
@@ -67,9 +72,10 @@ template <typename T> void ConverterBase<T>::synchronize()
 }
 
 // Get Stream Method
-template <typename T> cudaStream_t ConverterBase<T>::getStream()
+template <typename T> cudaStream_t ConverterBase<T>::getStream() const
 {
     return conversionStream;
 }
-} // namespace conversions
+
+} // namespace conversion
 } // namespace ffmpy

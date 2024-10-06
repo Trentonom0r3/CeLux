@@ -54,12 +54,12 @@ int main(int argc, char* argv[])
         Timer timer;
         torch::Tensor tnsr = torch::empty(
             {props.height, props.width, 3},
-            torch::TensorOptions().dtype(torch::kUInt8).device(torch::kCUDA));
+            torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCUDA));
 
         while (decoder.decodeNextFrame(frame))
         {
-            ffmpy::conversion::NV12ToRGB<uint8_t>().convert(frame,
-                                                            tnsr.data_ptr<uint8_t>());
+            ffmpy::conversion::NV12ToRGB<float>().convert(frame,
+                                                            tnsr.data_ptr());
             frameCount++;
         }
         double end = timer.elapsed();
