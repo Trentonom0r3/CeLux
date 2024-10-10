@@ -8,7 +8,6 @@
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
-#include <NV12ToRGB.hpp>
 
 namespace py = pybind11;
 
@@ -30,8 +29,7 @@ class VideoReader
      * @param hwType Type of hardware acceleration (e.g., "cuda").
      * @param config Configuration for frame processing.
      */
-    VideoReader(const std::string& filePath, bool useHardware = true,
-                const std::string& hwType = "cuda", bool as_numpy = false, const std::string& dtype = "uint8");
+    VideoReader(const std::string& filePath, bool as_numpy = false, const std::string& dtype = "uint8");
 
     /**
      * @brief Destructor for VideoReader.

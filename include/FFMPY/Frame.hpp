@@ -186,3 +186,4 @@ class Frame
     AVFrame* frame; ///< Pointer to the underlying AVFrame.
 };
 } // namespace ffmpy
+

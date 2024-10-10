@@ -3,11 +3,10 @@
 #include "Python/VideoReader.hpp"
 #include <torch/extension.h>
 
-VideoReader::VideoReader(const std::string& filePath, bool useHardware,
-                         const std::string& hwType, bool as_numpy,
-                         const std::string& dataType)
-    : decoder(std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType)),
-      properties(decoder->getVideoProperties()), as_numpy(as_numpy), currentIndex(0)
+VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
+                                 const std::string& dataType) //converter arg to pass in --- enum of optios? NV12To...?
+    : decoder(nullptr), as_numpy(as_numpy),
+      currentIndex(0)
 {
     try
     {
@@ -37,12 +36,15 @@ VideoReader::VideoReader(const std::string& filePath, bool useHardware,
         {
             throw std::invalid_argument("Unsupported dataType: " + dataType);
         }
-
+        bool useHardware = true;
+        std::string hwType = "cuda";
+        decoder = std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType,
+													   std::move(convert));
+        properties = decoder->getVideoProperties();
         // Initialize RGB Tensor on CUDA with the appropriate data type
         rgb_tensor = torch::empty(
             {properties.height, properties.width, 3},
             torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
-
         // Initialize numpy buffer with the appropriate data type
         npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
     }
@@ -74,13 +76,16 @@ void VideoReader::close()
 
 py::object VideoReader::readFrame()
 {
-    if (decoder->decodeNextFrame(frame))
+    if (decoder->decodeNextFrame(rgb_tensor.data_ptr()))
     { // Frame decoded successfully
-        // Convert frame to RGB
-        convert->convert(frame, rgb_tensor.data_ptr());
 
-        if (as_numpy)
-        {                                      // User wants NumPy array
+        if (!as_numpy)
+        {
+            return py::cast(rgb_tensor); // User wants NumPy array
+        }
+        
+        else
+        {
             size_t size = rgb_tensor.nbytes(); // Get the size in bytes
 
             copyTo(rgb_tensor.data_ptr(), npBuffer.mutable_data(), size,
@@ -88,8 +93,6 @@ py::object VideoReader::readFrame()
 
             return npBuffer;
         }
-        else
-            return py::cast(rgb_tensor);
     }
     else
     { // No frame decoded
@@ -153,7 +156,7 @@ void VideoReader::enter()
 }
 
 void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
-                       const py::object& traceback)
+                           const py::object& traceback)
 {
     close(); // Close the video reader and free resources
 }

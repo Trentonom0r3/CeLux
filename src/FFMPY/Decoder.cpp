@@ -6,32 +6,22 @@
 using namespace ffmpy::error;
 namespace ffmpy
 {
-// Optional: Initialize FFmpeg (if not already done globally)
-struct FFmpegInitializer
-{
-    FFmpegInitializer()
-    {
-        avformat_network_init();
-    }
-    ~FFmpegInitializer()
-    {
-        avformat_network_deinit();
-    }
-};
-
-static FFmpegInitializer ffmpegInitializer; // Ensures FFmpeg is initialized once
-
 /**
  * @brief Constructor that initializes the Decoder with a video file.
  * @param filePath Path to the input video file.
  * @param useHardware Whether to use hardware acceleration.
  * @param hwType Type of hardware acceleration (e.g., "cuda", "vaapi").
  */
-Decoder::Decoder(const std::string& filePath, bool useHardware,
-                 const std::string& hwType)
-    : formatCtx(nullptr), codecCtx(nullptr), hwDeviceCtx(nullptr), videoStreamIndex(-1),
-      hwAccelType(hwType)
+// Constructor implementation
+ffmpy::Decoder::Decoder(
+    const std::string& filePath, bool useHardware, const std::string& hwType,
+    std::unique_ptr<ffmpy::conversion::IConverter> converter)
+    : converter(std::move(converter)),
+      // Initialize other members as needed
+      formatCtx(nullptr), codecCtx(nullptr), hwDeviceCtx(nullptr),
+      pkt(av_packet_alloc()), videoStreamIndex(-1), hwAccelType(hwType)
 {
+    // Initialization logic
     openFile(filePath, useHardware, hwType);
     findVideoStream();
 
@@ -69,17 +59,20 @@ Decoder::Decoder(const std::string& filePath, bool useHardware,
     pkt = av_packet_alloc();
     // **Critical Step:** Set the time_base to match the stream's time_base
     codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
+
+    frame = av_frame_alloc();
 }
+
 std::vector<std::string> Decoder::listSupportedDecoders() const
 {
-    std::vector<std::string> decoders;
+    std::vector<std::string> Decoders;
     void* iter = nullptr; // Iterator for av_codec_iterate
     const AVCodec* codec = nullptr;
 
     // Iterate through all available codecs
     while ((codec = av_codec_iterate(&iter)) != nullptr)
     {
-        // Check if the codec is a decoder
+        // Check if the codec is a Decoder
         if (av_codec_is_decoder(codec))
         {
             std::string codecInfo = std::string(codec->name);
@@ -90,11 +83,11 @@ std::vector<std::string> Decoder::listSupportedDecoders() const
                 codecInfo += " - " + std::string(codec->long_name);
             }
 
-            decoders.push_back(codecInfo);
+            Decoders.push_back(codecInfo);
         }
     }
 
-    return decoders;
+    return Decoders;
 }
 /**
  * @brief Destructor that cleans up resources.
@@ -250,9 +243,8 @@ void Decoder::initCodecContext(const AVCodec* codec)
  * @return True if a frame was successfully decoded, False if end of stream.
  * @throws FFException on decoding errors.
  */
-bool Decoder::decodeNextFrame(Frame& frame)
+bool Decoder::decodeNextFrame(void* buffer)
 {
-    av_frame_unref(frame.get()); // Clear the frame buffer
     bool frameProcessed = false;
 
     while (!frameProcessed)
@@ -263,7 +255,7 @@ bool Decoder::decodeNextFrame(Frame& frame)
         {
             if (ret == AVERROR_EOF)
             {
-                // End of file: flush the decoder
+                // End of file: flush the Decoder
                 avcodec_send_packet(codecCtx.get(), nullptr);
             }
             else
@@ -274,13 +266,14 @@ bool Decoder::decodeNextFrame(Frame& frame)
         }
         else
         {
-            // If the packet belongs to the video stream, send it to the decoder
+            // If the packet belongs to the video stream, send it to the Decoder
             if (pkt->stream_index == videoStreamIndex)
             {
                 FF_CHECK(avcodec_send_packet(codecCtx.get(), pkt));
             }
             // Release the packet back to FFmpeg
             av_packet_unref(pkt);
+            av_frame_unref(frame.get());
         }
 
         // Attempt to receive a decoded frame
@@ -303,7 +296,7 @@ bool Decoder::decodeNextFrame(Frame& frame)
                 throw ffmpy::error::FFException(ret);
                 break; // Exit the inner loop on error
             }
-
+            converter->convert(frame, buffer);
             frameProcessed = true;
             break; // Successfully processed one frame
         }
@@ -315,6 +308,7 @@ bool Decoder::decodeNextFrame(Frame& frame)
         }
     }
     av_packet_unref(pkt);
+    av_frame_unref(frame.get());
     return frameProcessed;
 }
 
@@ -355,7 +349,7 @@ Decoder::VideoProperties Decoder::getVideoProperties() const
 }
 
 /**
- * @brief Check if the decoder is successfully initialized and open.
+ * @brief Check if the Decoder is successfully initialized and open.
  * @return True if open, False otherwise.
  */
 bool Decoder::isOpen() const
@@ -386,6 +380,12 @@ int64_t Decoder::convertTimestamp(double timestamp) const
 {
     return static_cast<int64_t>(timestamp * AV_TIME_BASE);
 }
+
+AVBufferRef* Decoder::getHWDeviceCtx() const
+{
+    return hwDeviceCtx.get();
+}
+
 
 /**
  * @brief Callback to select the hardware pixel format.

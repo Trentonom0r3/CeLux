@@ -2,3 +2,6 @@
 out/*
 setup.py
 Input_short.mp4
+ffmpy.egg-info/*
+build/*
+ffmpy/*
