@@ -1,28 +1,26 @@
-# ffmpy.pyi
 
+
+from dataclasses import dataclass
 from typing import Any, Optional, List, Dict, Union
 import numpy as np
 import torch
 
+@dataclass
+class ReaderConfig:
+    as_numpy: bool = False # If True, returns frames as NumPy array, else as torch.Tensor
+    dtype: str = "uint8"
+    to_cpu: bool = False
+    
+    def __post_init__(self):
+        if self.dtype not in ["uint8", "float", "half"]:
+            raise ValueError(f"Invalid dtype: {self.dtype}")
+        if self.as_numpy:
+            self.to_cpu = True
+            
 class VideoReader:
-    def __init__(
-        self, 
-        filePath: str, 
-        useHardware: bool = True, 
-        hwType: str = "cuda", 
-        as_numpy: bool = False,
-        dtype: str = "uint8"
-    ) -> None:
-        """
-        Initialize a VideoReader instance.
-
-        :param filePath: Path to the video file.
-        :param useHardware: Whether to use hardware acceleration.
-        :param hwType: Type of hardware acceleration (e.g., "cuda").
-        :param as_numpy: Whether to return frames as NumPy arrays.
-        :param dtype: Data type of the frames (e.g., "uint8"). If "float" or "half", frames are normalized to [0, 1].
-        """
-        ...
+    def __init__(self, input_video : str, config: Optional[ReaderConfig] = None):
+        self.input_video = input_video
+        self.config = ReaderConfig() if config is None else config
 
     def readFrame(self) -> Union[torch.Tensor, np.ndarray, None]:
         """

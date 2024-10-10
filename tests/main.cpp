@@ -1,44 +1,30 @@
 // main.cpp
 
 #include "Decoder.hpp"
-#include <NV12ToRGB.hpp>
+#include "Frame.hpp"
+#include <iostream>
+#include <stdexcept>
 #include <Timer.hpp>
 
 using namespace ffmpy;
-// Helper function to print all available filters
-void printAvailableFilters()
-{
-    const AVFilter* filter = nullptr;
-    void* opaque = nullptr; // Initialize iteration state
 
-    std::cout << "Available FFmpeg Filters:" << std::endl;
-    while ((filter = av_filter_iterate(&opaque)) != nullptr)
-    {
-        std::cout << " - " << filter->name;
-        if (filter->description)
-        {
-            std::cout << ": " << filter->description;
-        }
-        std::cout << std::endl;
-    }
-}
-
-int main(int argc, char* argv[])
-{
-
-    std::string videoFilePath =
-        "C:\\Users\\tjerf\\source\\repos\\FrameSmith\\Input.mp4"; // Change to desired
-                                                                  // video file path
+int main()
+{//"C:\Users\tjerf\source\repos\FrameSmith\Input.mp4"
+    std::string inputFilePath =
+        "C:\\Users\\tjerf\\source\\repos\\FrameSmith\\Input.mp4"; // Update with your input file
+    std::string outputFilePath =
+        "C:\\Users\\tjerf\\source\\repos\\FrameSmith\\Output.mp4"; // Update with your output file
 
     try
     {
-        printAvailableFilters();
-        // Create VideoDecoder instance with hardware acceleration
-        Decoder decoder(videoFilePath, true,
-                        "cuda"); // Change "cuda" to desired HW accel type
+        std::unique_ptr<ffmpy::conversion::IConverter> converter =
+            std::make_unique<ffmpy::conversion::NV12ToRGB<uint8_t>>();
 
-        // Get video properties
-        Decoder::VideoProperties props = decoder.getVideoProperties();
+        // Initialize the TestDecoder with hardware acceleration
+        Decoder TestDecoder(inputFilePath, true, "cuda", std::move(converter));
+
+        // Retrieve video properties
+        Decoder::VideoProperties props = TestDecoder.getVideoProperties();
         std::cout << "Video Properties:" << std::endl;
         std::cout << "Width: " << props.width << std::endl;
         std::cout << "Height: " << props.height << std::endl;
@@ -48,25 +34,23 @@ int main(int argc, char* argv[])
         std::cout << "Pixel Format: " << av_get_pix_fmt_name(props.pixelFormat)
                   << std::endl;
 
-        // Decode frames
-        Frame frame;
+        void* data = nullptr;
+        cudaMalloc(&data, props.width * props.height * 3);
         int frameCount = 0;
         Timer timer;
-        torch::Tensor tnsr = torch::empty(
-            {props.height, props.width, 3},
-            torch::TensorOptions().dtype(torch::kFloat32).device(torch::kCUDA));
-
-        while (decoder.decodeNextFrame(frame))
+        while (TestDecoder.decodeNextFrame(data)) //decoder handles conversion internally
         {
-            ffmpy::conversion::NV12ToRGB<float>().convert(frame,
-                                                            tnsr.data_ptr());
+
             frameCount++;
         }
-        double end = timer.elapsed();
-        std::cout << "Decoding completed. Total frames decoded: " << frameCount
-                  << std::endl;
-        std::cout << "Time taken: " << end << " seconds" << std::endl;
-        std::cout << "FPS: " << frameCount / end << std::endl;
+
+        double duration = timer.elapsed();
+        // Finalize encoding
+
+        std::cout << "Decoding and encoding completed. Total frames processed: "
+                  << frameCount << std::endl;
+        std::cout << "Total time taken: " << duration << " s" << std::endl;
+        std::cout << "FPS : " << frameCount / duration << std::endl;
     }
     catch (const ffmpy::error::FFException& ex)
     {
