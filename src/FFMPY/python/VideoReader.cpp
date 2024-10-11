@@ -20,13 +20,13 @@ VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
             npDataType = py::dtype::of<uint8_t>();
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<uint8_t>>();
         }
-        else if (dataType == "float")
+        else if (dataType == "float32")
         {
             torchDataType = torch::kFloat32;
             npDataType = py::dtype::of<float>();
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<float>>();
         }
-        else if (dataType == "half")
+        else if (dataType == "float16")
         {
             torchDataType = torch::kFloat16;
             npDataType = py::dtype("float16");
@@ -41,12 +41,18 @@ VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
         decoder = std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType,
 													   std::move(convert));
         properties = decoder->getVideoProperties();
-        // Initialize RGB Tensor on CUDA with the appropriate data type
-        rgb_tensor = torch::empty(
-            {properties.height, properties.width, 3},
-            torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
-        // Initialize numpy buffer with the appropriate data type
-        npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
+        if (as_numpy)
+        {
+          // Initialize numpy buffer with the appropriate data type
+          npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
+        }
+        else
+        {
+          // Initialize RGB Tensor on CUDA with the appropriate data type
+          RGBTensor = torch::empty(
+              {properties.height, properties.width, 3},
+              torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
+        }
     }
     catch (const std::exception& ex)
     {
@@ -76,19 +82,19 @@ void VideoReader::close()
 
 py::object VideoReader::readFrame()
 {
-    if (decoder->decodeNextFrame(rgb_tensor.data_ptr()))
+    if (decoder->decodeNextFrame(RGBTensor.data_ptr()))
     { // Frame decoded successfully
 
         if (!as_numpy)
         {
-            return py::cast(rgb_tensor); // User wants NumPy array
+            return py::cast(RGBTensor); // User wants Torch Tensor output
         }
-        
+
         else
         {
-            size_t size = rgb_tensor.nbytes(); // Get the size in bytes
+            size_t size = RGBTensor.nbytes(); // Get the size in bytes
 
-            copyTo(rgb_tensor.data_ptr(), npBuffer.mutable_data(), size,
+            copyTo(RGBTensor.data_ptr(), npBuffer.mutable_data(), size,
                    CopyType::HOST);
 
             return npBuffer;
@@ -119,6 +125,8 @@ py::dict VideoReader::getProperties() const
     props["duration"] = properties.duration;
     props["totalFrames"] = properties.totalFrames;
     props["pixelFormat"] = av_get_pix_fmt_name(properties.pixelFormat);
+    // props["codec"] = properties.codec; - not necessary ig
+    props["audio"] = properties.audio; // returns a bool value
     return props;
 }
 

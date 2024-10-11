@@ -19,6 +19,7 @@ class Decoder
         double duration;
         int totalFrames;
         AVPixelFormat pixelFormat;
+        bool audio;
     };
 
     // Updated constructor to accept shared_ptr

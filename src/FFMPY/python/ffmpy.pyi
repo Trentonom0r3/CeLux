@@ -1,5 +1,3 @@
-
-
 from dataclasses import dataclass
 from typing import Any, Optional, List, Dict, Union
 import numpy as np
@@ -7,18 +5,24 @@ import torch
 
 @dataclass
 class ReaderConfig:
-    as_numpy: bool = False # If True, returns frames as NumPy array, else as torch.Tensor
+    as_numpy: bool = (
+        False  # If True, returns frames as NumPy array, else as torch.Tensor
+    )
     dtype: str = "uint8"
     to_cpu: bool = False
-    
+    """
+    useHardware: bool = True
+    hwType="cuda",
+    """
+
     def __post_init__(self):
-        if self.dtype not in ["uint8", "float", "half"]:
+        if self.dtype not in ["uint8", "float32", "float16"]:
             raise ValueError(f"Invalid dtype: {self.dtype}")
         if self.as_numpy:
             self.to_cpu = True
-            
+
 class VideoReader:
-    def __init__(self, input_video : str, config: Optional[ReaderConfig] = None):
+    def __init__(self, input_video: str, config: Optional[ReaderConfig] = None):
         self.input_video = input_video
         self.config = ReaderConfig() if config is None else config
 
@@ -45,7 +49,7 @@ class VideoReader:
         :return: A list of codec names.
         """
         ...
-    
+
     def getProperties(self) -> Dict[str, Union[int, float]]:
         """
         Get properties of the video.
@@ -62,7 +66,7 @@ class VideoReader:
         """
         ...
 
-    def __iter__(self) -> 'VideoReader':
+    def __iter__(self) -> "VideoReader":
         """
         Return the iterator object itself.
 
@@ -79,7 +83,7 @@ class VideoReader:
         """
         ...
 
-    def __enter__(self) -> 'VideoReader':
+    def __enter__(self) -> "VideoReader":
         """
         Enter the runtime context related to the VideoReader object.
 
@@ -88,10 +92,10 @@ class VideoReader:
         ...
 
     def __exit__(
-        self, 
-        exc_type: Optional[type], 
-        exc_value: Optional[BaseException], 
-        traceback: Optional[Any]
+        self,
+        exc_type: Optional[type],
+        exc_value: Optional[BaseException],
+        traceback: Optional[Any],
     ) -> bool:
         """
         Exit the runtime context and handle exceptions.

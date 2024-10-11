@@ -44,6 +44,8 @@ ffmpy::Decoder::Decoder(
                       ? static_cast<double>(formatCtx->duration) / AV_TIME_BASE
                       : 0.0;
     vp.pixelFormat = codecCtx->pix_fmt;
+    vp.audio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
+                AVMEDIA_TYPE_AUDIO);
 
     // Calculate total frames if possible
     if (vp.fps > 0 && vp.duration > 0)
@@ -259,7 +261,7 @@ bool Decoder::decodeNextFrame(void* buffer)
                 avcodec_send_packet(codecCtx.get(), nullptr);
             }
             else
-            {   
+            {
                 throw ffmpy::error::FFException(ret);
                 break; // Exit the loop on error
             }
@@ -292,7 +294,7 @@ bool Decoder::decodeNextFrame(void* buffer)
                 break;
             }
             else if (ret < 0)
-            {   
+            {
                 throw ffmpy::error::FFException(ret);
                 break; // Exit the inner loop on error
             }
@@ -367,7 +369,7 @@ void Decoder::close()
     hwDeviceCtx.reset();
     videoStreamIndex = -1;
     properties = VideoProperties{};
-    //AVPacket* pkt 
+    //AVPacket* pkt
     av_packet_free(&pkt);
 }
 
