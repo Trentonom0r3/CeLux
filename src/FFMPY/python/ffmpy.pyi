@@ -11,8 +11,12 @@ class ReaderConfig:
     dtype: str = "uint8"
     to_cpu: bool = False
     """
-    useHardware: bool = True
-    hwType="cuda",
+    Config options for the VideoReader class.
+
+    :param as_numpy: If True, returns frames as NumPy array, else as torch.Tensor. Default is False.
+    :type as_numpy: bool
+    :param dtype: The data type of the returned frames. Default is "uint8".
+    :type dtype: str
     """
 
     def __post_init__(self):
@@ -23,6 +27,14 @@ class ReaderConfig:
 
 class VideoReader:
     def __init__(self, input_video: str, config: Optional[ReaderConfig] = None):
+        """
+        Initialize the VideoReader object.
+
+        :param input_video: The path to the input video file.
+        :type input_video: str
+        :param config: Configuration options for the VideoReader. If None, default configuration is used.
+        :type config: Optional[ReaderConfig]
+        """
         self.input_video = input_video
         self.config = ReaderConfig() if config is None else config
 

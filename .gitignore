@@ -5,3 +5,4 @@ Input_short.mp4
 ffmpy.egg-info/*
 build/*
 ffmpy/*
+*.mp4
