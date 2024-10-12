@@ -19,6 +19,7 @@ class Decoder
         double duration;
         int totalFrames;
         AVPixelFormat pixelFormat;
+        bool hasAudio;
     };
 
     // Updated constructor to accept shared_ptr
@@ -82,14 +83,25 @@ class Decoder
         }
     };
 
+    struct AVPacketDeleter
+    {
+        void operator()(AVPacket* pkt) const
+        {
+			av_packet_free(&pkt);
+		}
+	};
+
+
+
     using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
     using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
     using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
+    using AVPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
 
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;
     AVBufferRefPtr hwDeviceCtx;
-    AVPacket* pkt;
+    AVPacketPtr pkt;
     int videoStreamIndex;
     VideoProperties properties;
     std::string hwAccelType;

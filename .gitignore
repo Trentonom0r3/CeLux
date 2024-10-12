@@ -4,4 +4,7 @@ setup.py
 Input_short.mp4
 ffmpy.egg-info/*
 build/*
-ffmpy/*
+dist/*
+ffmpy.egg-info/*
+ffmpy/*.dll
+ffmpy/*.pyd

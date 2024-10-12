@@ -253,6 +253,4 @@ target_link_libraries(ffmpy PUBLIC
     CUDA::cudart
     ${FFMPEG_STATIC_LIBS}
     ${PYTHON_LIBRARY}
-    # ${FFMPEG_DEPENDENCIES}      # Uncomment if you have additional dependencies
-    # ${LIBVPX_LIBRARY}           # Uncomment and set if using libvpx
 )

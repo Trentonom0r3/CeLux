@@ -56,7 +56,7 @@ ffmpy::Decoder::Decoder(
     }
 
     properties = vp;
-    pkt = av_packet_alloc();
+    pkt.reset(av_packet_alloc());
     // **Critical Step:** Set the time_base to match the stream's time_base
     codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
 
@@ -246,11 +246,15 @@ void Decoder::initCodecContext(const AVCodec* codec)
 bool Decoder::decodeNextFrame(void* buffer)
 {
     bool frameProcessed = false;
+    if (buffer == nullptr)
+    {
+		throw FFException("Buffer is null");
+	}
 
     while (!frameProcessed)
     {
         // Attempt to read a packet from the video file
-        int ret = av_read_frame(formatCtx.get(), pkt);
+        int ret = av_read_frame(formatCtx.get(), pkt.get());
         if (ret < 0)
         {
             if (ret == AVERROR_EOF)
@@ -269,10 +273,10 @@ bool Decoder::decodeNextFrame(void* buffer)
             // If the packet belongs to the video stream, send it to the Decoder
             if (pkt->stream_index == videoStreamIndex)
             {
-                FF_CHECK(avcodec_send_packet(codecCtx.get(), pkt));
+                FF_CHECK(avcodec_send_packet(codecCtx.get(), pkt.get()));
             }
             // Release the packet back to FFmpeg
-            av_packet_unref(pkt);
+            av_packet_unref(pkt.get());
             av_frame_unref(frame.get());
         }
 
@@ -293,7 +297,7 @@ bool Decoder::decodeNextFrame(void* buffer)
             }
             else if (ret < 0)
             {   
-                throw ffmpy::error::FFException(ret);
+                throw FFException(ret);
                 break; // Exit the inner loop on error
             }
             converter->convert(frame, buffer);
@@ -307,7 +311,7 @@ bool Decoder::decodeNextFrame(void* buffer)
             break;
         }
     }
-    av_packet_unref(pkt);
+    av_packet_unref(pkt.get());
     av_frame_unref(frame.get());
     return frameProcessed;
 }
@@ -367,8 +371,6 @@ void Decoder::close()
     hwDeviceCtx.reset();
     videoStreamIndex = -1;
     properties = VideoProperties{};
-    //AVPacket* pkt 
-    av_packet_free(&pkt);
 }
 
 /**

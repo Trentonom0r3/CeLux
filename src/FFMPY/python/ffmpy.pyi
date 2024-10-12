@@ -1,26 +1,12 @@
 
-
-from dataclasses import dataclass
 from typing import Any, Optional, List, Dict, Union
 import numpy as np
 import torch
 
-@dataclass
-class ReaderConfig:
-    as_numpy: bool = False # If True, returns frames as NumPy array, else as torch.Tensor
-    dtype: str = "uint8"
-    to_cpu: bool = False
-    
-    def __post_init__(self):
-        if self.dtype not in ["uint8", "float", "half"]:
-            raise ValueError(f"Invalid dtype: {self.dtype}")
-        if self.as_numpy:
-            self.to_cpu = True
             
 class VideoReader:
-    def __init__(self, input_video : str, config: Optional[ReaderConfig] = None):
+    def __init__(self, input_video : str, as_numpy: bool = False, d_type : str = 'float32') -> None:
         self.input_video = input_video
-        self.config = ReaderConfig() if config is None else config
 
     def readFrame(self) -> Union[torch.Tensor, np.ndarray, None]:
         """

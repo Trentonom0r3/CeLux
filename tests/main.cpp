@@ -5,6 +5,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <Timer.hpp>
+#include <Encoder.hpp>
+#include <RGBToNV12.hpp>
+
 
 using namespace ffmpy;
 
@@ -14,6 +17,17 @@ int main()
         "C:\\Users\\tjerf\\source\\repos\\FrameSmith\\Input.mp4"; // Update with your input file
     std::string outputFilePath =
         "C:\\Users\\tjerf\\source\\repos\\FrameSmith\\Output.mp4"; // Update with your output file
+    ffmpy::Encoder::VideoProperties props;
+    props.width = 1920;
+    props.height = 1080;
+    props.fps = 30.0;
+    props.pixelFormat = AV_PIX_FMT_CUDA; // Or any other supported format
+    props.codecName = "h264_nvenc";      // Ensure this encoder is supported
+
+    std::unique_ptr<ffmpy::conversion::IConverter> converter =
+        std::make_unique<ffmpy::conversion::RGBToNV12<uint8_t>>();
+
+    ffmpy::Encoder encoder(outputFilePath, props, true, "cuda", std::move(converter));
 
     try
     {
@@ -40,7 +54,7 @@ int main()
         Timer timer;
         while (TestDecoder.decodeNextFrame(data)) //decoder handles conversion internally
         {
-
+            encoder.encodeFrame(data);
             frameCount++;
         }
 

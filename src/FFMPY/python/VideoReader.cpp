@@ -1,3 +1,4 @@
+
 // VideoReader.cpp
 
 #include "Python/VideoReader.hpp"
@@ -20,13 +21,13 @@ VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
             npDataType = py::dtype::of<uint8_t>();
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<uint8_t>>();
         }
-        else if (dataType == "float")
+        else if (dataType == "float32")
         {
             torchDataType = torch::kFloat32;
             npDataType = py::dtype::of<float>();
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<float>>();
         }
-        else if (dataType == "half")
+        else if (dataType == "float16")
         {
             torchDataType = torch::kFloat16;
             npDataType = py::dtype("float16");
@@ -117,8 +118,8 @@ py::dict VideoReader::getProperties() const
     props["height"] = properties.height;
     props["fps"] = properties.fps;
     props["duration"] = properties.duration;
-    props["totalFrames"] = properties.totalFrames;
-    props["pixelFormat"] = av_get_pix_fmt_name(properties.pixelFormat);
+    props["total_frames"] = properties.totalFrames;
+    props["pixel_format"] = av_get_pix_fmt_name(properties.pixelFormat);
     return props;
 }
 
@@ -164,10 +165,22 @@ void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
 void VideoReader::copyTo(void* src, void* dst, size_t size, CopyType type)
 {
     cudaError_t err;
-    err = cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, convert->getStream());
+    err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+    {
+		throw std::runtime_error("Error copying data to host: " + std::string(cudaGetErrorString(err)));
+	}
 }
 
 int VideoReader::length() const
 {
     return properties.totalFrames;
+}
+
+void VideoReader::sync()
+{
+    if (convert)
+    {
+		convert->synchronize();
+	}
 }
