@@ -30,10 +30,10 @@ try:
 except ImportError:
     logging.warning("Torch not found. Installing torch...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
-    import torch
+    import torch  # noqa
 
 # Importing at the bottom so FFMPY won't cry about it
-import ffmpy
+import ffmpy  # noqa
 
 
 def downloadVideo(url, outputPath):
