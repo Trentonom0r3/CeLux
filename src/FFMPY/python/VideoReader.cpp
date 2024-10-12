@@ -1,3 +1,4 @@
+
 // VideoReader.cpp
 
 #include "Python/VideoReader.hpp"
@@ -123,10 +124,8 @@ py::dict VideoReader::getProperties() const
     props["height"] = properties.height;
     props["fps"] = properties.fps;
     props["duration"] = properties.duration;
-    props["totalFrames"] = properties.totalFrames;
-    props["pixelFormat"] = av_get_pix_fmt_name(properties.pixelFormat);
-    // props["codec"] = properties.codec; - not necessary ig
-    props["audio"] = properties.audio; // returns a bool value
+    props["total_frames"] = properties.totalFrames;
+    props["pixel_format"] = av_get_pix_fmt_name(properties.pixelFormat);
     return props;
 }
 
@@ -172,10 +171,22 @@ void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
 void VideoReader::copyTo(void* src, void* dst, size_t size, CopyType type)
 {
     cudaError_t err;
-    err = cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, convert->getStream());
+    err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess)
+    {
+		throw std::runtime_error("Error copying data to host: " + std::string(cudaGetErrorString(err)));
+	}
 }
 
 int VideoReader::length() const
 {
     return properties.totalFrames;
+}
+
+void VideoReader::sync()
+{
+    if (convert)
+    {
+		convert->synchronize();
+	}
 }

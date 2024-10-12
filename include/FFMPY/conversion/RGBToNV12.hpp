@@ -2,15 +2,25 @@
 
 #pragma once
 
-#include "conversion.hpp"
 #include "Frame.hpp"
+#include "conversion.hpp"
 #include <cuda_runtime.h>
 #include <type_traits>
 
 extern "C"
 {
-
+                     
+    void rgb_to_nv12(const unsigned char* rgbInput, int width, int height,
+                     int rgbStride, unsigned char* yPlane, unsigned char* uvPlane,
+                     int yStride, int uvStride, cudaStream_t stream = 0);
+    void rgb_to_nv12_float(const float* rgbInput, int width, int height, int rgbStride,
+                           unsigned char* yPlane, unsigned char* uvPlane, int yStride,
+                           int uvStride, cudaStream_t stream = 0);
+    void rgb_to_nv12_half(const __half* rgbInput, int width, int height, int rgbStride,
+                          unsigned char* yPlane, unsigned char* uvPlane, int yStride,
+                          int uvStride, cudaStream_t stream = 0);
 }
+
 namespace ffmpy
 {
 namespace conversion
@@ -43,8 +53,9 @@ template <typename T> RGBToNV12<T>::~RGBToNV12()
 
 template <typename T> void RGBToNV12<T>::convert(ffmpy::Frame& frame, void* buffer)
 {
-    const unsigned char* yPlane = frame.getData(0);
-    const unsigned char* uvPlane = frame.getData(1);
+    const unsigned char* rgbInput = static_cast<const unsigned char*>(buffer);
+    unsigned char* yPlane = frame.getData(0);
+    unsigned char* uvPlane = frame.getData(1);
     int yStride = frame.getLineSize(0);
     int uvStride = frame.getLineSize(1);
     int width = frame.getWidth();
@@ -54,22 +65,22 @@ template <typename T> void RGBToNV12<T>::convert(ffmpy::Frame& frame, void* buff
     if constexpr (std::is_same<T, uint8_t>::value)
     {
         // Call the kernel for uint8_t
-       // nv12_to_rgb(yPlane, uvPlane, width, height, yStride, uvStride,
-           //         static_cast<uint8_t*>(buffer), rgbStride, this->conversionStream);
+        rgb_to_nv12(rgbInput, width, height, rgbStride, yPlane, uvPlane, yStride,
+                    uvStride, this->conversionStream);
     }
     else if constexpr (std::is_same<T, float>::value)
     {
         // Call the kernel for float
-      //  nv12_to_rgb_float(yPlane, uvPlane, width, height, yStride, uvStride,
-              //            static_cast<float*>(buffer), rgbStride,
-               //           this->conversionStream);
+        rgb_to_nv12_float(reinterpret_cast<const float*>(rgbInput), width, height,
+                          rgbStride, yPlane, uvPlane, yStride, uvStride,
+                          this->conversionStream);
     }
     else if constexpr (std::is_same<T, __half>::value)
     {
         // Call the kernel for __half
-      //  nv12_to_rgb_half(yPlane, uvPlane, width, height, yStride, uvStride,
-        //                 static_cast<__half*>(buffer), rgbStride,
-       //                  this->conversionStream);
+        rgb_to_nv12_half(reinterpret_cast<const __half*>(rgbInput), width, height,
+                         rgbStride, yPlane, uvPlane, yStride, uvStride,
+                         this->conversionStream);
     }
     else
     {

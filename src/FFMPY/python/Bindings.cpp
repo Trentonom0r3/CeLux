@@ -9,11 +9,11 @@ PYBIND11_MODULE(ffmpy, m)
 {
     py::class_<VideoReader>(m, "VideoReader")
         .def(py::init<const std::string&, bool, std::string&>(),
-             py::arg("filePath"), py::arg("as_numpy") = false, py::arg("dtype") = "uint8")
-        .def("readFrame", &VideoReader::readFrame, py::return_value_policy::copy)
+             py::arg("input_path"), py::arg("as_numpy") = false, py::arg("d_type") = "uint8")
+        .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
-        .def("supportedCodecs", &VideoReader::supportedCodecs)
-        .def("getProperties", &VideoReader::getProperties)
+        .def("supported_codecs", &VideoReader::supportedCodecs)
+        .def("get_properties", &VideoReader::getProperties)
         // Magic methods
         .def("__len__", &VideoReader::length)
         .def(

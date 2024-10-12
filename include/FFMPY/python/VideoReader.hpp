@@ -104,6 +104,8 @@ class VideoReader
               const py::object& traceback);
     int length() const;
 
+    void sync();
+
   private:
     /**
      * @brief Copy data from source to destination based on the copy type.
