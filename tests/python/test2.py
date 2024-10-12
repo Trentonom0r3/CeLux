@@ -9,10 +9,6 @@ import subprocess
 import os
 import logging
 
-# Nicer prints
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 # Try to import requests, if not found install it
 try:
@@ -33,7 +29,12 @@ except ImportError:
     import torch  # noqa
 
 # Importing at the bottom so FFMPY won't cry about it
-import ffmpy  # noqa
+import ffmpy
+
+# Nicer prints
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def downloadVideo(url, outputPath):
@@ -63,14 +64,18 @@ def getVideoUrl():
 
     Returns:
         str: The URL of the video.
+
+    URL From:
+        https://gist.github.com/jsturgis/3b19447b304616f18657
     """
+
     videoUrls = [
         "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
     ]
     return videoUrls[0]
 
 
-def processVideo(videoPath):
+def processVideoTorch(videoPath):
     """
     Processes the video to count frames and measure performance.
 
@@ -96,6 +101,36 @@ def processVideo(videoPath):
         raise
 
 
+def processVideoNumPy(videoPath):
+    """
+    Processes the video to count frames and measure performance.
+
+    Args:
+        videoPath (str): The path to the video file.
+    """
+    try:
+        frameCount = 0
+        start = time.time()
+        # Hardcoded to as_numpy false until fixed
+        # Until then, this still decodes on GPU
+        with ffmpy.VideoReader(videoPath, as_numpy=False, dtype="uint8") as reader:
+            for frame in reader:
+                if frameCount == 0:
+                    logging.info(
+                        f"Frame data: {frame.shape, frame.dtype, frame.device}"
+                    )
+                    # Just to make sure it's a numpy array
+                frame = frame.cpu().numpy()
+                frameCount += 1
+        end = time.time()
+        logging.info(f"Time taken: {end-start} seconds")
+        logging.info(f"Total Frames: {frameCount}")
+        logging.info(f"FPS: {frameCount/(end-start)}")
+    except Exception as e:
+        logging.error(f"Error processing video: {e}")
+        raise
+
+
 def main():
     videoUrl = getVideoUrl()
     videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
@@ -105,7 +140,13 @@ def main():
     else:
         logging.info(f"Video already exists at {videoPath}")
 
-    processVideo(videoPath)
+    logging.info("Processing video with torch frames")
+    processVideoTorch(videoPath)
+
+    print("\n\n")
+
+    logging.info("Processing video with numpy frames")
+    processVideoNumPy(videoPath)
 
 
 if __name__ == "__main__":
