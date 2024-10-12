@@ -15,36 +15,15 @@ Audio: True
 """
 
 import logging
-import subprocess
-import sys
 import os
+import cv2
+import requests
+import torch
+import ffmpy
 
-# Try to import stuff, if not found, pip install them
-# Maybe not the best way to do this, but it works for now rather than having random .txt files laying around
-try:
-    import torch
-except ImportError:
-    logging.warning("Torch not found. Installing torch...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
-    import torch  # noqa
-
-try:
-    import cv2
-except ImportError:
-    logging.warning("OpenCV not found. Installing opencv-python...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python"])
-    import cv2  # noqa
-
-try:
-    import requests
-except ImportError:
-    logging.warning("Requests not found. Installing requests...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
-    from requests.exceptions import RequestException
+from requests.exceptions import RequestException
 
 # Needs to be a wheel file
-import ffmpy
 
 # Nicer prints
 logging.basicConfig(

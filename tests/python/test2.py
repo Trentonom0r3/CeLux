@@ -4,32 +4,13 @@ Should be useful inside Github Actions to keep track of the performance of the V
 """
 
 import time
-import sys
-import subprocess
 import os
 import logging
-
-
-# Try to import requests, if not found install it
-try:
-    import requests
-except ImportError:
-    logging.warning("Requests not found. Installing requests...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
-    from requests.exceptions import RequestException
-
-
-# Try to import torch, if not found install it
-try:
-    import torch
-except ImportError:
-    logging.warning("Torch not found. Installing torch...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
-    import torch  # noqa
-
-# Importing at the bottom so FFMPY won't cry about it
+import requests
+import torch
 import ffmpy
+
+from requests.exceptions import RequestException
 
 # Nicer prints
 logging.basicConfig(
