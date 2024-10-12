@@ -9,9 +9,9 @@ Total Frames: 14315
 Width: 1280
 Height: 720
 Channels: 3
-FPS: N/A
-Duration: N/A
-Audio: N/A
+FPS: 24
+Duration: +- 596 seconds
+Audio: True
 """
 
 import logging
