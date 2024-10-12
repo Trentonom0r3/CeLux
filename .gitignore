@@ -1,10 +1,10 @@
 .vs/*
 out/*
-setup.py
-Input_short.mp4
+#setup.py
 ffmpy.egg-info/*
 build/*
 dist/*
 ffmpy.egg-info/*
 ffmpy/*.dll
 ffmpy/*.pyd
+*.mp4

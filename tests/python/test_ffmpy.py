@@ -2,12 +2,13 @@ import unittest
 import ffmpy
 import sys
 
+
 class TestVideoReader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Extract the video path from the command-line arguments once for all tests."""
         # Ensure the video path is provided as an argument
-        if not hasattr(cls, 'video_path'):
+        if not hasattr(cls, "video_path"):
             print("Usage: python test_ffmpy.py <video_path>")
             sys.exit(1)
 
@@ -66,6 +67,7 @@ class TestVideoReader(unittest.TestCase):
     def tearDown(self):
         """Clean up after each test."""
         self.reader = None
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

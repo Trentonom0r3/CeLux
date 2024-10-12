@@ -31,7 +31,7 @@ class VideoReader:
         :return: A list of codec names.
         """
         ...
-    
+
     def getProperties(self) -> Dict[str, Union[int, float]]:
         """
         Get properties of the video.
@@ -48,7 +48,7 @@ class VideoReader:
         """
         ...
 
-    def __iter__(self) -> 'VideoReader':
+    def __iter__(self) -> "VideoReader":
         """
         Return the iterator object itself.
 
@@ -65,7 +65,7 @@ class VideoReader:
         """
         ...
 
-    def __enter__(self) -> 'VideoReader':
+    def __enter__(self) -> "VideoReader":
         """
         Enter the runtime context related to the VideoReader object.
 
@@ -74,10 +74,10 @@ class VideoReader:
         ...
 
     def __exit__(
-        self, 
-        exc_type: Optional[type], 
-        exc_value: Optional[BaseException], 
-        traceback: Optional[Any]
+        self,
+        exc_type: Optional[type],
+        exc_value: Optional[BaseException],
+        traceback: Optional[Any],
     ) -> bool:
         """
         Exit the runtime context and handle exceptions.
