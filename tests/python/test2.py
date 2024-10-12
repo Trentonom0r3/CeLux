@@ -4,6 +4,7 @@ Should be useful inside Github Actions to keep track of the performance of the V
 """
 
 import time
+import argparse
 import os
 import logging
 import requests
@@ -37,23 +38,6 @@ def downloadVideo(url, outputPath):
     except RequestException as e:
         logging.error(f"Failed to download video: {e}")
         raise
-
-
-def getVideoUrl():
-    """
-    Returns the URL of a public domain video.
-
-    Returns:
-        str: The URL of the video.
-
-    URL From:
-        https://gist.github.com/jsturgis/3b19447b304616f18657
-    """
-
-    videoUrls = [
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    ]
-    return videoUrls[0]
 
 
 def processVideoTorch(videoPath):
@@ -109,9 +93,13 @@ def processVideoNumPy(videoPath):
         raise
 
 
-def main():
-    videoUrl = getVideoUrl()
-    videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
+def main(args):
+    if args.mode == "lite":
+        videoUrl = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        videoPath = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
+    else:
+        videoUrl = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
 
     if not os.path.exists(videoPath):
         downloadVideo(videoUrl, videoPath)
@@ -128,4 +116,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+
+    # Add 'lite' for github actions and 'full' for local testing
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="lite",
+        help="The mode to run the test in. 'lite' for github actions and 'full' for local testing.",
+        choices=["lite", "full"],
+    )
+    args = parser.parse_args()
+
+    main(args)

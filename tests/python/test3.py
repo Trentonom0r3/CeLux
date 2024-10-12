@@ -52,23 +52,6 @@ def downloadVideo(url, outputPath):
         raise
 
 
-def getVideoUrl():
-    """
-    Returns the URL of a public domain video.
-
-    Returns:
-        str: The URL of the video.
-
-    URL From:
-        https://gist.github.com/jsturgis/3b19447b304616f18657
-    """
-
-    videoUrls = [
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    ]
-    return videoUrls[0]
-
-
 def getMetadataCV2(videoPath):
     """
     Get metadata from the video file.
@@ -116,10 +99,10 @@ def getMetadataFFMPY(videoPath):
 
     video = ffmpy.VideoReader(videoPath)
 
-    metadata = video.getProperties()
+    metadata = video.get_properties()
 
     logging.info("FFMPY Metadata:")
-    logging.info(f"Total Frames: {metadata['totalFrames']}")
+    logging.info(f"Total Frames: {metadata['total_frames']}")
     logging.info(f"Width: {metadata['width']}")
     logging.info(f"Height: {metadata['height']}")
     # logging.info(f"Channels: {metadata['channels']}")
@@ -130,7 +113,7 @@ def getMetadataFFMPY(videoPath):
 
 
 if __name__ == "__main__":
-    videoUrl = getVideoUrl()
+    videoUrl = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
     videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
 
     if not os.path.exists(videoPath):
