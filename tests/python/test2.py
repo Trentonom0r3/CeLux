@@ -1,17 +1,13 @@
 """
-This test is to check the performance of the VideoReader class with numpy frames.
+This test is to check the performance of the VideoReader class with torch frames.
 Should be useful inside Github Actions to keep track of the performance of the VideoReader class.
-
 """
 
-import torch
 import time
 import sys
-import ffmpy
 import subprocess
 import os
 import logging
-from requests.exceptions import RequestException
 
 # Nicer prints
 logging.basicConfig(
@@ -25,6 +21,19 @@ except ImportError:
     logging.warning("Requests not found. Installing requests...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
     import requests
+    from requests.exceptions import RequestException
+
+
+# Try to import torch, if not found install it
+try:
+    import torch
+except ImportError:
+    logging.warning("Torch not found. Installing torch...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "torch"])
+    import torch
+
+# Importing at the bottom so FFMPY won't cry about it
+import ffmpy
 
 
 def downloadVideo(url, outputPath):
