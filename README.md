@@ -183,7 +183,7 @@ Contributions are welcome! Please follow these steps to contribute to the projec
 - **Pre-Release Update:**
   - Adjusted Python bindings to use snake_case.
   - Added `.pyi` stub files to `.whl`.
-  - Adusted `d_type` args to (`uint8`, `float32`, `float16`).
+  - Adjusted  `d_type` args to (`uint8`, `float32`, `float16`).
   - Added github actions for new releases.
   - Added HW Accel Encoder support, direct encoding from numpy/Tensors.
   - Added `has_audio` property to `VideoReader.get_properties()`.
