@@ -204,6 +204,7 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **FFmpeg:** This project is built on top of the powerful [FFmpeg](https://ffmpeg.org/) library.
 - **PyTorch:** Utilizes [PyTorch](https://pytorch.org/) for tensor operations and CUDA support.
 - **Vcpkg:** Simplifies cross-platform dependency management.
+- **[NevermindNilas](https://github.com/NevermindNilas)** - for help testing, API suggestions + more. 
 
 ## FAQ
 
