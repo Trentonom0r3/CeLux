@@ -2,7 +2,7 @@ name: Release and Benchmark Tests
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'dist/**'
   workflow_dispatch:
