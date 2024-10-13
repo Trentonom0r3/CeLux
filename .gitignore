@@ -3,8 +3,5 @@ out/*
 #setup.py
 ffmpy.egg-info/*
 build/*
-dist/*
 ffmpy.egg-info/*
-ffmpy/*.dll
-ffmpy/*.pyd
 *.mp4

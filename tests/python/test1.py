@@ -16,7 +16,7 @@ def main():
         with ffmpy.VideoReader(
             r"C:\Users\tjerf\source\repos\FrameSmith\Input.mp4",
             as_numpy=False,
-            dtype="uint8",
+            d_type="uint8",
         ) as reader_cm:
             for frame in reader_cm:
                 cv2.imshow("Frame", frame.cpu().numpy())
