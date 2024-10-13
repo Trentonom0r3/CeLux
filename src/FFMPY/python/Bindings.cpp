@@ -1,25 +1,24 @@
-// bindings.cpp
-
 #include "Python/VideoReader.hpp"
+#include "Python/VideoWriter.hpp"
+#include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
 
 PYBIND11_MODULE(ffmpy, m)
 {
+    // VideoReader bindings
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, bool, std::string&>(),
-             py::arg("input_path"), py::arg("as_numpy") = false, py::arg("d_type") = "uint8")
+        .def(py::init<const std::string&, bool, std::string&>(), py::arg("input_path"),
+             py::arg("as_numpy") = false, py::arg("d_type") = "uint8")
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)
         .def("get_properties", &VideoReader::getProperties)
-        // Magic methods
         .def("__len__", &VideoReader::length)
         .def(
             "__iter__", [](VideoReader& self) -> VideoReader& { return self; },
-            py::return_value_policy::reference_internal,
-            "Return the iterator object itself.")
+            py::return_value_policy::reference_internal)
         .def("__next__", &VideoReader::next)
         .def(
             "__enter__",
@@ -28,15 +27,27 @@ PYBIND11_MODULE(ffmpy, m)
                 self.enter();
                 return self;
             },
-            py::return_value_policy::reference_internal,
-            "Enter the context manager and set 'as_numpy' flag.")
+            py::return_value_policy::reference_internal)
+        .def("__exit__", &VideoReader::exit)
+        .def("sync", &VideoReader::sync)
+        .def("reset", &VideoReader::reset);
 
+    // VideoWriter bindings
+    py::class_<VideoWriter>(m, "VideoWriter")
+        .def(py::init<const std::string&, int, int, float, bool, std::string>(),
+             py::arg("file_path"), py::arg("width"), py::arg("height"), py::arg("fps"),
+             py::arg("as_numpy") = false, py::arg("dtype") = "uint8")
+        .def("write_frame", &VideoWriter::writeFrame, py::arg("frame"))
+        .def("supported_codecs", &VideoWriter::supportedCodecs)
+        .def("__call__", &VideoWriter::writeFrame, py::arg("frame"))
+        .def(
+            "__enter__", [](VideoWriter& self) -> VideoWriter& { return self; },
+            py::return_value_policy::reference_internal)
         .def("__exit__",
-             [](VideoReader& self, py::object exc_type, py::object exc_value,
+             [](VideoWriter& self, py::object exc_type, py::object exc_value,
                 py::object traceback)
              {
-                 self.exit(exc_type, exc_value, traceback);
-                 // Do not suppress exceptions
+                 self.close();
                  return false;
              });
 }

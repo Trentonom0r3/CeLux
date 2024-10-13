@@ -2,28 +2,27 @@
 #include "Python/VideoWriter.hpp"
 #include <torch/extension.h>
 
-VideoWriter::VideoWriter(const std::string& filePath, py::dict config)
+VideoWriter::VideoWriter(const std::string& filePath, int width, int height, float fps, bool as_numpy, std::string dtype)
 	: encoder(nullptr), as_numpy(as_numpy)
 {
     try
     {
         torch::Dtype torchDataType;
         py::dtype npDataType;
-        std::string dataType = config["dtype"].cast<std::string>();
 
-        if (dataType == "uint8")
+        if (dtype == "uint8")
         {
             torchDataType = torch::kUInt8;
             npDataType = py::dtype::of<uint8_t>();
             convert = std::make_unique<ffmpy::conversion::RGBToNV12<uint8_t>>();
         }
-        else if (dataType == "float32")
+        else if (dtype == "float32")
         {
             torchDataType = torch::kFloat32;
             npDataType = py::dtype::of<float>();
             convert = std::make_unique<ffmpy::conversion::RGBToNV12<float>>();
         }
-        else if (dataType == "float16")
+        else if (dtype == "float16")
         {
             torchDataType = torch::kFloat16;
             npDataType = py::dtype("float16");
@@ -31,23 +30,22 @@ VideoWriter::VideoWriter(const std::string& filePath, py::dict config)
         }
         else
         {
-            throw std::invalid_argument("Unsupported dataType: " + dataType);
+            throw std::invalid_argument("Unsupported dataType: " + dtype);
         }
 
         bool useHardware = true;
         std::string hwType = "cuda";
         ffmpy::Encoder::VideoProperties props;
-        props.width = config["width"].cast<int>();
-        props.height = config["height"].cast<int>();
-        props.fps = config["fps"].cast<double>();
+        props.width = width;
+        props.height = height;
+        props.fps = fps;
         props.pixelFormat = AV_PIX_FMT_CUDA;
         props.codecName = "h264_nvenc";
 
         encoder = std::make_unique<ffmpy::Encoder>(filePath, props, useHardware, hwType,
                                                    std::move(convert));
 
-        //npBuffer
-        cudaMalloc(&npBuffer, props.width * props.height * 3);
+        cudaMalloc(&npBuffer, width * height * 3);
     }
     catch (const std::exception& ex)
     {
@@ -64,31 +62,65 @@ VideoWriter::~VideoWriter()
 
 bool VideoWriter::writeFrame(py::object frame)
 {
-    if (py::isinstance<py::array>(frame))
+    try
     {
-        copyTo(frame.ptr(), npBuffer, py::cast<py::array>(frame).nbytes(), CopyType::HOST);
-        encoder->encodeFrame(npBuffer);
+        if (py::isinstance<py::array>(frame))
+        {
+            // Handle NumPy array case
+            py::array npFrame = py::cast<py::array>(frame);
+            void* src = npFrame.mutable_data();
+            size_t size = npFrame.nbytes();
+
+            // Copy data from CPU (NumPy) to GPU (npBuffer)
+            copyTo(src, npBuffer, size);
+            encoder->encodeFrame(npBuffer);
+        }
+        else
+        {
+            // Handle Torch tensor case
+            torch::Tensor tensorFrame = py::cast<torch::Tensor>(frame);
+
+            // Ensure tensor is contiguous for correct memory layout
+            if (!tensorFrame.is_contiguous())
+            {
+                tensorFrame = tensorFrame.contiguous();
+            }
+
+            // Handle both CPU and GPU tensors appropriately
+            if (tensorFrame.device().is_cpu())
+            {
+                // Copy from CPU tensor to GPU (npBuffer)
+                copyTo(tensorFrame.data_ptr(), npBuffer, tensorFrame.nbytes());
+            }
+            else if (tensorFrame.device().is_cuda())
+            {
+                // If tensor is already on GPU, just get the pointer
+                encoder->encodeFrame(tensorFrame.data_ptr());
+                return true;
+            }
+
+            encoder->encodeFrame(npBuffer);
+            return true;
+        }
+
     }
-    else if (py::isinstance<torch::Tensor>(frame))
+    catch (const std::exception& ex)
     {
-        auto tensor = py::cast<torch::Tensor>(frame);
-		encoder->encodeFrame(tensor.data_ptr());
-	}
-    else
-    {
-		throw std::invalid_argument("Unsupported frame type: " + std::string(py::str(frame)));
+        std::cerr << "Exception in writeFrame: " << ex.what() << std::endl;
+        throw; // Re-throw exception after logging
     }
 }
+
 
 std::vector<std::string> VideoWriter::supportedCodecs()
 {
     return encoder->listSupportedEncoders();
 }
 
-void VideoWriter::copyTo(void* src, void* dst, size_t size, CopyType type)
+void VideoWriter::copyTo(void* src, void* dst, size_t size)
 {
     cudaError_t err;
-    err = cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, convert->getStream());
+    err = cudaMemcpy(dst, src, size, cudaMemcpyHostToHost);
     if (err != cudaSuccess)
     {
 		throw std::runtime_error("Error copying data to host: " + std::string(cudaGetErrorString(err)));
@@ -100,11 +132,9 @@ void VideoWriter::close()
     if (convert)
     {
 		convert->synchronize();
-		convert.reset();
 	}
     if (encoder)
     {
 		encoder->close();
-		encoder.reset();
 	}
 }

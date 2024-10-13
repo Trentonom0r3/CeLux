@@ -31,7 +31,6 @@ Encoder::Encoder(const std::string& outputPath, const VideoProperties& props,
  */
 Encoder::~Encoder()
 {
-    finalize(); // Ensure finalization is done before destruction
     close();
 }
 
@@ -57,7 +56,6 @@ Encoder& Encoder::operator=(Encoder&& other) noexcept
 {
     if (this != &other)
     {
-        finalize();
         close();
 
         formatCtx = std::move(other.formatCtx);
@@ -386,6 +384,7 @@ bool Encoder::isOpen() const
  */
 void Encoder::close()
 {
+    finalize();
     if (packet)
     {
         av_packet_free(&packet);

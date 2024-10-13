@@ -1,2 +1,2 @@
 import torch
-from .ffmpy import VideoReader
+from .ffmpy import VideoReader, VideoWriter

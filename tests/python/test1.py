@@ -4,7 +4,7 @@ import time
 import cv2
 import sys
 #out/build/x64-release
-#sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
+sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
 import ffmpy
 
 
@@ -18,13 +18,12 @@ def main():
             as_numpy=False,
             d_type="uint8",
         ) as reader_cm:
-            for frame in reader_cm:
-                cv2.imshow("Frame", frame.cpu().numpy())
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
-                framecount += 1
+            with ffmpy.VideoWriter("./output.mp4", 1920, 1080, 24.0, as_numpy=False) as writer:
+                for frame in reader_cm:
+                    writer(frame)
+                    framecount += 1
 
-                pass
+                    pass
         end = time.time()
         print("Numpy Frames")
         print(f"Time taken: {end-start} seconds")

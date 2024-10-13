@@ -9,6 +9,7 @@ class VideoProperties(TypedDict):
     duration: float
     total_frames: int
     pixel_format: str
+    has_audio: bool
     
 class VideoReader:
     def __init__(self, input_path: str, as_numpy: bool = False, d_type: str = "uint8") -> None:
@@ -132,3 +133,17 @@ class VideoReader:
         Reset the video reader to the beginning of the video.
         """
         ...
+
+class VideoWriter:
+    def __init__(self, file_path: str, width: int, height: int, fps: float, 
+                 as_numpy: bool = False, dtype: str = "uint8") -> None: ...
+    
+    def write_frame(self, frame: Union[torch.Tensor, numpy.ndarray]) -> bool: ...
+    
+    def supported_codecs(self) -> List[str]: ...
+    
+    def __enter__(self) -> 'VideoWriter': ...
+    
+    def __exit__(self, exc_type: Optional[type], exc_value: Optional[BaseException], traceback: Optional[Any]) -> bool: ...
+    
+    def __call__(self, frame: Union[torch.Tensor, numpy.ndarray]) -> bool: ...

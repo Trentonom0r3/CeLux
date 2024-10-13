@@ -130,7 +130,7 @@ class VideoReader
     std::unique_ptr<ffmpy::conversion::IConverter> convert;
 
     // Buffers
-    torch::Tensor rgb_tensor; // For RGB conversion (GPU)
+    torch::Tensor RGBTensor;  // For RGB conversion (GPU)
     py::array npBuffer;       // For NumPy Output
     ffmpy::Frame frame;       // Decoded frame
 

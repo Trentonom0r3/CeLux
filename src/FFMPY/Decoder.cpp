@@ -44,7 +44,7 @@ ffmpy::Decoder::Decoder(
                       ? static_cast<double>(formatCtx->duration) / AV_TIME_BASE
                       : 0.0;
     vp.pixelFormat = codecCtx->pix_fmt;
-    vp.audio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
+    vp.hasAudio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
                 AVMEDIA_TYPE_AUDIO);
 
     // Calculate total frames if possible

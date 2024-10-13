@@ -11,35 +11,11 @@
 
 namespace py = pybind11;
 
-// Enum for copy types
-enum class CopyType
-{
-    HOST,
-    DEVICE
-};
-
-//py::dict config = py::dict();
-//config["width"] = 1920;
-//config["height"] = 1080;
-//config["fps"] = 30;
-//config["as_numpy"] = true;
-//config["dtype"] = "uint8";
-
-py::dict createConfig(int width, int height, int fps, bool as_numpy, std::string dtype)
-{
-	py::dict config;
-	config["width"] = width;
-	config["height"] = height;
-	config["fps"] = fps;
-	config["as_numpy"] = as_numpy;
-	config["dtype"] = dtype;
-	return config;
-}
 
 class VideoWriter
 {
   public:
-    VideoWriter(const std::string& filePath, py::dict config);
+    VideoWriter(const std::string& filePath, int width, int height, float fps, bool as_numpy, std::string dtype);
 
     ~VideoWriter();
 
@@ -47,14 +23,15 @@ class VideoWriter
 
     std::vector<std::string> supportedCodecs();
 
-  private:
-
-    void copyTo(void* src, void* dst, size_t size, CopyType type);
-
+    
     /**
      * @brief Close the video writer and release resources.
      */
     void close();
+  private:
+
+    void copyTo(void* src, void* dst, size_t size);
+
 
     // Member variables
     std::unique_ptr<ffmpy::Encoder> encoder;

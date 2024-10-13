@@ -42,18 +42,15 @@ VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
         decoder = std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType,
 													   std::move(convert));
         properties = decoder->getVideoProperties();
-        if (as_numpy)
-        {
+
           // Initialize numpy buffer with the appropriate data type
           npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
-        }
-        else
-        {
+       
           // Initialize RGB Tensor on CUDA with the appropriate data type
           RGBTensor = torch::empty(
               {properties.height, properties.width, 3},
               torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
-        }
+        
     }
     catch (const std::exception& ex)
     {
@@ -126,6 +123,7 @@ py::dict VideoReader::getProperties() const
     props["duration"] = properties.duration;
     props["total_frames"] = properties.totalFrames;
     props["pixel_format"] = av_get_pix_fmt_name(properties.pixelFormat);
+    props["has_audio"] = properties.hasAudio;
     return props;
 }
 
