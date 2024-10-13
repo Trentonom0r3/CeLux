@@ -29,17 +29,16 @@ jobs:
         run: |
           $version = (Get-ChildItem dist\*.whl | Select-String -Pattern 'ffmpy-(\d+\.\d+\.\d+)').Matches.Groups[1].Value
           Write-Output "New version detected: $version"
-          echo "::set-output name=version::$version"  # Use set-output to pass version
-        continue-on-error: false  # Ensure script fails if the version is not found
+          echo "version=$version" >> $env:GITHUB_ENV  # Use environment files
 
       - name: Create GitHub Release
         if: always()
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: v${{ steps.get_version.outputs.version }}
-          name: v${{ steps.get_version.outputs.version }}
-          body: "Automated release of version ${{ steps.get_version.outputs.version }}"
+          tag: v${{ env.version }}
+          name: v${{ env.version }}
+          body: "Automated release of version ${{ env.version }}"
           draft: false
           prerelease: false
           artifacts: |
@@ -63,7 +62,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install requests torch opencv-python-headless numpy
-          pip install https://github.com/${{ github.repository }}/releases/download/v${{ needs.release.outputs.version }}/ffmpy-${{ needs.release.outputs.version }}-py3-none-any.whl
+          pip install https://github.com/${{ github.repository }}/releases/download/v${{ env.version }}/ffmpy-${{ env.version }}-py3-none-any.whl
 
       - name: Run video processing tests
         run: |
