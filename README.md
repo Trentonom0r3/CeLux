@@ -178,6 +178,16 @@ Contributions are welcome! Please follow these steps to contribute to the projec
 
 ## Changelog
 
+### Version 0.2.1 (2024-10-13)
+
+- **Pre-Release Update:**
+  - Adjusted Python bindings to use snake_case.
+  - Added `.pyi` stub files to `.whl`.
+  - Adusted `d_type` args to (`uint8`, `float32`, `float16`).
+  - Added github actions for new releases.
+  - Added HW Accel Encoder support, direct encoding from numpy/Tensors.
+  - Added `has_audio` property to `VideoReader.get_properties()`.
+
 ### Version 0.1.1 (2024-10-06)
 
 - **Pre-Release Update:**
@@ -214,16 +224,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 **A:** Please open an issue on the [GitHub Issues](https://github.com/Trentonom0r3/ffmpy/issues) page with detailed information about the bug or feature request.
 
 ## Roadmap
-
-- **Encoder Support:**
-  - Add an encoder, customized for accepting numpy, or tensors directly. 
-  
 - **Additional Conversion Support:**
   - Create additional conversion modules:
-    - NV12ToRGB, RGBToNV12, etc;
-
-- **Support for Additional Codecs:**
-  - Expand the range of supported video codecs.
+    - NV12ToBGR, BGRToNV12, NV12ToNV12(no change converter)
 
 - **Audio Processing:**
   - Introduce capabilities for audio extraction and processing.
@@ -233,6 +236,10 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 - **Cross-Platform Support:**
   - Improve compatibility with different operating systems and hardware configurations.
+
+- **Support for Additional Codecs:**
+  - Expand the range of supported video codecs.
+
 
 
 
