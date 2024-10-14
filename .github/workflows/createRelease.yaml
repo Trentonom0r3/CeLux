@@ -23,9 +23,13 @@ jobs:
         with:
           python-version: '3.12.7'
 
-      - name: Install Dependencies
+      - name: Install Build Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
+
+      - name: Install Test Dependencies
+        run: |
+          python -m pip install requests opencv-python  # Install required packages for tests
 
       - name: Detect New Version from setup.py
         id: get_version
