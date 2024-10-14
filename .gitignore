@@ -6,3 +6,4 @@ build/*
 ffmpy.egg-info/*
 *.mp4
 /dist
+/build
