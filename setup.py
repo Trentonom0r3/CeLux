@@ -7,7 +7,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name="ffmpy",
-    version="0.2.4.1",
+    version="0.2.4.2",
     author="Trenton Flanagan",
     author_email="spigonvids@gmail.com",
     description="HW accelerated video reading for ML Inference.",
