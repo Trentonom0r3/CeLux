@@ -116,10 +116,8 @@ def process_frame(frame):
 # Ensure torch is imported before ffmpy
 with ffmpy.VideoReader(
     "path/to/input/video.mp4",
-    useHardware=True,
-    hwType="cuda",
     as_numpy=False,
-    dtype="uint8"
+    d_type="uint8"
 ) as reader:
     for frame in reader:
         # Frame will be in HWC format, uint8 data type, values in [0, 255]
