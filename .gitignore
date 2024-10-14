@@ -5,3 +5,4 @@ ffmpy.egg-info/*
 build/*
 ffmpy.egg-info/*
 *.mp4
+dist
