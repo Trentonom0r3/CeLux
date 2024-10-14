@@ -3,3 +3,4 @@ numpy
 opencv-python-headless
 setuptools
 wheel
+requests
