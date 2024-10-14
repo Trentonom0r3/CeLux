@@ -4,7 +4,7 @@ import time
 import cv2
 import sys
 #out/build/x64-release
-sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
+#sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
 import ffmpy
 
 
