@@ -39,6 +39,11 @@ jobs:
         run: |
           python setup.py sdist bdist_wheel
 
+      - name: Run Tests
+        run: |
+          python tests/python/test2.py
+          python tests/python/test3.py
+
       - name: Create GitHub Release
         if: always()
         uses: ncipollo/release-action@v1
@@ -52,7 +57,7 @@ jobs:
           artifacts: |
             dist/*.whl
             dist/*.tar.gz
-        continue-on-error: true  # Prevent failure if the tag already exists
+        continue-on-error: true
 
       - name: Handle Existing Tag (Optional)
         if: failure()
