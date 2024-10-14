@@ -4,7 +4,7 @@ import time
 import cv2
 import sys
 #out/build/x64-release
-#sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
+sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
 import ffmpy
 
 
@@ -15,10 +15,10 @@ def main():
         start = time.time()
         with ffmpy.VideoReader(
             r"C:\Users\tjerf\source\repos\FrameSmith\Input.mp4",
-            as_numpy=False,
+            as_numpy=True,
             d_type="uint8",
-        )([10, 20]) as reader_cm:
-            with ffmpy.VideoWriter("./output.mp4", 1920, 1080, 24.0, as_numpy=False) as writer:
+        ) as reader_cm:
+            with ffmpy.VideoWriter("./output.mp4", 1920, 1080, 24.0, as_numpy=True) as writer:
                 for frame in reader_cm:
                     writer(frame)
                     framecount += 1

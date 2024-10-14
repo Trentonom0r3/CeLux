@@ -10,7 +10,7 @@ PYBIND11_MODULE(ffmpy, m)
     // VideoReader bindings
     // VideoReader bindings
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, bool, std::string&>(), py::arg("input_path"),
+        .def(py::init<const std::string&, bool, const std::string&>(), py::arg("input_path"),
              py::arg("as_numpy") = false, py::arg("d_type") = "uint8")
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)

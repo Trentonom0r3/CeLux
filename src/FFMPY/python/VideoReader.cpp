@@ -86,29 +86,31 @@ void VideoReader::close()
 
 py::object VideoReader::readFrame()
 {
-    if (decoder->decodeNextFrame(RGBTensor.data_ptr()))
-    { // Frame decoded successfully
+    int result = decoder->decodeNextFrame(RGBTensor.data_ptr());
 
+    if (result == 1) // Frame decoded successfully
+    {
         if (!as_numpy)
         {
-            return py::cast(RGBTensor); // User wants Torch Tensor output
+            return py::cast(RGBTensor);
         }
-
         else
         {
-            size_t size = RGBTensor.nbytes(); // Get the size in bytes
-
-            copyTo(RGBTensor.data_ptr(), npBuffer.mutable_data(), size,
-                   CopyType::HOST);
-
+            size_t size = RGBTensor.nbytes();
+            copyTo(RGBTensor.data_ptr(), npBuffer.mutable_data(), size, CopyType::HOST);
             return npBuffer;
         }
     }
-    else
-    { // No frame decoded
-        return py::none();
+    else if (result == 0) // End of video stream
+    {
+        throw py::stop_iteration();
+    }
+    else // Decoding failed
+    {
+        throw std::runtime_error("Failed to decode the next frame.");
     }
 }
+
 
 bool VideoReader::seek(double timestamp)
 {
@@ -146,12 +148,14 @@ bool VideoReader::seekToFrame(int frame_number)
         return false; // Out of range
     }
 
-    // Convert the frame number to a timestamp in seconds
+    // Convert frame number to timestamp in seconds
     double timestamp = static_cast<double>(frame_number) / properties.fps;
 
-    // Use the existing seek method with the timestamp
+    // Reuse the existing seek function from Decoder
     return seek(timestamp);
 }
+
+
 
 
 VideoReader& VideoReader::iter()
@@ -166,9 +170,15 @@ py::object VideoReader::next()
 {
     if (end_frame >= 0 && currentIndex > end_frame)
     {
-        throw py::stop_iteration();
+        throw py::stop_iteration(); // Stop iteration if range is exhausted
     }
+
     py::object frame = readFrame();
+    if (frame.is_none())
+    {
+        throw py::stop_iteration(); // Stop iteration if no more frames are available
+    }
+
     currentIndex++;
     return frame;
 }
