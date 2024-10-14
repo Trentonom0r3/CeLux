@@ -26,7 +26,7 @@ jobs:
 
     - name: Install the package
       run: |
-        for /f "delims=" %%i in ('dir /b dist\*.whl') do pip install dist\%%i
+        Get-ChildItem -Path dist -Filter *.whl | ForEach-Object { pip install $_.FullName }
 
     - name: Install dependencies
       run: |
