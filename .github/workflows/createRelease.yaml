@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
     paths:
-      - 'dist/**'
+      - 'setup.py'
   workflow_dispatch:
 
 jobs:
@@ -23,13 +23,17 @@ jobs:
         with:
           python-version: '3.12.7'
 
-      - name: Detect New Version
+      - name: Detect New Version from setup.py
         id: get_version
-        shell: pwsh
+        shell: bash
         run: |
-          $version = (Get-ChildItem dist\*.whl | Select-String -Pattern 'ffmpy-(\d+\.\d+\.\d+)').Matches.Groups[1].Value
-          Write-Output "New version detected: $version"
-          echo "version=$version" >> $env:GITHUB_ENV  # Use environment files
+          version=$(python setup.py --version)
+          echo "New version detected: $version"
+          echo "version=$version" >> $GITHUB_ENV
+
+      - name: Build the package
+        run: |
+          python setup.py sdist bdist_wheel
 
       - name: Create GitHub Release
         if: always()
@@ -44,5 +48,3 @@ jobs:
           artifacts: |
             dist/*.whl
             dist/*.tar.gz
-
-  
