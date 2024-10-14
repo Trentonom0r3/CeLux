@@ -4,7 +4,7 @@ on:
   push:
     branches: [master]
     paths:
-      - 'dist/**'
+      - 'setup.py'
   workflow_dispatch:
 
 jobs:
@@ -25,20 +25,19 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install setuptools wheel
+          python -m pip install --upgrade pip setuptools wheel
 
-      - name: Build the package
+      - name: Detect New Version from setup.py
+        id: get_version
+        shell: bash
+        run: |
+          version=$(python setup.py --version)
+          echo "New version detected: $version"
+          echo "version=$version" >> $GITHUB_ENV
+
+      - name: Build the Package
         run: |
           python setup.py sdist bdist_wheel
-
-      - name: Detect New Version
-        id: get_version
-        shell: pwsh
-        run: |
-          $version = (Get-ChildItem dist\*.whl | Select-String -Pattern 'ffmpy-(\d+\.\d+\.\d+)').Matches.Groups[1].Value
-          Write-Output "New version detected: $version"
-          echo "version=$version" >> $env:GITHUB_ENV  # Use environment files
 
       - name: Create GitHub Release
         if: always()
@@ -53,3 +52,9 @@ jobs:
           artifacts: |
             dist/*.whl
             dist/*.tar.gz
+        continue-on-error: true  # Prevent failure if the tag already exists
+
+      - name: Handle Existing Tag (Optional)
+        if: failure()
+        run: |
+          echo "Release tag already exists. Skipping release creation."
