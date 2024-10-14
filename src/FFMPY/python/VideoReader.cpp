@@ -1,13 +1,12 @@
-
-// VideoReader.cpp
-
 #include "Python/VideoReader.hpp"
+#include <pybind11/pybind11.h>
 #include <torch/extension.h>
 
+namespace py = pybind11;
+
 VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
-                                 const std::string& dataType) //converter arg to pass in --- enum of optios? NV12To...?
-    : decoder(nullptr), as_numpy(as_numpy),
-      currentIndex(0)
+                         const std::string& dataType)
+    : decoder(nullptr), as_numpy(as_numpy), currentIndex(0)
 {
     try
     {
@@ -37,20 +36,22 @@ VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
         {
             throw std::invalid_argument("Unsupported dataType: " + dataType);
         }
+
         bool useHardware = true;
         std::string hwType = "cuda";
+
         decoder = std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType,
-													   std::move(convert));
+                                                   std::move(convert));
+
         properties = decoder->getVideoProperties();
 
-          // Initialize numpy buffer with the appropriate data type
-          npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
-       
-          // Initialize RGB Tensor on CUDA with the appropriate data type
-          RGBTensor = torch::empty(
-              {properties.height, properties.width, 3},
-              torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
-        
+        // Initialize numpy buffer with the appropriate data type
+        npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
+
+        // Initialize RGB Tensor on CUDA with the appropriate data type
+        RGBTensor = torch::empty(
+            {properties.height, properties.width, 3},
+            torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
     }
     catch (const std::exception& ex)
     {
@@ -86,19 +87,40 @@ void VideoReader::close()
 
 py::object VideoReader::readFrame()
 {
-    int result = decoder->decodeNextFrame(RGBTensor.data_ptr());
+    int result;
+
+    // Release GIL during decoding
+    {
+        py::gil_scoped_release release;
+        result = decoder->decodeNextFrame(RGBTensor.data_ptr());
+    }
 
     if (result == 1) // Frame decoded successfully
     {
-        if (!as_numpy)
+        if (as_numpy)
         {
-            return py::cast(RGBTensor);
+            size_t size = RGBTensor.nbytes();
+
+            // Release GIL during data copying
+            {
+                py::gil_scoped_release release;
+                try
+                {
+                    copyTo(RGBTensor.data_ptr(), npBuffer.mutable_data(), size,
+                           CopyType::HOST);
+                }
+                catch (const std::exception& e)
+                {
+                    // Reacquire GIL and rethrow exception
+                    py::gil_scoped_acquire acquire;
+                    throw;
+                }
+            }
+            return npBuffer;
         }
         else
         {
-            size_t size = RGBTensor.nbytes();
-            copyTo(RGBTensor.data_ptr(), npBuffer.mutable_data(), size, CopyType::HOST);
-            return npBuffer;
+            return py::cast(RGBTensor);
         }
     }
     else if (result == 0) // End of video stream
@@ -111,10 +133,17 @@ py::object VideoReader::readFrame()
     }
 }
 
-
 bool VideoReader::seek(double timestamp)
 {
-    return decoder->seek(timestamp);
+    bool success;
+
+    // Release GIL during seeking
+    {
+        py::gil_scoped_release release;
+        success = decoder->seek(timestamp);
+    }
+
+    return success;
 }
 
 std::vector<std::string> VideoReader::supportedCodecs()
@@ -151,12 +180,8 @@ bool VideoReader::seekToFrame(int frame_number)
     // Convert frame number to timestamp in seconds
     double timestamp = static_cast<double>(frame_number) / properties.fps;
 
-    // Reuse the existing seek function from Decoder
     return seek(timestamp);
 }
-
-
-
 
 VideoReader& VideoReader::iter()
 {
@@ -164,7 +189,6 @@ VideoReader& VideoReader::iter()
     seekToFrame(start_frame);
     return *this;
 }
-
 
 py::object VideoReader::next()
 {
@@ -183,27 +207,27 @@ py::object VideoReader::next()
     return frame;
 }
 
-
 void VideoReader::enter()
 {
-    // Could be used to initialize or allocate resources
-    // Currently, all resources are initialized in the constructor
+    // Resources are already initialized in the constructor
 }
 
 void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
-                           const py::object& traceback)
+                       const py::object& traceback)
 {
     close(); // Close the video reader and free resources
 }
 
 void VideoReader::copyTo(void* src, void* dst, size_t size, CopyType type)
 {
-    cudaError_t err;
-    err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
+    cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
     if (err != cudaSuccess)
     {
-		throw std::runtime_error("Error copying data to host: " + std::string(cudaGetErrorString(err)));
-	}
+        // Reacquire GIL before throwing exception
+        py::gil_scoped_acquire acquire;
+        throw std::runtime_error("Error copying data to host: " +
+                                 std::string(cudaGetErrorString(err)));
+    }
 }
 
 int VideoReader::length() const
@@ -213,8 +237,12 @@ int VideoReader::length() const
 
 void VideoReader::sync()
 {
-    if (convert)
+    // Release GIL during synchronization
     {
-		convert->synchronize();
-	}
+        py::gil_scoped_release release;
+        if (convert)
+        {
+            convert->synchronize();
+        }
+    }
 }

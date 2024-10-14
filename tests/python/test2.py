@@ -9,6 +9,8 @@ import os
 import logging
 import requests
 import torch
+import sys
+sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
 import ffmpy
 
 from requests.exceptions import RequestException

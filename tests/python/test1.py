@@ -18,12 +18,12 @@ def main():
             as_numpy=True,
             d_type="uint8",
         ) as reader_cm:
-            with ffmpy.VideoWriter("./output.mp4", 1920, 1080, 24.0, as_numpy=True) as writer:
-                for frame in reader_cm:
-                    writer(frame)
-                    framecount += 1
+            #with ffmpy.VideoWriter("./output.mp4", 1920, 1080, 24.0, as_numpy=True) as writer:
+            for frame in reader_cm:
+               # writer(frame)
+                framecount += 1
 
-                    pass
+                pass
         end = time.time()
         print("Numpy Frames")
         print(f"Time taken: {end-start} seconds")
