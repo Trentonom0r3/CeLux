@@ -103,6 +103,7 @@ class VideoReader
     void exit(const py::object& exc_type, const py::object& exc_value,
               const py::object& traceback);
     int length() const;
+    void setRange(int start, int end);
 
     void sync();
 
@@ -116,6 +117,7 @@ class VideoReader
      * @param type Type of copy (HOST or DEVICE).
      */
     void copyTo(void* src, void* dst, size_t size, CopyType type);
+    bool seekToFrame(int frame_number);
 
     /**
      * @brief Close the video reader and release resources.
@@ -133,6 +135,8 @@ class VideoReader
     torch::Tensor RGBTensor;  // For RGB conversion (GPU)
     py::array npBuffer;       // For NumPy Output
     ffmpy::Frame frame;       // Decoded frame
+    int start_frame = 0;
+    int end_frame = -1; // -1 indicates no limit
 
     // Iterator state
     int currentIndex;

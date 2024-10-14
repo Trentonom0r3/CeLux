@@ -64,6 +64,12 @@ VideoReader::~VideoReader()
     close();
 }
 
+void VideoReader::setRange(int start, int end)
+{
+    start_frame = start;
+    end_frame = end;
+}
+
 void VideoReader::close()
 {
     if (convert)
@@ -133,26 +139,40 @@ void VideoReader::reset()
     currentIndex = 0;
 }
 
+bool VideoReader::seekToFrame(int frame_number)
+{
+    if (frame_number < 0 || frame_number >= properties.totalFrames)
+    {
+        return false; // Out of range
+    }
+
+    // Convert the frame number to a timestamp in seconds
+    double timestamp = static_cast<double>(frame_number) / properties.fps;
+
+    // Use the existing seek method with the timestamp
+    return seek(timestamp);
+}
+
+
 VideoReader& VideoReader::iter()
 {
-    // reset(); // Reset to the beginning
+    currentIndex = start_frame;
+    seekToFrame(start_frame);
     return *this;
 }
 
+
 py::object VideoReader::next()
 {
-    if (currentIndex >= properties.totalFrames)
+    if (end_frame >= 0 && currentIndex > end_frame)
     {
-        throw py::stop_iteration(); // Signal the end of iteration
+        throw py::stop_iteration();
     }
-    auto frame_obj = readFrame();
-    if (frame_obj.is_none())
-    {
-        throw py::stop_iteration(); // Stop iteration if frame couldn't be read
-    }
+    py::object frame = readFrame();
     currentIndex++;
-    return frame_obj;
+    return frame;
 }
+
 
 void VideoReader::enter()
 {

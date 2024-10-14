@@ -177,7 +177,17 @@ Contributions are welcome! Please follow these steps to contribute to the projec
    - Go to the original repository and click on "Pull Requests," then "New Pull Request."
 
 ## Changelog
-
+### Version 0.2.2 (2024-10-14)
+- **Pre-Release Update:**
+  - Fixed a few small issues.
+  - Made `VideoReader` and `VideoWriter` callable.
+  - Created BGR onversions.
+  - Added frame range (in/out) args.
+  ```py
+  with VideoReader('input.mp4')([10, 20]) as reader:
+    for frame in reader:
+        print(f"Processing frame {frame}")
+  ```
 ### Version 0.2.1 (2024-10-13)
 
 - **Pre-Release Update:**

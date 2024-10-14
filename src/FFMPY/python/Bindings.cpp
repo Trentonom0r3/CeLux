@@ -8,6 +8,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(ffmpy, m)
 {
     // VideoReader bindings
+    // VideoReader bindings
     py::class_<VideoReader>(m, "VideoReader")
         .def(py::init<const std::string&, bool, std::string&>(), py::arg("input_path"),
              py::arg("as_numpy") = false, py::arg("d_type") = "uint8")
@@ -17,7 +18,7 @@ PYBIND11_MODULE(ffmpy, m)
         .def("get_properties", &VideoReader::getProperties)
         .def("__len__", &VideoReader::length)
         .def(
-            "__iter__", [](VideoReader& self) -> VideoReader& { return self; },
+            "__iter__", [](VideoReader& self) -> VideoReader& { return self.iter(); },
             py::return_value_policy::reference_internal)
         .def("__next__", &VideoReader::next)
         .def(
@@ -30,7 +31,29 @@ PYBIND11_MODULE(ffmpy, m)
             py::return_value_policy::reference_internal)
         .def("__exit__", &VideoReader::exit)
         .def("sync", &VideoReader::sync)
-        .def("reset", &VideoReader::reset);
+        .def("reset", &VideoReader::reset)
+        .def(
+            "__call__",
+            [](VideoReader& self, py::object arg) -> VideoReader&
+            {
+                if (py::isinstance<py::list>(arg) || py::isinstance<py::tuple>(arg))
+                {
+                    auto range = arg.cast<std::vector<int>>();
+                    if (range.size() != 2)
+                    {
+                        throw std::runtime_error(
+                            "Range must be a list or tuple of two integers");
+                    }
+                    self.setRange(range[0], range[1]);
+                }
+                else
+                {
+                    throw std::runtime_error(
+                        "Argument must be a list or tuple of two integers");
+                }
+                return self;
+            },
+            py::return_value_policy::reference_internal);
 
     // VideoWriter bindings
     py::class_<VideoWriter>(m, "VideoWriter")
