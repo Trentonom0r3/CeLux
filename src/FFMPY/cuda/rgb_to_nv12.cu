@@ -7,7 +7,7 @@
 extern "C"
 {
     // Clamp function for unsigned char
-    __device__ unsigned char clamp_uchar(int value)
+    static __device__ unsigned char clamp_uchar(int value)
     {
         return static_cast<unsigned char>(value < 0 ? 0 : (value > 255 ? 255 : value));
     }

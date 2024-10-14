@@ -217,6 +217,9 @@ target_link_libraries(FFMPyApp PUBLIC FFMPyLib)
 # Instead of using pybind11_add_module, we'll manually create the Python module
 add_library(ffmpy MODULE  ${CMAKE_SOURCE_DIR}/src/FFMPY/Python/Bindings.cpp)
 
+target_compile_options(ffmpy PRIVATE /O2 /Ob2 /Oi /Ot /GL)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -use_fast_math")
+
 # Specify include directories for the bindings
 target_include_directories(ffmpy PUBLIC
     ${CMAKE_SOURCE_DIR}/include/FFMPY

@@ -8,26 +8,26 @@ extern "C"
 {
 
     // Clamp function for unsigned char using integer arithmetic
-    __device__ unsigned char clamp_uchar_int(int value)
+    static __device__ unsigned char clamp_uchar_int(int value)
     {
         return static_cast<unsigned char>(value < 0 ? 0 : (value > 255 ? 255 : value));
     }
 
     // Clamp function for float
-    __device__ float clamp_float(float value)
+    static __device__ float clamp_float(float value)
     {
         return fminf(fmaxf(value, 0.0f), 1.0f);
     }
 
     // Clamp function for __half
-    __device__ __half clamp_half(__half value)
+    static __device__ __half clamp_half(__half value)
     {
         return __hmin(__hmax(value, __float2half(0.0f)), __float2half(1.0f));
     }
 
     // CUDA Kernel for NV12 to RGB conversion with unsigned char output using integer
     // arithmetic
-    __global__ void nv12_to_bgr_kernel_uchar(const unsigned char* __restrict__ yPlane,
+   static  __global__ void nv12_to_bgr_kernel_uchar(const unsigned char* __restrict__ yPlane,
                                              const unsigned char* __restrict__ uvPlane,
                                              int width, int height, int yStride,
                                              int uvStride,
