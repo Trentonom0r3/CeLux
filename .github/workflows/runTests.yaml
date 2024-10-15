@@ -3,6 +3,11 @@ name: Auto Test
 on:
   push:
 
+env:
+  # Define environment variables for versions and URLs
+  CUDA_VERSION_WINDOWS: "12.6.0"
+  CUDA_BUILD_WINDOWS: "560.76"
+
 jobs:
   test:
     runs-on: windows-latest
