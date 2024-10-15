@@ -18,15 +18,16 @@ jobs:
     - name: Cache pip packages
       uses: actions/cache@v2
       with:
-        path: ~\AppData\Local\pip\Cache
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/tests/requirements-runner.txt') }}
+        # Use correct path for Windows runners
+        path: C:\Users\runneradmin\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('tests/requirements-runner.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r tests/requirements-runner.txt
+        pip install --no-cache-dir -r tests/requirements-runner.txt
 
     - name: Build the package
       run: |
