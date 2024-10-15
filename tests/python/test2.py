@@ -5,12 +5,12 @@ Should be useful inside Github Actions to keep track of the performance of the V
 
 import time
 import argparse
-import os
 import logging
 import requests
-import torch
 import sys
-sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import ffmpy
 
 from requests.exceptions import RequestException

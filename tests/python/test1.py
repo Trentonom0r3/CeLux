@@ -1,10 +1,9 @@
 # example.py
-import torch
 import time
-import cv2
 import sys
-#out/build/x64-release
-#sys.path.append(r"C:\Users\tjerf\source\repos\ffmpy\out\build\x64-release")
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import ffmpy
 
 

@@ -1,6 +1,6 @@
 .vs/*
 out/*
-#setup.py
+build.py
 ffmpy.egg-info/*
 build/*
 ffmpy.egg-info/*
@@ -10,7 +10,7 @@ ffmpy.egg-info/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
+
 *$py.class
 
 # C extensions

@@ -16,13 +16,18 @@ setup(
     url="https://github.com/Trentonom0r3/ffmpy",  # Update with the correct GitHub URL
     packages=find_packages(),
     package_data={
-        "ffmpy": ["*.pyd", "*.dll"],  # Include the .pyd and .dll files
+        "ffmpy": ["*.pyd", "*.dll", "*.pyi", "*.py"],  # Include the .pyd and .dll files
     },
-    classifiers=[
+     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: Other/Proprietary License",  # Updated license classifier
-        "Operating System :: Microsoft :: Windows",  # Updated to indicate it's Windows-specific
+        "License :: OSI Approved :: GNU Affero General Public License v3",  # Updated license classifier
+        "Operating System :: Microsoft :: Windows",  # Indicates Windows-specific package
+        "Operating System :: Microsoft :: Windows :: Windows 10",  # Further specify Windows version if needed
+        "Operating System :: Microsoft :: Windows :: Windows 11",  # Further specify Windows version if needed
     ],
+    license="AGPL-3.0",
+    license_files=("LICENSE",),
     python_requires=">=3.11",
     include_package_data=True,
+    zip_safe=False,  # Ensures the wheel is not treated as pure Python
 )

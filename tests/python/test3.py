@@ -18,7 +18,9 @@ import logging
 import os
 import cv2
 import requests
-import torch
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import ffmpy
 
 from requests.exceptions import RequestException

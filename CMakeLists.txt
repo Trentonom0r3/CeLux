@@ -16,8 +16,6 @@ project(FFMPy LANGUAGES CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
-
 # ------------------------------
 # 2. Specify CUDA Paths Directly
 # ------------------------------
@@ -204,9 +202,9 @@ target_link_libraries(FFMPyLib PUBLIC
     #"${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/nvcuvid.lib"  # CUDA Video Decoder library
 )
 
-#10
-#FFMPyLib
-#add executable that links to FFMPyLib
+# ------------------------------
+# 10. Add Executable that Links to FFMPyLib
+# ------------------------------
 add_executable(FFMPyApp tests/main.cpp)
 target_link_libraries(FFMPyApp PUBLIC FFMPyLib)
 
@@ -233,19 +231,23 @@ target_include_directories(ffmpy PUBLIC
 
 # Define the module properties to match Python's expectations
 set_target_properties(ffmpy PROPERTIES
-    PREFIX "${PYTHON_MODULE_PREFIX}"            # Typically empty on Windows
-    SUFFIX "${PYTHON_MODULE_EXTENSION}"         # Typically .pyd on Windows
+    PREFIX ""  # Typically empty on Windows
+    SUFFIX ".pyd"  # Typically .pyd on Windows
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     POSITION_INDEPENDENT_CODE ON
 )
 
-# Set the output directory for the .pyd file
-set(PYBIND_OUTPUT_DIR "${CMAKE_BINARY_DIR}")
+# Ensure the output directory exists
+file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/ffmpy")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib")  # Directory for .lib and .exp files
 
-# Change the output directory for the reader_module target
+# Set the output directory for the .pyd and .dll files to FFMPY/ffmpy
 set_target_properties(ffmpy PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${PYBIND_OUTPUT_DIR}
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ffmpy"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ffmpy"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"  # Redirect .lib files
+    # Note: .exp files are typically placed alongside .lib; CMake doesn't provide a direct property to change their location
 )
 
 # Link libraries to the bindings
@@ -256,4 +258,18 @@ target_link_libraries(ffmpy PUBLIC
     CUDA::cudart
     ${FFMPEG_STATIC_LIBS}
     ${PYTHON_LIBRARY}
+)
+
+# ------------------------------
+# 12. Optional: Clean Up Other Output Directories
+# ------------------------------
+
+# Set FFMPyLib output directory for static libraries
+set_target_properties(FFMPyLib PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+)
+
+# Set FFMPyApp output directory for executables
+set_target_properties(FFMPyApp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
