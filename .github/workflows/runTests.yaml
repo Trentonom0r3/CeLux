@@ -15,24 +15,40 @@ jobs:
       with:
         python-version: '3.12.7'
 
-    - name: Download CUDA Toolkit 12.1
+    # Download CUDA Toolkit Installer (Windows)
+    - name: Download CUDA Toolkit Installer (Windows)
+      shell: pwsh
       run: |
-        curl -LO https://developer.download.nvidia.com/compute/cuda/12.1.105/local_installers/cuda_12.1.105_528.24_windows.exe
-        dir cuda_12.1.105_528.24_windows.exe
+        $cuda_version = "${{ env.CUDA_VERSION_WINDOWS }}"
+        $cuda_build = "${{ env.CUDA_BUILD_WINDOWS }}"
+        $cuda_url = "https://developer.download.nvidia.com/compute/cuda/${cuda_version}/local_installers/cuda_${cuda_version}_${cuda_build}_windows.exe"
+        Write-Output "Attempting to download CUDA Toolkit from $cuda_url"
 
-    - name: Grant Execute Permissions
+        # Check URL Accessibility
+        try {
+          $response = Invoke-WebRequest -Uri $cuda_url -Method Head -UseBasicParsing -ErrorAction Stop
+          Write-Output "URL exists. Proceeding with download."
+        }
+        catch {
+          Write-Error "CUDA Toolkit installer not found at $cuda_url. Please verify the URL."
+          exit 1
+        }
+
+        # Download the Installer
+        Invoke-WebRequest -Uri $cuda_url -OutFile "cuda_installer.exe" -UseBasicParsing
+
+    # Install CUDA Toolkit (Windows)
+    - name: Install CUDA Toolkit (Windows)
+      shell: pwsh
       run: |
-        icacls cuda_12.1.105_528.24_windows.exe /grant Everyone:F
+        Start-Process -FilePath "cuda_installer.exe" -ArgumentList "/S" -Wait
+        Remove-Item "cuda_installer.exe"
 
-    - name: Install CUDA Toolkit 12.1
-      shell: cmd
-      run: |
-        .\cuda_12.1.105_528.24_windows.exe -s -noreboot --installpath="C:\CUDA"
-
+    # Verify CUDA Installation
     - name: Verify CUDA Installation
+      shell: pwsh
       run: |
-        C:\CUDA\bin\nvcc --version
-        nvidia-smi
+        nvcc --version
 
     - name: Cache pip packages
       uses: actions/cache@v2
