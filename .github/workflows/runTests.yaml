@@ -15,10 +15,14 @@ jobs:
       with:
         python-version: '3.12.7'
 
-    - name: Download and Install CUDA Toolkit 12.1
+    - name: Download CUDA Toolkit 12.1
       run: |
         curl -LO https://developer.download.nvidia.com/compute/cuda/12.1.105/local_installers/cuda_12.1.105_528.24_windows.exe
-        start /wait cuda_12.1.105_528.24_windows.exe -s -noreboot --installpath="C:\CUDA"
+
+    - name: Install CUDA Toolkit 12.1
+      shell: cmd
+      run: |
+        cuda_12.1.105_528.24_windows.exe -s -noreboot --installpath="C:\CUDA"
 
     - name: Verify CUDA Installation
       run: |
