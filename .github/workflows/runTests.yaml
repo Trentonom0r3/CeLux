@@ -18,11 +18,16 @@ jobs:
     - name: Download CUDA Toolkit 12.1
       run: |
         curl -LO https://developer.download.nvidia.com/compute/cuda/12.1.105/local_installers/cuda_12.1.105_528.24_windows.exe
+        dir cuda_12.1.105_528.24_windows.exe
+
+    - name: Grant Execute Permissions
+      run: |
+        icacls cuda_12.1.105_528.24_windows.exe /grant Everyone:F
 
     - name: Install CUDA Toolkit 12.1
       shell: cmd
       run: |
-        cuda_12.1.105_528.24_windows.exe -s -noreboot --installpath="C:\CUDA"
+        .\cuda_12.1.105_528.24_windows.exe -s -noreboot --installpath="C:\CUDA"
 
     - name: Verify CUDA Installation
       run: |
