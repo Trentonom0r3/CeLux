@@ -18,7 +18,7 @@ jobs:
     - name: Cache pip packages
       uses: actions/cache@v2
       with:
-        path: C:\Users\runneradmin\AppData\Local\pip\Cache
+        path: c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages
         key: ${{ runner.os }}-pip-${{ hashFiles('tests/requirements-runner.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-

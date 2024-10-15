@@ -1,7 +1,6 @@
 # PyTorch and related libraries with CUDA support
 torch==2.4.1+cu121
 torchvision==0.19.1+cu121
-torchaudio==2.4.0+cu121
 
 # Additional libraries
 torchmetrics==1.4.2
