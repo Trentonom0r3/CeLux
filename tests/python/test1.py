@@ -51,7 +51,7 @@ def process_video_with_visualization(video_path, output_path=None):
         frame_count = 0
         start = time.time()
 
-        with ffmpy.VideoReader(video_path, as_numpy=True, d_type="uint8") as reader:
+        with ffmpy.VideoReader(video_path, device = "cpu", d_type="uint8") as reader:
             writer = None
             if output_path:
                 writer = ffmpy.VideoWriter(output_path, 1920, 1080, 24.0, as_numpy=True)
