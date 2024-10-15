@@ -1,9 +1,9 @@
-# PyTorch and related libraries with CUDA 12.4 support
-torch==2.4.1+cu124
-torchvision==0.19.1+cu124
-torchaudio==2.4.0+cu124
+# PyTorch and related libraries with CUDA support
+torch==2.4.1+cu121
+torchvision==0.19.1+cu121
+torchaudio==2.4.0+cu121
 
-# Other dependencies
+# Additional libraries
 torchmetrics==1.4.2
 numpy
 opencv-python-headless
@@ -12,4 +12,4 @@ wheel
 requests
 
 # Use PyTorch's stable wheel index for CUDA-enabled packages
--f https://download.pytorch.org/whl/cu124
+-f https://download.pytorch.org/whl/torch_stable.html
