@@ -4,32 +4,51 @@
 
 namespace py = pybind11;
 
-VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
+VideoReader::VideoReader(const std::string& filePath, const std::string& device,
                          const std::string& dataType)
-    : decoder(nullptr), as_numpy(as_numpy), currentIndex(0)
+    : decoder(nullptr), device(device), currentIndex(0), start_frame(0), end_frame(-1), torchDevice(torch::kCUDA)
 {
     try
     {
+        if (device == "cuda")
+        {
+            if (!torch::cuda::is_available())
+            {
+				throw std::runtime_error("CUDA is not available. Please install a CUDA-enabled version of PyTorch.");
+			}
+            if (torch::cuda::device_count() == 0)
+            {
+				throw std::runtime_error("No CUDA devices found. Please check your CUDA installation.");
+			}		
+		}
+        else if (device == "cpu")
+        {
+            torchDevice = torch::Device(torch::kCPU);
+		}
+        else
+        {
+			throw std::invalid_argument("Unsupported device: " + device);
+		}
         // Determine the data types based on the dataType argument
         torch::Dtype torchDataType;
-        py::dtype npDataType;
+        //  py::dtype npDataType;
 
         if (dataType == "uint8")
         {
             torchDataType = torch::kUInt8;
-            npDataType = py::dtype::of<uint8_t>();
+            //  npDataType = py::dtype::of<uint8_t>();
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<uint8_t>>();
         }
         else if (dataType == "float32")
         {
             torchDataType = torch::kFloat32;
-            npDataType = py::dtype::of<float>();
+            // npDataType = py::dtype::of<float>();
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<float>>();
         }
         else if (dataType == "float16")
         {
             torchDataType = torch::kFloat16;
-            npDataType = py::dtype("float16");
+            // npDataType = py::dtype("float16");
             convert = std::make_unique<ffmpy::conversion::NV12ToRGB<__half>>();
         }
         else
@@ -46,10 +65,14 @@ VideoReader::VideoReader(const std::string& filePath, bool as_numpy,
         properties = decoder->getVideoProperties();
 
         // Initialize numpy buffer with the appropriate data type
-        npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
+        // npBuffer = py::array(npDataType, {properties.height, properties.width, 3});
 
         // Initialize RGB Tensor on CUDA with the appropriate data type
         RGBTensor = torch::empty(
+            {properties.height, properties.width, 3},
+            torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
+
+        cpuTensor = torch::empty(
             {properties.height, properties.width, 3},
             torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
     }
@@ -97,30 +120,17 @@ py::object VideoReader::readFrame()
 
     if (result == 1) // Frame decoded successfully
     {
-        if (as_numpy)
+        cpuTensor.copy_(RGBTensor, /*non_blocking=*/true);
+        if (torchDevice == torch::kCPU)
         {
-            size_t size = RGBTensor.nbytes();
-
-            // Release GIL during data copying
             {
                 py::gil_scoped_release release;
-                try
-                {
-                    copyTo(RGBTensor.data_ptr(), npBuffer.mutable_data(), size,
-                           CopyType::HOST);
-                }
-                catch (const std::exception& e)
-                {
-                    // Reacquire GIL and rethrow exception
-                    py::gil_scoped_acquire acquire;
-                    throw;
-                }
             }
-            return npBuffer;
+            return py::cast(cpuTensor.to(torch::kCPU, /*non_blocking=*/true));
         }
         else
         {
-            return py::cast(RGBTensor);
+            return py::cast(cpuTensor);
         }
     }
     else if (result == 0) // End of video stream

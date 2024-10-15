@@ -83,8 +83,9 @@ def processVideoNumPy(videoPath):
         with ffmpy.VideoReader(videoPath, as_numpy=True, d_type="uint8") as reader:
             for frame in reader:
                 if frameCount == 0:
-                    logging.info(f"Frame data: {frame.shape, frame.dtype}")
+                    logging.info(f"Frame data: {frame.shape, frame.dtype, frame.device}")
                     # Just to make sure it's a numpy array
+                    frame.numpy()
                 frameCount += 1
         end = time.time()
         logging.info(f"Time taken: {end-start} seconds")

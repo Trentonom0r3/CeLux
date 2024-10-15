@@ -1,12 +1,12 @@
 
 # ffmpy
 
-ffmpy is a high-performance Python library for video processing built on top of FFmpeg. It offers some of the fastest decode times for full HD video in the world, allowing for efficient and seamless video decoding directly into NumPy arrays or PyTorch tensors.
+ffmpy is a high-performance Python library for video processing built on top of FFmpeg. It offers some of the fastest decode times for full HD video in the world, allowing for efficient and seamless video decoding directly into PyTorch tensors.
 
 ## Features
 
 - **Ultra-Fast Video Decoding:** Achieve lightning-fast decode times for full HD videos using hardware acceleration.
-- **Direct Decoding to NumPy/Tensors:** Decode video frames directly into NumPy arrays or PyTorch tensors for immediate processing.
+- **Direct Decoding to Tensors:** Decode video frames directly into PyTorch tensors for immediate processing.
 - **Hardware Acceleration Support:** Utilize CUDA for GPU-accelerated decoding, significantly improving performance.
 - **Easy Integration:** Seamlessly integrates with existing Python workflows, making it easy to incorporate into your projects.
 - **Supports Multiple Data Types:** Handle video frames in `uint8`, `float32`, or `float16` data types.
@@ -116,7 +116,7 @@ def process_frame(frame):
 # Ensure torch is imported before ffmpy
 with ffmpy.VideoReader(
     "path/to/input/video.mp4",
-    as_numpy=False,
+    device="cpu",
     d_type="uint8"
 ) as reader:
     for frame in reader:
@@ -126,9 +126,7 @@ with ffmpy.VideoReader(
 
 **Parameters:**
 
-- `useHardware` (bool): Enable hardware acceleration (default: `True`).
-- `hwType` (str): Type of hardware acceleration to use (e.g., `"cuda"`).
-- `as_numpy` (bool): Return frames as NumPy arrays if `True`, else as PyTorch tensors (default: `False`).
+- `device` (str): Device to use. Can be `"cpu"` or `"cuda"`.
 - `dtype` (str): Data type of the output frames (`"uint8"`, `"float"`, or `"half"`).
 
 **Note:** If you set `dtype` to `"float"` or `"half"`, the frame values will be normalized between `0.0` and `1.0`.
@@ -175,6 +173,13 @@ Contributions are welcome! Please follow these steps to contribute to the projec
    - Go to the original repository and click on "Pull Requests," then "New Pull Request."
 
 ## Changelog
+### Version 0.2.6 (2024-10-15) 
+- **Pre-Release Update:**
+  - Removed `Numpy` support in favor of `PyTorch` tensors, gpu/cpu support provided.
+  - Added `NV12ToBGR`, `BGRToNV12`, and `NV12ToNV12` conversion modules.
+  - Fixed a few small issues.
+  - Updated documentation and examples.
+  - 
 ### Version 0.2.2 (2024-10-14)
 - **Pre-Release Update:**
   - Fixed a few small issues.

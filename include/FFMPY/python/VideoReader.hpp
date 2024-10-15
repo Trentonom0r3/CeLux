@@ -6,7 +6,6 @@
 #include "Decoder.hpp"
 #include "NV12ToRGB.hpp"
 
-#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -29,7 +28,8 @@ class VideoReader
      * @param hwType Type of hardware acceleration (e.g., "cuda").
      * @param config Configuration for frame processing.
      */
-    VideoReader(const std::string& filePath, bool as_numpy = false, const std::string& dtype = "uint8");
+    VideoReader(const std::string& filePath, const std::string& device = "cuda",
+                const std::string& dtype = "uint8");
 
     /**
      * @brief Destructor for VideoReader.
@@ -127,13 +127,15 @@ class VideoReader
     // Member variables
     std::unique_ptr<ffmpy::Decoder> decoder;
     ffmpy::Decoder::VideoProperties properties;
-    bool as_numpy;
+    std::string device;
+
+    torch::Device torchDevice;
 
     std::unique_ptr<ffmpy::conversion::IConverter> convert;
 
     // Buffers
     torch::Tensor RGBTensor;  // For RGB conversion (GPU)
-    py::array npBuffer;       // For NumPy Output
+    torch::Tensor cpuTensor;  // For CPU conversion (CPU)
     ffmpy::Frame frame;       // Decoded frame
     int start_frame = 0;
     int end_frame = -1; // -1 indicates no limit

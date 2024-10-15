@@ -1,6 +1,5 @@
 from typing import List, Dict, Optional, Any, Union, TypedDict, Tuple
 import torch
-import numpy
 
 class VideoProperties(TypedDict):
     width: int
@@ -12,13 +11,13 @@ class VideoProperties(TypedDict):
     has_audio: bool
 
 class VideoReader:
-    def __init__(self, input_path: str, as_numpy: bool = False, d_type: str = "uint8") -> None:
+    def __init__(self, input_path: str, device: str = "cuda", d_type: str = "uint8") -> None:
         """
         Initialize the VideoReader object.
 
         Args:
             input_path (str): Path to the video file.
-            as_numpy (bool): Whether to return frames as NumPy arrays. Default is False.
+            device (str): Device to be used. Default is "cuda".
             d_type (str): Data type of the frames (e.g., "uint8"). Default is "uint8".
         """
         ...
@@ -45,12 +44,12 @@ class VideoReader:
         """
         ...
 
-    def read_frame(self) -> Union['torch.Tensor', 'numpy.ndarray']:
+    def read_frame(self) -> torch.Tensor:
         """
         Read a frame from the video.
 
         Returns:
-            Union[torch.Tensor, numpy.ndarray]: The frame data, either as a torch.Tensor or numpy.ndarray.
+            Union[torch.Tensor: The frame data, as a torch.Tensor.
         """
         ...
 
@@ -110,12 +109,12 @@ class VideoReader:
         """
         ...
 
-    def __next__(self) -> Union['torch.Tensor', 'numpy.ndarray']:
+    def __next__(self) -> torch.Tensor:
         """
         Get the next frame in the video.
 
         Returns:
-            Union[torch.Tensor, numpy.ndarray]: The next frame as a torch.Tensor or numpy.ndarray.
+          torch.Tensor: The next frame as a torch.Tensor.
         
         Raises:
             StopIteration: When no more frames are available.
