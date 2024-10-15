@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: windows-latest  # Use windows GPU-enabled runner or install CUDA toolkit manually
 
     steps:
     - uses: actions/checkout@v2
@@ -14,6 +14,16 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12.7'
+
+    - name: Install CUDA Toolkit
+      run: |
+        # Download and install NVIDIA CUDA Toolkit 12.1
+        choco install cuda -y --version=12.1
+
+    - name: Verify CUDA installation
+      run: |
+        nvcc --version
+        nvidia-smi
 
     - name: Cache pip packages
       uses: actions/cache@v2
