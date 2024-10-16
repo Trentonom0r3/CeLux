@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cstdint> // For fixed-width integer types
-#include <cuda_runtime.h>
 #include <exception>
 #include <iostream>
 #include <memory>
@@ -12,8 +11,6 @@
 #include <stdexcept> // For std::runtime_error
 #include <string>
 #include <thread>
-#include <torch/cuda.h>
-#include <torch/torch.h>
 
 #include <vector>
 #include <cuda_fp16.h>
@@ -32,7 +29,6 @@ extern "C"
 #include <libswresample/swresample.h> // Include for SwrContext and resampling functions
                                       // hwaccel
 #include <libavutil/hwcontext.h>
-#include <libavutil/hwcontext_cuda.h>
     // audio headers
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>

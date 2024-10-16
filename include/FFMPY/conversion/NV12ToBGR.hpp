@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "conversion.hpp"
+#include "BaseConverter.hpp"
 #include "Frame.hpp"
 #include <cuda_runtime.h>
 #include <type_traits>

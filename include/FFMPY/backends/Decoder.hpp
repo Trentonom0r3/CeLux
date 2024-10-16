@@ -2,9 +2,14 @@
 #pragma once
 
 #include "FFException.hpp"
-#include <Frame.hpp>
-#include <NV12ToRGB.hpp>
-#include <memory>
+#include <Frame.hpp> 
+#define CUDA_ENABLED
+#ifdef CUDA_ENABLED
+#include <GPUConverters.hpp>
+#include <CPUConverters.hpp>
+#else 
+#include <conversion/cpu/CPUConverters.hpp>
+#endif
 
 namespace ffmpy
 {
@@ -22,12 +27,10 @@ class Decoder
         bool hasAudio;
     };
 
-    // Updated constructor to accept shared_ptr
-    Decoder(const std::string& filePath, bool useHardware = true,
-                const std::string& hwType = "cuda",
-                std::unique_ptr<ffmpy::conversion::IConverter> converter = nullptr);
+    // Constructor
+    Decoder(std::unique_ptr<ffmpy::conversion::IConverter> converter = nullptr);
 
-    AVBufferRef* getHWDeviceCtx() const;
+    // Destructor
     virtual ~Decoder();
 
     // Deleted copy constructor and assignment operator
@@ -38,27 +41,31 @@ class Decoder
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
 
-    bool decodeNextFrame(void* buffer);
-    bool seek(double timestamp);
-    VideoProperties getVideoProperties() const;
-    bool isOpen() const;
-    void close();
-    std::vector<std::string> listSupportedDecoders() const;
-    AVCodecContext* getCtx()
-    {
-        return codecCtx.get();
-    }
+    // Core methods
+    virtual bool decodeNextFrame(void* buffer);
+    virtual bool seek(double timestamp);
+    virtual VideoProperties getVideoProperties() const;
+    virtual bool isOpen() const;
+    virtual void close();
+    virtual std::vector<std::string> listSupportedDecoders() const;
+    AVCodecContext* getCtx();
 
-  private:
-    void openFile(const std::string& filePath, bool useHardware,
-                  const std::string& hwType);
-    void initHWAccel(const std::string& hwType);
-    void findVideoStream();
-    void initCodecContext(const AVCodec* codec);
-    int64_t convertTimestamp(double timestamp) const;
-    static enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
-                                          const enum AVPixelFormat* pix_fmts);
+  protected:
+    // Initialization method
+    void initialize(const std::string& filePath);
 
+    // Virtual methods for customization
+    virtual void openFile(const std::string& filePath);
+    virtual void initHWAccel(); // Default does nothing
+    virtual void findVideoStream();
+    virtual void initCodecContext(const AVCodec* codec);
+    virtual int64_t convertTimestamp(double timestamp) const;
+
+    // Virtual callback for hardware pixel formats
+    virtual enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
+                                           const enum AVPixelFormat* pix_fmts);
+
+    // Deleters and smart pointers
     struct AVFormatContextDeleter
     {
         void operator()(AVFormatContext* ctx) const
@@ -87,27 +94,24 @@ class Decoder
     {
         void operator()(AVPacket* pkt) const
         {
-			av_packet_free(&pkt);
-		}
-	};
-
-
+            av_packet_free(&pkt);
+        }
+    };
 
     using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
     using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
     using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
     using AVPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
 
+    // Member variables
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;
-    AVBufferRefPtr hwDeviceCtx;
     AVPacketPtr pkt;
     int videoStreamIndex;
     VideoProperties properties;
-    std::string hwAccelType;
     Frame frame;
 
-    // Changed to shared_ptr
     std::unique_ptr<ffmpy::conversion::IConverter> converter;
+    AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
 };
 } // namespace ffmpy

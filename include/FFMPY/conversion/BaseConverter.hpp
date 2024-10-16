@@ -18,8 +18,8 @@ template <typename T> class ConverterBase : public IConverter
     ConverterBase(cudaStream_t stream);
     virtual ~ConverterBase();
 
-    void synchronize() override;
-    cudaStream_t getStream() const override;
+    virtual void synchronize() override;
+    virtual cudaStream_t getStream() const;
 
   protected:
     cudaStream_t conversionStream;

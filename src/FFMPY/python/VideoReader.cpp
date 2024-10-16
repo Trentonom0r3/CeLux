@@ -1,6 +1,6 @@
 #include "Python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
-#include <torch/extension.h>
+
 
 namespace py = pybind11;
 
@@ -59,7 +59,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         bool useHardware = true;
         std::string hwType = "cuda";
 
-        decoder = std::make_unique<ffmpy::Decoder>(filePath, useHardware, hwType,
+        decoder = std::make_unique<ffmpy::backends::gpu::cuda::Decoder>(filePath,
                                                    std::move(convert));
 
         properties = decoder->getVideoProperties();

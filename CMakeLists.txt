@@ -159,7 +159,7 @@ endif()
 # ------------------------------
 # 9. Add Source Files
 # ------------------------------
-file(GLOB_RECURSE SOURCES "src/FFMPY/*.cpp" "src/FFMPY/conversion/*.cpp" "src/FFMPY/cuda/*.cu")
+file(GLOB_RECURSE SOURCES "src/FFMPY/*.cpp" "src/FFMPY/conversion/*.cpp" "src/FFMPY/cuda/*.cu" "src/FFMPY/backends/*.cpp")
 
 # Create a static library target for FFMPyLib
 add_library(FFMPyLib STATIC ${SOURCES})
@@ -168,7 +168,9 @@ add_library(FFMPyLib STATIC ${SOURCES})
 target_include_directories(FFMPyLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include/FFMPY
     ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion
+    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/cpu
     ${CMAKE_SOURCE_DIR}/include/FFMPY/error
+    ${CMAKE_SOURCE_DIR}/include/FFMPY/backends
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
@@ -202,12 +204,7 @@ target_link_libraries(FFMPyLib PUBLIC
     #"${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/nvcuvid.lib"  # CUDA Video Decoder library
 )
 
-# ------------------------------
-# 10. Add Executable that Links to FFMPyLib
-# ------------------------------
-add_executable(FFMPyApp tests/main.cpp)
-target_link_libraries(FFMPyApp PUBLIC FFMPyLib)
-
+# ---------------------------
 # ------------------------------
 # 11. Add Pybind11 Bindings as a Separate Module (Manual Handling)
 # ------------------------------
@@ -267,9 +264,4 @@ target_link_libraries(ffmpy PUBLIC
 # Set FFMPyLib output directory for static libraries
 set_target_properties(FFMPyLib PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-)
-
-# Set FFMPyApp output directory for executables
-set_target_properties(FFMPyApp PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
