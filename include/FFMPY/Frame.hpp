@@ -5,6 +5,12 @@
 
 namespace ffmpy
 {
+enum class dataType
+{
+    UINT8,
+    FLOAT16,
+    FLOAT32,
+};
 /**
  * @class Frame
  * @brief A simple RAII wrapper for FFmpeg's AVFrame structure.

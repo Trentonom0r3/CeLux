@@ -4,11 +4,16 @@
 
 #include "IConverter.hpp"
 #include <cuda_runtime.h>
-#include <stdexcept>
+#include <cuda_fp16.h>
+#include <type_traits>
 
 namespace ffmpy
 {
 namespace conversion
+{
+namespace gpu
+{
+namespace cuda
 {
 
 template <typename T> class ConverterBase : public IConverter
@@ -77,5 +82,7 @@ template <typename T> cudaStream_t ConverterBase<T>::getStream() const
     return conversionStream;
 }
 
+} // namespace cuda
+} // namespace gpu
 } // namespace conversion
 } // namespace ffmpy

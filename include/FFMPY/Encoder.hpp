@@ -2,20 +2,8 @@
 #pragma once
 
 #include "FFException.hpp"
-#include <Frame.hpp>
-#include <NV12ToRGB.hpp> // Adjust the path based on your project structure
-#include <memory>
-#include <string>
-#include <vector>
-
-extern "C"
-{
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/hwcontext.h>
-#include <libavutil/opt.h>
-#include <libavutil/pixdesc.h>
-}
+#include <Frame.hpp> 
+#include <Conversion.hpp>
 
 namespace ffmpy
 {

@@ -2,8 +2,9 @@
 #include "Python/VideoWriter.hpp"
 #include <torch/extension.h>
 
-VideoWriter::VideoWriter(const std::string& filePath, int width, int height, float fps, bool as_numpy, std::string dtype)
-	: encoder(nullptr), as_numpy(as_numpy)
+VideoWriter::VideoWriter(const std::string& filePath, int width, int height, float fps,
+                         bool as_numpy, std::string dtype)
+    : encoder(nullptr), as_numpy(as_numpy)
 {
     try
     {
@@ -14,19 +15,22 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         {
             torchDataType = torch::kUInt8;
             npDataType = py::dtype::of<uint8_t>();
-            convert = std::make_unique<ffmpy::conversion::RGBToNV12<uint8_t>>();
+            convert =
+                std::make_unique<ffmpy::conversion::gpu::cuda::RGBToNV12<uint8_t>>();
         }
         else if (dtype == "float32")
         {
             torchDataType = torch::kFloat32;
             npDataType = py::dtype::of<float>();
-            convert = std::make_unique<ffmpy::conversion::RGBToNV12<float>>();
+            convert =
+                std::make_unique<ffmpy::conversion::gpu::cuda::RGBToNV12<float>>();
         }
         else if (dtype == "float16")
         {
             torchDataType = torch::kFloat16;
             npDataType = py::dtype("float16");
-            convert = std::make_unique<ffmpy::conversion::RGBToNV12<__half>>();
+            convert =
+                std::make_unique<ffmpy::conversion::gpu::cuda::RGBToNV12<__half>>();
         }
         else
         {
@@ -102,7 +106,6 @@ bool VideoWriter::writeFrame(py::object frame)
             encoder->encodeFrame(npBuffer);
             return true;
         }
-
     }
     catch (const std::exception& ex)
     {
@@ -110,7 +113,6 @@ bool VideoWriter::writeFrame(py::object frame)
         throw; // Re-throw exception after logging
     }
 }
-
 
 std::vector<std::string> VideoWriter::supportedCodecs()
 {
@@ -123,18 +125,19 @@ void VideoWriter::copyTo(void* src, void* dst, size_t size)
     err = cudaMemcpy(dst, src, size, cudaMemcpyHostToHost);
     if (err != cudaSuccess)
     {
-		throw std::runtime_error("Error copying data to host: " + std::string(cudaGetErrorString(err)));
-	}
+        throw std::runtime_error("Error copying data to host: " +
+                                 std::string(cudaGetErrorString(err)));
+    }
 }
 
 void VideoWriter::close()
 {
     if (convert)
     {
-		convert->synchronize();
-	}
+        convert->synchronize();
+    }
     if (encoder)
     {
-		encoder->close();
-	}
+        encoder->close();
+    }
 }

@@ -4,8 +4,6 @@
 
 #include "BaseConverter.hpp"
 #include "Frame.hpp"
-#include <cuda_runtime.h>
-#include <type_traits>
 
 extern "C"
 {
@@ -25,6 +23,10 @@ extern "C"
 namespace ffmpy
 {
 namespace conversion
+{
+namespace gpu
+{
+namespace cuda
 {
 
 template <typename T> class NV12ToBGR : public ConverterBase<T>
@@ -96,5 +98,7 @@ template <typename T> void NV12ToBGR<T>::convert(ffmpy::Frame& frame, void* buff
     }
 }
 
+} // namespace cuda
+} // namespace gpu
 } // namespace conversion
 } // namespace ffmpy

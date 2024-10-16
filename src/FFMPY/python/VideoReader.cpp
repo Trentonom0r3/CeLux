@@ -1,7 +1,6 @@
 #include "Python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
 
-
 namespace py = pybind11;
 
 VideoReader::VideoReader(const std::string& filePath, const std::string& device,
@@ -36,20 +35,21 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         if (dataType == "uint8")
         {
             torchDataType = torch::kUInt8;
+            auto dtype = ffmpy::dataType::UINT8;
             //  npDataType = py::dtype::of<uint8_t>();
-            convert = std::make_unique<ffmpy::conversion::NV12ToRGB<uint8_t>>();
+            convert = createConverter(ffmpy::backend::CUDA, ffmpy::ConversionType::NV12ToRGB, dtype);
         }
         else if (dataType == "float32")
         {
             torchDataType = torch::kFloat32;
-            // npDataType = py::dtype::of<float>();
-            convert = std::make_unique<ffmpy::conversion::NV12ToRGB<float>>();
+            auto dtype = ffmpy::dataType::FLOAT32;
+            convert = createConverter(ffmpy::backend::CUDA, ffmpy::ConversionType::NV12ToRGB, dtype);
         }
         else if (dataType == "float16")
         {
             torchDataType = torch::kFloat16;
-            // npDataType = py::dtype("float16");
-            convert = std::make_unique<ffmpy::conversion::NV12ToRGB<__half>>();
+			auto dtype = ffmpy::dataType::FLOAT16;
+			convert = createConverter(ffmpy::backend::CUDA, ffmpy::ConversionType::NV12ToRGB, dtype);
         }
         else
         {

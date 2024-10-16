@@ -13,7 +13,6 @@
 #include <thread>
 
 #include <vector>
-#include <cuda_fp16.h>
 extern "C"
 {
 #include <libavcodec/avcodec.h>

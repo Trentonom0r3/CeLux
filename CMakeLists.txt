@@ -159,16 +159,20 @@ endif()
 # ------------------------------
 # 9. Add Source Files
 # ------------------------------
-file(GLOB_RECURSE SOURCES "src/FFMPY/*.cpp" "src/FFMPY/conversion/*.cpp" "src/FFMPY/cuda/*.cu" "src/FFMPY/backends/*.cpp")
-
+file(GLOB_RECURSE SOURCES "src/FFMPY/*.cpp" "src/FFMPY/conversion/*.cpp" "src/FFMPY/cuda/*.cu" "src/FFMPY/backends/*.cpp" "src/FFMPY/conversion/cpu/*.cpp"
+"src/FFMPY/conversion/gpu/cuda*.cpp")
 # Create a static library target for FFMPyLib
 add_library(FFMPyLib STATIC ${SOURCES})
+    # Add a preprocessor definition for CUDA_ENABLED
+target_compile_definitions(FFMPyLib PUBLIC CUDA_ENABLED)
 
 # Specify include directories for FFMPyLib
 target_include_directories(FFMPyLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include/FFMPY
     ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion
     ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/cpu
+    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/gpu
+    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/gpu/cuda
     ${CMAKE_SOURCE_DIR}/include/FFMPY/error
     ${CMAKE_SOURCE_DIR}/include/FFMPY/backends
     ${TORCH_INCLUDE_DIRS}

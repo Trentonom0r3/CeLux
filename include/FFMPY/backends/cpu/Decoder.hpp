@@ -15,7 +15,10 @@ class Decoder : public ffmpy::Decoder
         initialize(filePath);
     }
 
-    ~Decoder() override = default;
+    ~Decoder() override
+    {
+    	// Cleanup
+	}
 
     // No need to override methods unless specific behavior is needed
 };

@@ -3,16 +3,16 @@
 
 #include "FFException.hpp"
 #include <Frame.hpp> 
-#define CUDA_ENABLED
-#ifdef CUDA_ENABLED
-#include <GPUConverters.hpp>
-#include <CPUConverters.hpp>
-#else 
-#include <conversion/cpu/CPUConverters.hpp>
-#endif
+#include <Conversion.hpp>
 
 namespace ffmpy
 {
+    enum class backend
+	{
+		CPU,
+		CUDA
+	};
+
 class Decoder
 {
   public:
@@ -26,7 +26,7 @@ class Decoder
         AVPixelFormat pixelFormat;
         bool hasAudio;
     };
-
+    Decoder() = default;
     // Constructor
     Decoder(std::unique_ptr<ffmpy::conversion::IConverter> converter = nullptr);
 

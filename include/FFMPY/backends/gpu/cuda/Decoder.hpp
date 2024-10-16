@@ -2,6 +2,7 @@
 #pragma once
 
 #include "backends/Decoder.hpp"
+
 extern "C"
 {
     #include <libavutil/hwcontext_cuda.h>
@@ -19,7 +20,7 @@ class Decoder : public ffmpy::Decoder
         initialize(filePath);
     }
 
-    ~Decoder() override = default;
+    ~Decoder() override;
 
   protected:
     void initHWAccel() override;

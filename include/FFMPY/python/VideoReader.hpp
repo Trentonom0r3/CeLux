@@ -3,8 +3,7 @@
 #ifndef VIDEOREADER_HPP
 #define VIDEOREADER_HPP
 
-#include "backends/gpu/cuda/Decoder.hpp"
-#include "NV12ToRGB.hpp"
+#include "Factory.hpp"
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
 
@@ -125,8 +124,8 @@ class VideoReader
     void close();
 
     // Member variables
-    std::unique_ptr<ffmpy::backends::gpu::cuda::Decoder> decoder;
-    ffmpy::backends::gpu::cuda::Decoder::VideoProperties properties;
+    std::unique_ptr<ffmpy::Decoder> decoder;
+    ffmpy::Decoder::VideoProperties properties;
     std::string device;
 
     torch::Device torchDevice;

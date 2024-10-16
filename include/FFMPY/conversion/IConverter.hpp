@@ -3,7 +3,6 @@
 #pragma once
 
 #include "Frame.hpp"
-#include <cuda_runtime.h>
 
 namespace ffmpy
 {
