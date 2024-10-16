@@ -20,7 +20,7 @@ class Decoder : public ffmpy::Decoder
         initialize(filePath);
     }
 
-    ~Decoder() override;
+    ~Decoder() override ;
 
   protected:
     void initHWAccel() override;

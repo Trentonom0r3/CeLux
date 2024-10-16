@@ -220,16 +220,10 @@ bool Decoder::decodeNextFrame(void* buffer)
                 throw FFException("Error during decoding");
             }
 
-            // Use the converter to process the frame
-            if (converter)
-            {
                 converter->convert(frame, buffer);
-            }
-            else
-            {
-                // If no converter is provided, you can process the frame directly
-                // For example, copy frame data to buffer
-            }
+
+            av_packet_unref(pkt.get());
+            av_frame_unref(frame.get());
             frameProcessed = true;
             break; // Successfully processed one frame
         }

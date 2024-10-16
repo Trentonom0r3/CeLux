@@ -47,30 +47,76 @@ template <typename T> class NV12ToRGB : public ConverterBase<T>
      */
     void convert(ffmpy::Frame& frame, void* buffer) override
     {
+        // Verify the pixel format
+        if (frame.getPixelFormat() != AV_PIX_FMT_YUV420P)
+        {
+            throw std::runtime_error("Frame pixel format is not YUV420P");
+        }
+
         if (!swsContext)
         {
-            // Initialize the swsContext for NV12 to RGB conversion
+            // Initialize the swsContext for YUV420P to RGB conversion
             swsContext = sws_getContext(frame.getWidth(), frame.getHeight(),
-                                        AV_PIX_FMT_NV12, // Source format
+                                        AV_PIX_FMT_YUV420P, // Source format
                                         frame.getWidth(), frame.getHeight(),
                                         AV_PIX_FMT_RGB24, // Destination format
                                         SWS_BILINEAR, nullptr, nullptr, nullptr);
             if (!swsContext)
             {
                 throw std::runtime_error(
-                    "Failed to initialize swsContext for NV12 to RGB conversion");
+                    "Failed to initialize swsContext for YUV420P to RGB conversion");
             }
+
+            // Set color space and range explicitly (optional)
+            int srcRange = 0; // MPEG (16-235)
+            int dstRange = 1; // JPEG (0-255)
+            const int* srcMatrix = sws_getCoefficients(SWS_CS_ITU709);
+            const int* dstMatrix = sws_getCoefficients(SWS_CS_ITU709);
+
+            sws_setColorspaceDetails(swsContext, srcMatrix, srcRange, dstMatrix,
+                                     dstRange, 0, 1 << 16, 1 << 16);
         }
 
-        const uint8_t* srcData[2] = {frame.getData(0), frame.getData(1)};
-        int srcLineSize[2] = {frame.getLineSize(0), frame.getLineSize(1)};
+        // Source data and line sizes
+        const uint8_t* srcData[4] = {nullptr};
+        int srcLineSize[4] = {0};
 
-        uint8_t* dstData[1] = {static_cast<uint8_t*>(buffer)};
-        int dstLineSize[1] = {frame.getWidth() * 3}; // RGB stride
+        srcData[0] = frame.getData(0);
+        srcData[1] = frame.getData(1);
+        srcData[2] = frame.getData(2);
 
-        // Perform the conversion from NV12 to RGB
-        sws_scale(swsContext, srcData, srcLineSize, 0, frame.getHeight(), dstData,
-                  dstLineSize);
+        srcLineSize[0] = frame.getLineSize(0);
+        srcLineSize[1] = frame.getLineSize(1);
+        srcLineSize[2] = frame.getLineSize(2);
+
+        // Destination data and line sizes
+        uint8_t* dstData[4] = {nullptr};
+        int dstLineSize[4] = {0};
+
+        // Calculate the required buffer size
+        int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, frame.getWidth(),
+                                                frame.getHeight(), 1);
+        if (numBytes < 0)
+        {
+            throw std::runtime_error("Could not get buffer size");
+        }
+
+        // Initialize the destination data pointers and line sizes
+        int ret = av_image_fill_arrays(dstData, dstLineSize,
+                                       static_cast<uint8_t*>(buffer), AV_PIX_FMT_RGB24,
+                                       frame.getWidth(), frame.getHeight(), 1);
+        if (ret < 0)
+        {
+            throw std::runtime_error("Could not fill destination image arrays");
+        }
+
+        // Perform the conversion from YUV420P to RGB
+        int result = sws_scale(swsContext, srcData, srcLineSize, 0, frame.getHeight(),
+                               dstData, dstLineSize);
+        if (result <= 0)
+        {
+            throw std::runtime_error("sws_scale failed during conversion");
+        }
     }
 };
 

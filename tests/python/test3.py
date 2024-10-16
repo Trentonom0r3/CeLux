@@ -99,7 +99,7 @@ def getMetadataFFMPY(videoPath):
     Get metadata from the video file using FFMPY.
     """
 
-    video = ffmpy.VideoReader(videoPath)
+    video = ffmpy.VideoReader(videoPath, "cpu")
 
     metadata = video.get_properties()
 
@@ -110,6 +110,7 @@ def getMetadataFFMPY(videoPath):
     # logging.info(f"Channels: {metadata['channels']}")
     logging.info(f"FPS: {metadata['fps']}")
     logging.info(f"Duration: {metadata['duration']}")
+    logging.info(f"Pixel Format: {metadata['pixel_format']}")
 
     return metadata
 

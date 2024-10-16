@@ -9,6 +9,9 @@ import logging
 import requests
 import sys
 import os
+import cProfile
+import pstats
+import io
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import ffmpy
@@ -52,7 +55,7 @@ def processVideoTorch(videoPath):
     try:
         frameCount = 0
         start = time.time()
-        with ffmpy.VideoReader(videoPath, device = "cuda" , d_type="uint8") as reader:
+        with ffmpy.VideoReader(videoPath, device="cuda", d_type="uint8") as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(
@@ -80,7 +83,7 @@ def processVideoNumPy(videoPath):
         start = time.time()
         # Hardcoded to as_numpy false until fixed
         # Until then, this still decodes on GPU
-        with ffmpy.VideoReader(videoPath, device = "cpu", d_type="uint8") as reader:
+        with ffmpy.VideoReader(videoPath, device="cpu", d_type="uint8") as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(f"Frame data: {frame.shape, frame.dtype, frame.device}")
@@ -109,13 +112,37 @@ def main(args):
     else:
         logging.info(f"Video already exists at {videoPath}")
 
-    logging.info("Processing video with torch frames")
-    processVideoTorch(videoPath)
+    # Create a cProfile profiler instance
+    profiler = cProfile.Profile()
 
-    print("")
+    # Start profiling
+    profiler.enable()
 
-    logging.info("Processing video with numpy frames")
-    processVideoNumPy(videoPath)
+    try:
+        logging.info("Processing video with torch frames on GPU")
+        processVideoTorch(videoPath)
+
+        logging.info("")
+
+        logging.info("Processing video with torch frames on CPU")
+        processVideoNumPy(videoPath)
+    finally:
+        # Stop profiling
+        profiler.disable()
+
+        # Create a stream to hold profiling results
+        s = io.StringIO()
+        ps = pstats.Stats(profiler, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
+
+        # Print profiling results
+        ps.print_stats()
+
+        # Write profiling results to the console
+        logging.info("Profiling results:\n" + s.getvalue())
+
+        # Optionally, write profiling results to a file
+        with open("profiling_results.txt", "w") as f:
+            f.write(s.getvalue())
 
 
 if __name__ == "__main__":

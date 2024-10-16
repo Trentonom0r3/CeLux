@@ -6,7 +6,6 @@
 #include "Factory.hpp"
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
-
 namespace py = pybind11;
 
 // Enum for copy types
@@ -42,9 +41,9 @@ class VideoReader
      * py::array<uint8_t>. Shape is always HWC. If batch size is specified in Reader
      * config, output shape will be BHWC for Tensors.
      *
-     * @return py::object (torch::Tensor or py::array<uint8_t>)
+     * @return  torch::Tensor (torch::Tensor or py::array<uint8_t>)
      */
-    py::object readFrame();
+    torch::Tensor readFrame();
 
     /**
      * @brief Seek to a specific timestamp in the video.
@@ -83,9 +82,9 @@ class VideoReader
     /**
      * @brief Get the next frame in iteration.
      *
-     * @return py::object Next frame as torch::Tensor or py::array<uint8_t>.
+     * @return  torch::Tensor Next frame as torch::Tensor or py::array<uint8_t>.
      */
-    py::object next();
+     torch::Tensor next();
 
     /**
      * @brief Enter method for Python context manager.
@@ -133,9 +132,9 @@ class VideoReader
     std::unique_ptr<ffmpy::conversion::IConverter> convert;
 
     // Buffers
-    torch::Tensor RGBTensor;  // For RGB conversion (GPU)
-    torch::Tensor cpuTensor;  // For CPU conversion (CPU)
-    ffmpy::Frame frame;       // Decoded frame
+    torch::Tensor RGBTensor; // For RGB conversion (GPU)
+    torch::Tensor cpuTensor; // For CPU conversion (CPU)
+    ffmpy::Frame frame;      // Decoded frame
     int start_frame = 0;
     int end_frame = -1; // -1 indicates no limit
 
