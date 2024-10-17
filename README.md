@@ -203,6 +203,14 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.0 (2024-10-17)
+
+- **Pre-Release Update:**
+  - Renamed from `ffmpy` to `CeLux`.
+  - Created official `pypi` release.
+  - Refactored to split `cpu` and `cuda` backends.
+
+  
 ### Version 0.2.6 (2024-10-15)
 
 - **Pre-Release Update:**
