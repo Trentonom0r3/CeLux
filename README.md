@@ -1,4 +1,4 @@
-![Build Status](https://github.com/Trentonom0r3/celux/actions/workflows/ci.yml/badge.svg)
+
 ![License](https://img.shields.io/badge/license-AGPL%203.0-blue.svg)
 ![PyPI Version](https://img.shields.io/pypi/v/celux)
 ![PyPI Version CUDA](https://img.shields.io/pypi/v/celux-cuda)
