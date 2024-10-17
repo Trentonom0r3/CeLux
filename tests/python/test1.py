@@ -12,8 +12,8 @@ import os
 import cv2  # For visual confirmation
 
 # Adjust the path to include celux
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux_cuda as celux
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -54,11 +54,11 @@ def process_video_with_visualization(video_path, output_path=None):
         with celux.VideoReader(video_path, device = "cuda", d_type="uint8") as reader:
             writer = None
             if output_path:
-                writer = celux.VideoWriter(output_path, 1920, 1080, 24.0, as_numpy=True)
-
+                writer = celux.VideoWriter(output_path, 1920, 1080, 24.0,  device = "cuda")
+                
             for frame in reader:
                 # Display the frame using OpenCV
-                cv2.imshow("Video Frame", frame.numpy())
+               # cv2.imshow("Video Frame", frame.cpu().numpy())
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
                     break

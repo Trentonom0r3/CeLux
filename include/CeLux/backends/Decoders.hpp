@@ -1,6 +1,6 @@
 #pragma once
-#ifndef DEOCDERS_HPP
-#define DEOCDERS_HPP
+#ifndef DECODERS_HPP
+#define DECODERS_HPP
 
 #include <backends/Decoder.hpp>
 #include <backends/cpu/Decoder.hpp>
@@ -9,4 +9,4 @@
 #include <backends/gpu/cuda/Decoder.hpp>
 #endif
 
-#endif // DEOCDERS_HPP
+#endif // DECODERS_HPP

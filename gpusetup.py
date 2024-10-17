@@ -3,7 +3,7 @@ from pathlib import Path
 
 # Set the package name for the CUDA version
 package_name = "celux-cuda"
-version = "0.3.0"    # Version for CUDA version
+version = "0.3.1"    # Version for CUDA version
 
 # Read the contents of your README file
 this_directory = Path(__file__).parent

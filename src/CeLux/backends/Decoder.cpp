@@ -77,7 +77,7 @@ void Decoder::initialize(const std::string& filePath)
     // Calculate total frames if possible
     if (vp.fps > 0 && vp.duration > 0)
     {
-        vp.totalFrames = static_cast<int>(vp.duration * vp.fps);
+        vp.totalFrames = vp.duration * vp.fps;
     }
     else
     {

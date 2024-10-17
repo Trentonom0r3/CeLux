@@ -203,6 +203,14 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.1 (2024-10-17)
+
+- **Pre-Release Update:**
+  - Adjusted Frame Range End in `VideoReader` to be exclusive to match `cv2` behavior.
+  - Removed unnecessary error throws.
+  - Encoder **DOES NOT** work currenty. *WiP.*
+
+
 ### Version 0.3.0 (2024-10-17)
 
 - **Pre-Release Update:**
