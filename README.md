@@ -69,7 +69,7 @@ pip install celux-cuda
 Regardless of the installation choice, both packages are imported using the same module name:
 
 ```python
-import celux
+import celux #as cx
 ```
 
 This design ensures a seamless transition between CPU and CUDA versions without changing your import statements.
