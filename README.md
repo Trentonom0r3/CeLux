@@ -32,14 +32,6 @@ Install the CPU version of **CeLux** using `pip`:
 pip install celux
 ```
 
-**Prerequisites:**
-
-- **PyTorch (CPU):** Required for tensor operations. Install via:
-
-  ```bash
-  pip install torch
-  ```
-
 **Note:** The CPU version **only** supports CPU operations. Attempting to use GPU features with this version will result in an error.
 
 ### 🖥️ CUDA (GPU) Installation
@@ -50,17 +42,7 @@ Install the CUDA version of **CeLux** using `pip`:
 pip install celux-cuda
 ```
 
-**Prerequisites:**
-
-- **PyTorch (with CUDA Support):** Required for tensor operations and GPU acceleration. Install via:
-
-  ```bash
-  pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
-  ```
-
-  *Replace `cu118` with the appropriate CUDA version compatible with your system.*
-
-**Note:** The CUDA version **requires** a CUDA-capable GPU and the corresponding CUDA toolkit installed on your system.
+**Note:** The CUDA version **requires** a CUDA-capable GPU and the corresponding Torch-Cuda installation.
 
 ### 🔄 Both Packages Import as `celux`
 
