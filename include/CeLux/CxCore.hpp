@@ -39,7 +39,11 @@ extern "C"
 
 namespace celux
 {
-
+enum class backend
+{
+    CPU,
+    CUDA
+};
 /**
  * @enum VideoCodec
  * @brief Enumerates the different video codecs supported.

@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Set the package name for the CPU version
 package_name = "celux"
-version = "0.3.0"  # Version for CPU version
+version = "0.3.1"  # Version for CPU version
 
 # Read the contents of your README file
 this_directory = Path(__file__).parent

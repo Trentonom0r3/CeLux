@@ -1,14 +1,12 @@
-// Decoder.hpp
 #pragma once
 
 #include "FFException.hpp"
-#include <Frame.hpp> 
 #include <Conversion.hpp>
+#include <Frame.hpp>
 
 namespace celux
 {
-
-class Decoder
+class Encoder
 {
   public:
     struct VideoProperties
@@ -16,44 +14,39 @@ class Decoder
         int width;
         int height;
         double fps;
-        double duration;
-        double totalFrames;
         AVPixelFormat pixelFormat;
-        bool hasAudio;
+        std::string codecName;
     };
-    Decoder() = default;
-    // Constructor
-    Decoder(std::unique_ptr<celux::conversion::IConverter> converter = nullptr);
+    Encoder(const std::string& outputPath, const VideoProperties& props,
+            std::unique_ptr<celux::conversion::IConverter> converter);
+    Encoder() = default;
+    Encoder(std::unique_ptr<celux::conversion::IConverter> converter = nullptr);
 
-    // Destructor
-    virtual ~Decoder();
+    virtual ~Encoder();
 
     // Deleted copy constructor and assignment operator
-    Decoder(const Decoder&) = delete;
-    Decoder& operator=(const Decoder&) = delete;
+    Encoder(const Encoder&) = delete;
+    Encoder& operator=(const Encoder&) = delete;
 
     // Move constructor and assignment operator
-    Decoder(Decoder&&) noexcept;
-    Decoder& operator=(Decoder&&) noexcept;
+    Encoder(Encoder&&) noexcept;
+    Encoder& operator=(Encoder&&) noexcept;
 
     // Core methods
-    virtual bool decodeNextFrame(void* buffer);
-    virtual bool seek(double timestamp);
-    virtual VideoProperties getVideoProperties() const;
+    virtual bool encodeFrame(void* buffer);
+    virtual bool finalize();
     virtual bool isOpen() const;
     virtual void close();
-    virtual std::vector<std::string> listSupportedDecoders() const;
+    virtual std::vector<std::string> listSupportedEncoders() const;
     AVCodecContext* getCtx();
 
   protected:
     // Initialization method
-    void initialize(const std::string& filePath);
-
+    void initialize(const std::string& outputPath, const VideoProperties& props);
     // Virtual methods for customization
-    virtual void openFile(const std::string& filePath);
+    virtual void openFile(const std::string& outputPath, const VideoProperties& props);
     virtual void initHWAccel(); // Default does nothing
-    virtual void findVideoStream();
-    virtual void initCodecContext(const AVCodec* codec);
+    virtual void initCodecContext(const AVCodec* codec, const VideoProperties& props);
     virtual int64_t convertTimestamp(double timestamp) const;
 
     // Virtual callback for hardware pixel formats
@@ -65,7 +58,9 @@ class Decoder
     {
         void operator()(AVFormatContext* ctx) const
         {
-            avformat_close_input(&ctx);
+            if (!(ctx->oformat->flags & AVFMT_NOFILE))
+                avio_closep(&ctx->pb);
+            avformat_free_context(ctx);
         }
     };
 
@@ -85,28 +80,21 @@ class Decoder
         }
     };
 
-    struct AVPacketDeleter
-    {
-        void operator()(AVPacket* pkt) const
-        {
-            av_packet_free(&pkt);
-        }
-    };
-
     using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
     using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
     using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
-    using AVPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
 
     // Member variables
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;
-    AVPacketPtr pkt;
-    int videoStreamIndex;
+    AVBufferRefPtr hwDeviceCtx;
+    AVBufferRefPtr hwFramesCtx;
+    AVStream* stream = nullptr;
+    AVPacket* packet = nullptr;
     VideoProperties properties;
+    std::string hwAccelType;
+    int64_t pts = 0;
     Frame frame;
-
     std::unique_ptr<celux::conversion::IConverter> converter;
-    AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
 };
 } // namespace celux

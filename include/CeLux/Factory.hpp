@@ -1,17 +1,16 @@
-// Factory.hpp
-
 #pragma once
 #ifndef FACTORY_HPP
 #define FACTORY_HPP
 
 #include <Decoders.hpp>
+#include <Encoders.hpp> // Assuming you have header files that declare Encoder classes
 
 namespace celux
 {
 
 /**
- * @brief Factory class to create Decoders and Converters based on backend and
- * configuration.
+ * @brief Factory class to create Decoders, Encoders, and Converters based on backend
+ * and configuration.
  */
 class Factory
 {
@@ -37,6 +36,44 @@ class Factory
         case celux::backend::CUDA:
             return std::make_unique<celux::backends::gpu::cuda::Decoder>(
                 filename, std::move(converter));
+#endif // CUDA_ENABLED
+        default:
+            throw std::invalid_argument("Unsupported backend: " +
+                                        std::to_string(static_cast<int>(backend)));
+        }
+    }
+
+    /**
+     * @brief Creates an Encoder instance based on the specified backend.
+     *
+     * @param backend Backend type (CPU or CUDA).
+     * @param filename Path to the output video file.
+     * @param props Video properties for the encoder (e.g., width, height, fps).
+     * @param converter Unique pointer to the IConverter instance.
+     * @return std::unique_ptr<Encoder> Pointer to the created Encoder.
+     */
+    static std::unique_ptr<Encoder>
+    createEncoder(celux::backend backend, const std::string& filename,
+                  const Encoder::VideoProperties& props,
+                  std::unique_ptr<celux::conversion::IConverter> converter)
+    {
+        int width = props.width;
+        int height = props.height;
+        int fps = props.fps;
+        std::cout << "Creating Encoder with width: " << width << ", height: " << height
+				  << ", fps: " << fps << std::endl;
+        switch (backend)
+
+        {
+            std::cout << "Creating CPU encoder\n" << std::endl;
+        case celux::backend::CPU:
+            return std::make_unique<celux::backends::cpu::Encoder>(
+                filename, props, std::move(converter));
+#ifdef CUDA_ENABLED 
+        case celux::backend::CUDA:
+            std::cout << "Creating CUDA encoder\n" << std::endl;
+            return std::make_unique<celux::backends::gpu::cuda::Encoder>(
+                filename, props, std::move(converter));
 #endif // CUDA_ENABLED
         default:
             throw std::invalid_argument("Unsupported backend: " +
@@ -77,6 +114,40 @@ class Factory
                 else if (dtype == celux::dataType::FLOAT32)
                 {
                     return std::make_unique<celux::conversion::cpu::NV12ToRGB<float>>();
+                }
+                break;
+            case celux::ConversionType::RGBToNV12:
+                if (dtype == celux::dataType::UINT8)
+                {
+                    return std::make_unique<
+                        celux::conversion::cpu::RGBToNV12<uint8_t>>();
+                }
+                else if (dtype == celux::dataType::FLOAT32)
+                {
+                    return std::make_unique<celux::conversion::cpu::RGBToNV12<float>>();
+                }
+                break;
+            case celux::ConversionType::BGRToNV12:
+                if (dtype == celux::dataType::UINT8)
+                {
+                    return std::make_unique<
+                        celux::conversion::cpu::BGRToNV12<uint8_t>>();
+                }
+                else if (dtype == celux::dataType::FLOAT32)
+                {
+                    return std::make_unique<celux::conversion::cpu::BGRToNV12<float>>();
+                }
+                break;
+            case celux::ConversionType::NV12ToBGR:
+                if (dtype == celux::dataType::UINT8)
+                {
+
+                    return std::make_unique<
+                        celux::conversion::cpu::NV12ToBGR<uint8_t>>();
+                }
+                else if (dtype == celux::dataType::FLOAT32)
+                {
+                    return std::make_unique<celux::conversion::cpu::NV12ToBGR<float>>();
                 }
                 break;
 

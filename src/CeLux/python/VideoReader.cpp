@@ -114,6 +114,26 @@ VideoReader::~VideoReader()
 
 void VideoReader::setRange(int start, int end)
 {
+    // Handle negative indices by converting them to positive frame numbers
+    if (start < 0)
+        start = properties.totalFrames + start;
+    if (end < 0)
+        end = properties.totalFrames + end;
+
+    // Validate the adjusted frame range
+    if (start < 0 || end < 0)
+    {
+        throw std::runtime_error("Frame indices out of range after adjustment.");
+    }
+    if (end <= start)
+    {
+        throw std::runtime_error(
+            "end_frame must be greater than start_frame after adjustment.");
+    }
+
+    // Make end_frame exclusive by subtracting one
+    end = end - 1;
+
     start_frame = start;
     end_frame = end;
 }
