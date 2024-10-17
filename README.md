@@ -34,7 +34,6 @@ pip install celux
 
 **Prerequisites:**
 
-- **FFmpeg:** Required for audio/video processing functionalities.
 - **PyTorch (CPU):** Required for tensor operations. Install via:
 
   ```bash
@@ -53,7 +52,6 @@ pip install celux-cuda
 
 **Prerequisites:**
 
-- **FFmpeg:** Required for audio/video processing functionalities.
 - **PyTorch (with CUDA Support):** Required for tensor operations and GPU acceleration. Install via:
 
   ```bash
