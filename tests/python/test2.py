@@ -9,12 +9,9 @@ import logging
 import requests
 import sys
 import os
-import cProfile
-import pstats
-import io
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import ffmpy
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux
 
 from requests.exceptions import RequestException
 
@@ -45,7 +42,7 @@ def downloadVideo(url, outputPath):
         raise
 
 
-def processVideoTorch(videoPath):
+def processVideoCuda(videoPath):
     """
     Processes the video to count frames and measure performance.
 
@@ -55,7 +52,7 @@ def processVideoTorch(videoPath):
     try:
         frameCount = 0
         start = time.time()
-        with ffmpy.VideoReader(videoPath, device="cuda", d_type="uint8") as reader:
+        with celux.VideoReader(videoPath, device = "cuda" , d_type="uint8") as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(
@@ -71,7 +68,7 @@ def processVideoTorch(videoPath):
         raise
 
 
-def processVideoNumPy(videoPath):
+def processVideoCPU(videoPath):
     """
     Processes the video to count frames and measure performance.
 
@@ -83,7 +80,7 @@ def processVideoNumPy(videoPath):
         start = time.time()
         # Hardcoded to as_numpy false until fixed
         # Until then, this still decodes on GPU
-        with ffmpy.VideoReader(videoPath, device="cpu", d_type="uint8") as reader:
+        with celux.VideoReader(videoPath, device = "cpu", d_type="uint8") as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(f"Frame data: {frame.shape, frame.dtype, frame.device}")
@@ -112,37 +109,13 @@ def main(args):
     else:
         logging.info(f"Video already exists at {videoPath}")
 
-    # Create a cProfile profiler instance
-    profiler = cProfile.Profile()
+    logging.info("Processing video with CUDA")
+    processVideoCuda(videoPath)
 
-    # Start profiling
-    profiler.enable()
+    print("")
 
-    try:
-        logging.info("Processing video with torch frames on GPU")
-        processVideoTorch(videoPath)
-
-        logging.info("")
-
-        logging.info("Processing video with torch frames on CPU")
-        processVideoNumPy(videoPath)
-    finally:
-        # Stop profiling
-        profiler.disable()
-
-        # Create a stream to hold profiling results
-        s = io.StringIO()
-        ps = pstats.Stats(profiler, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
-
-        # Print profiling results
-        ps.print_stats()
-
-        # Write profiling results to the console
-        logging.info("Profiling results:\n" + s.getvalue())
-
-        # Optionally, write profiling results to a file
-        with open("profiling_results.txt", "w") as f:
-            f.write(s.getvalue())
+    logging.info("Processing video with CPU")
+    processVideoCPU(videoPath)
 
 
 if __name__ == "__main__":

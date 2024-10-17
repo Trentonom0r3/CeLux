@@ -4,13 +4,20 @@ cmake_minimum_required(VERSION 3.15)
 # 1. Project Setup
 # ------------------------------
 
+# Option to enable or disable CUDA support
+option(ENABLE_CUDA "Enable CUDA support" ON)
+
 # Use vcpkg toolchain if on Windows
 if (WIN32)
     set(CMAKE_TOOLCHAIN_FILE "C:/Users/tjerf/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
 endif()
 
-# Enable C++ and CUDA languages
-project(FFMPy LANGUAGES CXX CUDA)
+# Conditionally include CUDA in the project languages
+if(ENABLE_CUDA)
+    project(CeLux LANGUAGES CXX CUDA)
+else()
+    project(CeLux LANGUAGES CXX)
+endif()
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -20,12 +27,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 2. Specify CUDA Paths Directly
 # ------------------------------
 
-# Define CUDA toolkit root path
-set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
+if(ENABLE_CUDA)
+    # Define CUDA toolkit root path
+    set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
 
-# Include CUDA directories
-include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
-link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+    # Include CUDA directories
+    include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
+    link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+endif()
 
 # ------------------------------
 # 3. Manually Specify FFmpeg Static Libraries (A)
@@ -45,7 +54,7 @@ set(FFMPEG_STATIC_LIBS
     "${VCPKG_INSTALLED_DIR}/lib/avdevice.lib"
     "${VCPKG_INSTALLED_DIR}/lib/swscale.lib"
     "${VCPKG_INSTALLED_DIR}/lib/swresample.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/avfilter.lib"  # Add avfilter library
+    "${VCPKG_INSTALLED_DIR}/lib/avfilter.lib"
     "${VCPKG_INSTALLED_DIR}/lib/libx264.lib"
 )
 
@@ -54,7 +63,11 @@ set(FFMPEG_STATIC_LIBS
 # ------------------------------
 
 # Set the path to the root of the libtorch installation
-set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cu121/libtorch")
+if(ENABLE_CUDA)
+    set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cu121/libtorch")
+else()
+    set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cpu/libtorch")
+endif()
 set(CMAKE_PREFIX_PATH "${TORCH_INSTALL_PREFIX}")
 
 # Find Torch
@@ -65,37 +78,19 @@ find_package(Torch REQUIRED)
 # ------------------------------
 
 # Define the Windows SDK lib path (adjust the version as needed)
-set(WINDOWS_SDK_LIB_PATH "C:/Program Files (x86)/Windows Kits/10/Lib")
+set(WINDOW_SDK_LIB_PATH "C:/Program Files (x86)/Windows Kits/10/Lib")
 
-# Find mf.lib
-find_library(MF_LIB
-    NAMES mf
-    PATHS "${WINDOWS_SDK_LIB_PATH}/*/um/x64"
-    NO_DEFAULT_PATH
-)
-
+find_library(MF_LIB NAMES mf PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
 if(NOT MF_LIB)
     message(FATAL_ERROR "mf.lib not found. Ensure the Windows SDK is installed.")
 endif()
 
-# Find mfuuid.lib
-find_library(MFUUUID_LIB
-    NAMES mfuuid
-    PATHS "${WINDOWS_SDK_LIB_PATH}/*/um/x64"
-    NO_DEFAULT_PATH
-)
-
+find_library(MFUUUID_LIB NAMES mfuuid PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
 if(NOT MFUUUID_LIB)
     message(FATAL_ERROR "mfuuid.lib not found. Ensure the Windows SDK is installed.")
 endif()
 
-# Find ole32.lib
-find_library(OLE32_LIB
-    NAMES ole32
-    PATHS "${WINDOWS_SDK_LIB_PATH}/*/um/x64"
-    NO_DEFAULT_PATH
-)
-
+find_library(OLE32_LIB NAMES ole32 PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
 if(NOT OLE32_LIB)
     message(FATAL_ERROR "ole32.lib not found. Ensure the Windows SDK is installed.")
 endif()
@@ -104,22 +99,18 @@ endif()
 # 6. Manually Specify Python 3.12 Paths (C)
 # ------------------------------
 
-# Manually set Python paths
 set(PYTHON_EXECUTABLE "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/python.exe")
 set(PYTHON_INCLUDE_DIR "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/include")
 set(PYTHON_LIBRARY "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/libs/python312.lib")
 
-# Ensure that the Python executable exists
 if(NOT EXISTS "${PYTHON_EXECUTABLE}")
     message(FATAL_ERROR "Python executable not found at ${PYTHON_EXECUTABLE}")
 endif()
 
-# Ensure that the Python include directory exists
 if(NOT EXISTS "${PYTHON_INCLUDE_DIR}")
     message(FATAL_ERROR "Python include directory not found at ${PYTHON_INCLUDE_DIR}")
 endif()
 
-# Ensure that the Python library exists
 if(NOT EXISTS "${PYTHON_LIBRARY}")
     message(FATAL_ERROR "Python library not found at ${PYTHON_LIBRARY}")
 endif()
@@ -127,13 +118,13 @@ endif()
 # ------------------------------
 # 7. Find pybind11 using vcpkg
 # ------------------------------
+
 find_package(pybind11 REQUIRED)
 
 # ------------------------------
 # 8. Find Torch Python Library
 # ------------------------------
 
-# Find the path to the installed torch module
 execute_process(
     COMMAND ${PYTHON_EXECUTABLE} -c "import torch; import os; print(os.path.dirname(torch.__file__))"
     OUTPUT_VARIABLE TORCH_PYTHON_PATH
@@ -144,7 +135,6 @@ if(NOT TORCH_PYTHON_PATH)
     message(FATAL_ERROR "Could not find torch in the current Python environment.")
 endif()
 
-# Find Torch Python library (torch_python)
 find_library(
     TORCH_PYTHON_LIBRARY
     NAMES torch_python
@@ -159,40 +149,62 @@ endif()
 # ------------------------------
 # 9. Add Source Files
 # ------------------------------
-file(GLOB_RECURSE SOURCES "src/FFMPY/*.cpp" "src/FFMPY/conversion/*.cpp" "src/FFMPY/cuda/*.cu" "src/FFMPY/backends/*.cpp" "src/FFMPY/conversion/cpu/*.cpp"
-"src/FFMPY/conversion/gpu/cuda*.cpp")
-# Create a static library target for FFMPyLib
-add_library(FFMPyLib STATIC ${SOURCES})
-    # Add a preprocessor definition for CUDA_ENABLED
-target_compile_definitions(FFMPyLib PUBLIC CUDA_ENABLED)
 
-# Specify include directories for FFMPyLib
-target_include_directories(FFMPyLib PUBLIC
-    ${CMAKE_SOURCE_DIR}/include/FFMPY
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/cpu
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/gpu
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/conversion/gpu/cuda
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/error
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/backends
+file(GLOB_RECURSE SOURCES_COMMON
+    "src/CeLux/*.cpp"
+    "src/CeLux/conversion/*.cpp"
+    "src/CeLux/backends/*.cpp"
+    "src/CeLux/conversion/cpu/*.cpp"
+)
+
+if(ENABLE_CUDA)
+    file(GLOB_RECURSE SOURCES_CUDA
+        "src/CeLux/cuda/*.cu"
+        "src/CeLux/conversion/gpu/cuda*.cpp"
+    )
+    set(SOURCES ${SOURCES_COMMON} ${SOURCES_CUDA})
+else()
+    set(SOURCES ${SOURCES_COMMON})
+endif()
+
+add_library(CeLuxLib STATIC ${SOURCES})
+
+if(ENABLE_CUDA)
+    target_compile_definitions(CeLuxLib PUBLIC CUDA_ENABLED)
+endif()
+
+target_include_directories(CeLuxLib PUBLIC
+    ${CMAKE_SOURCE_DIR}/include/CeLux
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/cpu
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu/cuda
+    ${CMAKE_SOURCE_DIR}/include/CeLux/error
+    ${CMAKE_SOURCE_DIR}/include/CeLux/backends
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
-    "${CUDA_TOOLKIT_ROOT_DIR}/include"  # Add CUDA include directories
     ${PYTHON_INCLUDE_DIR}
 )
 
-# Set properties for FFMPyLib
-set_target_properties(FFMPyLib PROPERTIES
+if(ENABLE_CUDA)
+    target_include_directories(CeLuxLib PUBLIC "${CUDA_TOOLKIT_ROOT_DIR}/include")
+endif()
+
+set_target_properties(CeLuxLib PROPERTIES
     CXX_STANDARD 17
-    CUDA_STANDARD 17
-    CUDA_STANDARD_REQUIRED ON
     POSITION_INDEPENDENT_CODE ON
-    CUDA_SEPARABLE_COMPILATION ON
 )
 
-# Link FFmpeg static libraries, CUDA, and WMF libraries to FFMPyLib
-target_link_libraries(FFMPyLib PUBLIC
+if(ENABLE_CUDA)
+    set_target_properties(CeLuxLib PROPERTIES
+        CUDA_STANDARD 17
+        CUDA_STANDARD_REQUIRED ON
+        CUDA_SEPARABLE_COMPILATION ON
+    )
+endif()
+
+target_link_libraries(CeLuxLib PUBLIC
     ws2_32
     bcrypt
     secur32
@@ -203,69 +215,85 @@ target_link_libraries(FFMPyLib PUBLIC
     ${OLE32_LIB}
     ${FFMPEG_STATIC_LIBS}
     ${TORCH_LIBRARIES}
-    CUDA::cudart
-    "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib"  # CUDA driver library
-    #"${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/nvcuvid.lib"  # CUDA Video Decoder library
 )
 
-# ---------------------------
+if(ENABLE_CUDA)
+    target_link_libraries(CeLuxLib PUBLIC
+        CUDA::cudart
+        "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib"
+    )
+endif()
+
 # ------------------------------
-# 11. Add Pybind11 Bindings as a Separate Module (Manual Handling)
+# 10. Build the Python Module
 # ------------------------------
 
-# Instead of using pybind11_add_module, we'll manually create the Python module
-add_library(ffmpy MODULE  ${CMAKE_SOURCE_DIR}/src/FFMPY/Python/Bindings.cpp)
+add_library(celux MODULE  ${CMAKE_SOURCE_DIR}/src/CeLux/Python/Bindings.cpp)
 
-target_compile_options(ffmpy PRIVATE /O2 /Ob2 /Oi /Ot /GL)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -use_fast_math")
+target_compile_options(celux PRIVATE /O2 /Ob2 /Oi /Ot /GL)
+if(ENABLE_CUDA)
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -use_fast_math")
+endif()
 
-# Specify include directories for the bindings
-target_include_directories(ffmpy PUBLIC
-    ${CMAKE_SOURCE_DIR}/include/FFMPY
-    ${CMAKE_SOURCE_DIR}/include/FFMPY/python
+target_include_directories(celux PUBLIC
+    ${CMAKE_SOURCE_DIR}/include/CeLux
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/cpu
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu
+    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu/cuda
+    ${CMAKE_SOURCE_DIR}/include/CeLux/error
+    ${CMAKE_SOURCE_DIR}/include/CeLux/backends
+    ${CMAKE_SOURCE_DIR}/include/CeLux/python
     ${TORCH_INCLUDE_DIRS}
-    ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include  # Include PyTorch API headers
+    ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
     ${pybind11_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
 )
 
-# Define the module properties to match Python's expectations
-set_target_properties(ffmpy PROPERTIES
-    PREFIX ""  # Typically empty on Windows
-    SUFFIX ".pyd"  # Typically .pyd on Windows
+set_target_properties(celux PROPERTIES
+    PREFIX ""  
+    SUFFIX ".pyd"
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     POSITION_INDEPENDENT_CODE ON
 )
 
 # Ensure the output directory exists
-file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/ffmpy")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib")  # Directory for .lib and .exp files
+if(ENABLE_CUDA)
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/celux_cuda")
+    set(LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux_cuda")
+    set(RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux_cuda")
+    set(ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib_cuda")
+else()
+    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/celux")
+    set(LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux")
+    set(RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux")
+    set(ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+endif()
 
-# Set the output directory for the .pyd and .dll files to FFMPY/ffmpy
-set_target_properties(ffmpy PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ffmpy"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ffmpy"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"  # Redirect .lib files
-    # Note: .exp files are typically placed alongside .lib; CMake doesn't provide a direct property to change their location
+set_target_properties(celux PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_DIRECTORY}
+    RUNTIME_OUTPUT_DIRECTORY ${RUNTIME_OUTPUT_DIRECTORY}
+    ARCHIVE_OUTPUT_DIRECTORY ${ARCHIVE_OUTPUT_DIRECTORY}
 )
 
-# Link libraries to the bindings
-target_link_libraries(ffmpy PUBLIC
-    FFMPyLib
+target_link_libraries(celux PUBLIC
+    CeLuxLib
     ${TORCH_LIBRARIES}
-    ${TORCH_PYTHON_LIBRARY}          # Link against torch_python
-    CUDA::cudart
+    ${TORCH_PYTHON_LIBRARY}
     ${FFMPEG_STATIC_LIBS}
     ${PYTHON_LIBRARY}
 )
 
+if(ENABLE_CUDA)
+    target_link_libraries(celux PUBLIC CUDA::cudart)
+endif()
+
 # ------------------------------
-# 12. Optional: Clean Up Other Output Directories
+# 11. Optional: Clean Up Other Output Directories
 # ------------------------------
 
-# Set FFMPyLib output directory for static libraries
-set_target_properties(FFMPyLib PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+set_target_properties(CeLuxLib PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY "${ARCHIVE_OUTPUT_DIRECTORY}"
 )

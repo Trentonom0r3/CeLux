@@ -19,40 +19,96 @@
       }
     },
     {
-      "name": "x64-debug",
-      "displayName": "x64 Debug",
-      "description": "Target Windows (64-bit) with the Visual Studio development environment. (Debug)",
+      "name": "x64-debug-cpu",
+      "displayName": "x64 Debug CPU-only",
+      "description": "Target Windows (64-bit) CPU-only build. (Debug)",
       "inherits": "windows-base",
       "architecture": {
         "value": "x64",
         "strategy": "external"
       },
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_CUDA": "OFF"
+      }
     },
     {
-      "name": "x64-release",
-      "displayName": "x64 Release",
-      "description": "Target Windows (64-bit) with the Visual Studio development environment. (RelWithDebInfo)",
-      "inherits": "x64-debug",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+      "name": "x64-release-cpu",
+      "displayName": "x64 Release CPU-only",
+      "description": "Target Windows (64-bit) CPU-only build. (Release)",
+      "inherits": "x64-debug-cpu",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     },
     {
-      "name": "x86-debug",
-      "displayName": "x86 Debug",
-      "description": "Target Windows (32-bit) with the Visual Studio development environment. (Debug)",
+      "name": "x64-debug-cuda",
+      "displayName": "x64 Debug CUDA",
+      "description": "Target Windows (64-bit) with CUDA support. (Debug)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_CUDA": "ON"
+      }
+    },
+    {
+      "name": "x64-release-cuda",
+      "displayName": "x64 Release CUDA",
+      "description": "Target Windows (64-bit) with CUDA support. (Release)",
+      "inherits": "x64-debug-cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "x86-debug-cpu",
+      "displayName": "x86 Debug CPU-only",
+      "description": "Target Windows (32-bit) CPU-only build. (Debug)",
       "inherits": "windows-base",
       "architecture": {
         "value": "x86",
         "strategy": "external"
       },
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_CUDA": "OFF"
+      }
     },
     {
-      "name": "x86-release",
-      "displayName": "x86 Release",
-      "description": "Target Windows (32-bit) with the Visual Studio development environment. (RelWithDebInfo)",
-      "inherits": "x86-debug",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+      "name": "x86-release-cpu",
+      "displayName": "x86 Release CPU-only",
+      "description": "Target Windows (32-bit) CPU-only build. (Release)",
+      "inherits": "x86-debug-cpu",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "x86-debug-cuda",
+      "displayName": "x86 Debug CUDA",
+      "description": "Target Windows (32-bit) with CUDA support. (Debug)",
+      "inherits": "windows-base",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_CUDA": "ON"
+      }
+    },
+    {
+      "name": "x86-release-cuda",
+      "displayName": "x86 Release CUDA",
+      "description": "Target Windows (32-bit) with CUDA support. (Release)",
+      "inherits": "x86-debug-cuda",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ]
 }

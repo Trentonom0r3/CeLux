@@ -21,7 +21,7 @@ import requests
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import ffmpy
+import celux
 
 from requests.exceptions import RequestException
 
@@ -94,16 +94,16 @@ def getMetadataCV2(videoPath):
     return metadata
 
 
-def getMetadataFFMPY(videoPath):
+def getMetadataCeLux(videoPath):
     """
-    Get metadata from the video file using FFMPY.
+    Get metadata from the video file using CeLux.
     """
 
-    video = ffmpy.VideoReader(videoPath, "cpu")
+    video = celux.VideoReader(videoPath, "cpu")
 
     metadata = video.get_properties()
 
-    logging.info("FFMPY Metadata:")
+    logging.info("CeLux Metadata:")
     logging.info(f"Total Frames: {metadata['total_frames']}")
     logging.info(f"Width: {metadata['width']}")
     logging.info(f"Height: {metadata['height']}")
@@ -128,4 +128,4 @@ if __name__ == "__main__":
 
     print("")
 
-    getMetadataFFMPY(videoPath)
+    getMetadataCeLux(videoPath)
