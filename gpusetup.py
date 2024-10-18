@@ -1,14 +1,9 @@
 import os
 from setuptools import setup
 from pathlib import Path
-import argparse
 
-# Parse version from command-line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("--version", type=str, required=True, help="The version of the package to build")
-args = parser.parse_args()
-VERSION = args.version
-
+# Set the version from environment variable
+VERSION = os.getenv("CELUX_VERSION", "0.0.1")
 # Set the package name for the CUDA version
 package_name = "celux-cuda"
 

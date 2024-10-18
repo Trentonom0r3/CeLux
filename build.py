@@ -36,8 +36,11 @@ def build_package(is_cuda=False):
     # Change to temporary build directory
     os.chdir(temp_build_dir)
 
+    # Set the version environment variable
+    os.environ["CELUX_VERSION"] = VERSION
+
     # Run the setup file to build the wheel
-    subprocess.run(["python", setup_file, "bdist_wheel", f"--version={VERSION}"], check=True)
+    subprocess.run(["python", setup_file, "bdist_wheel"], check=True)
 
     # Move the built wheel to the main dist directory
     os.makedirs("../dist", exist_ok=True)
