@@ -27,8 +27,9 @@ jobs:
       - name: Set Version
         id: set_version
         run: |
-          VERSION=$(date +"%Y.%m.%d")
-          echo "version=$VERSION" >> $GITHUB_ENV
+          $VERSION = (Get-Date -Format "yyyy.MM.dd")
+          echo "version=$VERSION" >> $env:GITHUB_ENV
+        
 
       - name: Build the Packages
         run: |
