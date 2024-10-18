@@ -37,9 +37,11 @@ jobs:
       - name: Build the Packages
         run: |
           python build.py --version ${{ env.version }}
+        working-directory: ./CeLux
 
       - name: List contents after build
         run: ls -R
+        working-directory: ./CeLux
 
       - name: Create GitHub Release
         if: always()
@@ -52,8 +54,8 @@ jobs:
           draft: false
           prerelease: false
           artifacts: |
-            dist/*.whl
-            dist/*.tar.gz
+            ./CeLux/dist/*.whl
+            ./CeLux/dist/*.tar.gz
         continue-on-error: true
 
       - name: Handle Existing Tag (Optional)
@@ -77,13 +79,12 @@ jobs:
         run: |
           python -m pip install --upgrade twine
 
-      - name: Verify Dist Directory
-        run: |
-          ls dist/
+      - name: List contents of dist directory
+        run: ls ./CeLux/dist/
 
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PPYI }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload dist/*
+          twine upload ./CeLux/dist/*
