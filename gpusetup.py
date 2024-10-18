@@ -1,9 +1,16 @@
+import os
 from setuptools import setup
 from pathlib import Path
+import argparse
+
+# Parse version from command-line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument("--version", type=str, required=True, help="The version of the package to build")
+args = parser.parse_args()
+VERSION = args.version
 
 # Set the package name for the CUDA version
 package_name = "celux-cuda"
-version = "0.3.1"    # Version for CUDA version
 
 # Read the contents of your README file
 this_directory = Path(__file__).parent
@@ -11,7 +18,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setup(
     name=package_name,  # Package name on PyPI will be "celux-cuda"
-    version=version,
+    version=VERSION,
     author="Trenton Flanagan",
     author_email="spigonvids@gmail.com",
     description="HW accelerated video reading for ML Inference (CUDA version).",
