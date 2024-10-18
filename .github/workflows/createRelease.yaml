@@ -26,8 +26,9 @@ jobs:
 
       - name: Extract Version from build.py
         id: get_version
+        shell: pwsh
         run: |
-          VERSION=$(grep 'VERSION = ' build.py | cut -d '"' -f 2)
+          $VERSION = (Get-Content build.py | Select-String 'VERSION = "' | ForEach-Object { $_ -match 'VERSION = \"([^\"]+)\"'; $matches[1] })
           echo "version=$VERSION" >> $GITHUB_ENV
 
       - name: Build the Packages
@@ -70,9 +71,13 @@ jobs:
         run: |
           python -m pip install --upgrade twine
 
+      - name: Verify Dist Directory
+        run: |
+          ls dist/
+
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           twine upload dist/*
