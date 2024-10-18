@@ -24,9 +24,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
-      - name: List contents before build
-        run: ls -R
-
       - name: Extract Version from build.py
         id: get_version
         shell: pwsh
@@ -85,6 +82,6 @@ jobs:
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.PYPI }}
         run: |
           twine upload ./CeLux/dist/*
