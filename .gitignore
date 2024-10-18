@@ -1,6 +1,5 @@
 .vs/*
 out/*
-build.py
 ffmpy.egg-info/*
 build/*
 ffmpy.egg-info/*
