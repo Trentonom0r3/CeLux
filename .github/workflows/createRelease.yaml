@@ -22,14 +22,13 @@ jobs:
 
       - name: Install Build Dependencies
         run: |
-          python -m pip install --upgrade pip setuptools wheel twine
+          python -m pip install --upgrade pip setuptools wheel
 
-      - name: Set Version
-        id: set_version
+      - name: Extract Version from build.py
+        id: get_version
         run: |
-          $VERSION = (Get-Date -Format "yyyy.MM.dd")
-          echo "version=$VERSION" >> $env:GITHUB_ENV
-        
+          VERSION=$(grep 'VERSION = ' build.py | cut -d '"' -f 2)
+          echo "version=$VERSION" >> $GITHUB_ENV
 
       - name: Build the Packages
         run: |
@@ -74,6 +73,6 @@ jobs:
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI}}
+          TWINE_PASSWORD: ${{ secrets.PYPI }}
         run: |
           twine upload dist/*
