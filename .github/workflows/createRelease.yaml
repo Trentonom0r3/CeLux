@@ -24,6 +24,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
+      - name: List contents before build
+        run: ls -R
+
       - name: Extract Version from build.py
         id: get_version
         shell: pwsh
@@ -34,6 +37,9 @@ jobs:
       - name: Build the Packages
         run: |
           python build.py --version ${{ env.version }}
+
+      - name: List contents after build
+        run: ls -R
 
       - name: Create GitHub Release
         if: always()
@@ -78,6 +84,6 @@ jobs:
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_PASSWORD: ${{ secrets.PPYI }}
         run: |
           twine upload dist/*
