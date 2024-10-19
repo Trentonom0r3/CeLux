@@ -4,12 +4,12 @@
 #include <torch/extension.h>
 
 VideoWriter::VideoWriter(const std::string& filePath, int width, int height, float fps,
-                         const std::string& device, const std::string& dataType)
+                         const std::string& device, const std::string& dataType, std::optional<torch::Stream> stream)
     : encoder(nullptr)
 {
     try
     {
-        std::cout << "Creating VideoWriter\n" << std::endl;
+        CELUX_DEBUG("Creating VideoWriter\n");
         celux::Encoder::VideoProperties props;
         props.width = width;
         props.height = height;
@@ -36,7 +36,7 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         else if (device == "cpu")
         {
 
-            props.codecName = "h264";
+            props.codecName = "libx264";
             backend = celux::backend::CPU;
         }
         else
@@ -67,18 +67,26 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         {
             throw std::invalid_argument("Unsupported dataType: " + dataType);
         }
-        std::cout << "Creating encoder\n" << std::endl;
+        CELUX_DEBUG("Creating encoder\n");
         // Create the converter using the factory
-      //  convert = celux::Factory::createConverter(
-         //   backend, celux::ConversionType::RGBToNV12, dtype, nostream;
-        std::cout << "Converter created\n" << std::endl;
+        if (!stream.has_value())
+        {
+            convert = celux::Factory::createConverter(
+				backend, celux::ConversionType::RGBToNV12, dtype, std::nullopt);
+		}
+        else
+        {
+            convert = celux::Factory::createConverter(
+				backend, celux::ConversionType::RGBToNV12, dtype, stream.value());
+		}
+        CELUX_DEBUG("Converter created\n");
 
       encoder = celux::Factory::createEncoder(backend, filePath, props, std::move(convert));
-      std::cout << "Encoder created\n" << std::endl;
+      CELUX_DEBUG("Encoder created\n");
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "Exception in VideoReader constructor: " << ex.what() << std::endl;
+        CELUX_DEBUG("Exception in VideoReader constructor: ");
         throw; // Re-throw exception after logging
     }
 }
@@ -93,13 +101,13 @@ bool VideoWriter::writeFrame(torch::Tensor tensorFrame)
 {
     try
     {
-        std::cout << "Writing frame\n" << std::endl;
+        CELUX_DEBUG("Writing frame\n");
         // If tensor is already on GPU, just get the pointer
         encoder->encodeFrame(tensorFrame.data_ptr());
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "Exception in writeFrame: " << ex.what() << std::endl;
+        CELUX_DEBUG("Exception in writeFrame: ");
         throw; // Re-throw exception after logging
     }
 }
@@ -114,9 +122,5 @@ void VideoWriter::close()
     if (convert)
     {
         convert->synchronize();
-    }
-    if (encoder)
-    {
-        encoder->close();
     }
 }

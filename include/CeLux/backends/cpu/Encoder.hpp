@@ -14,10 +14,6 @@ class Encoder : public celux::Encoder
         initialize(outputPath, props);
     }
 
-    ~Encoder() override
-    {
-        // Cleanup if necessary
-    }
 
     // No need to override methods unless specific behavior is needed
 };

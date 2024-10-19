@@ -1,4 +1,4 @@
-// RGBToNV12.hpp
+// BGRToNV12.hpp
 #pragma once
 
 #include "CPUConverter.hpp"
@@ -13,24 +13,24 @@ namespace cpu
 {
 
 /**
- * @brief Converter for RGB to NV12 conversion on CPU.
+ * @brief Converter for BGR to NV12 conversion on CPU.
  *
  * @tparam T Data type used for conversion.
  */
-template <typename T> class RGBToNV12 : public ConverterBase<T>
+template <typename T> class BGRToNV12 : public ConverterBase<T>
 {
   public:
     /**
      * @brief Constructor that invokes the base class constructor.
      */
-    RGBToNV12() : ConverterBase<T>()
+    BGRToNV12() : ConverterBase<T>()
     {
     }
 
     /**
      * @brief Destructor that frees the swsContext.
      */
-    ~RGBToNV12()
+    ~BGRToNV12()
     {
         if (swsContext)
         {
@@ -40,7 +40,7 @@ template <typename T> class RGBToNV12 : public ConverterBase<T>
     }
 
     /**
-     * @brief Performs RGB to NV12 conversion.
+     * @brief Performs BGR to NV12 conversion.
      *
      * @param frame Reference to the frame to be converted.
      * @param buffer Pointer to the buffer containing NV12 data.
@@ -48,23 +48,23 @@ template <typename T> class RGBToNV12 : public ConverterBase<T>
     void convert(celux::Frame& frame, void* buffer) override
     {
         // Verify the pixel format
-        if (frame.getPixelFormat() != AV_PIX_FMT_RGB24)
+        if (frame.getPixelFormat() != AV_PIX_FMT_BGR24)
         {
-            throw std::runtime_error("Frame pixel format is not RGB24");
+            throw std::runtime_error("Frame pixel format is not BGR24");
         }
 
         if (!swsContext)
         {
-            // Initialize the swsContext for RGB to NV12 conversion
+            // Initialize the swsContext for BGR to NV12 conversion
             swsContext = sws_getContext(frame.getWidth(), frame.getHeight(),
-                                        AV_PIX_FMT_RGB24, // Source format
+                                        AV_PIX_FMT_BGR24, // Source format
                                         frame.getWidth(), frame.getHeight(),
                                         AV_PIX_FMT_NV12, // Destination format
                                         SWS_BILINEAR, nullptr, nullptr, nullptr);
             if (!swsContext)
             {
                 throw std::runtime_error(
-                    "Failed to initialize swsContext for RGB to NV12 conversion");
+                    "Failed to initialize swsContext for BGR to NV12 conversion");
             }
 
             // Set color space and range explicitly (optional)
@@ -105,7 +105,7 @@ template <typename T> class RGBToNV12 : public ConverterBase<T>
             throw std::runtime_error("Could not fill destination image arrays");
         }
 
-        // Perform the conversion from RGB to NV12
+        // Perform the conversion from BGR to NV12
         int result = sws_scale(swsContext, srcData, srcLineSize, 0, frame.getHeight(),
                                dstData, dstLineSize);
         if (result <= 0)

@@ -12,7 +12,8 @@ class VideoWriter
 {
   public:
     VideoWriter(const std::string& filePath, int width, int height, float fps,
-                const std::string& device, const std::string& dtype);
+        const std::string& device,
+        const std::string& dtype, std::optional<torch::Stream> stream = std::nullopt);
 
     ~VideoWriter();
 

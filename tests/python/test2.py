@@ -13,7 +13,7 @@ import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import celux_cuda as celux
-celux.set_log_level(celux.LogLevel.debug)
+celux.set_log_level(celux.LogLevel.info)
 STREAM = torch.cuda.Stream("cuda")
 
 from requests.exceptions import RequestException

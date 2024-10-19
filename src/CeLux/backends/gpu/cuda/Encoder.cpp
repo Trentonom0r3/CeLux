@@ -1,21 +1,23 @@
 #include "backends/gpu/cuda/Encoder.hpp"
 using namespace celux::error;
+
 namespace celux::backends::gpu::cuda
 {
 void Encoder::initHWAccel()
 {
-    std::cout << "Initializing HW Acceleration\n" << std::endl;
+    CELUX_DEBUG("Initializing HW Acceleration\n");
     // Find the hardware device type
     enum AVHWDeviceType type = av_hwdevice_find_type_by_name("cuda");
     if (type == AV_HWDEVICE_TYPE_NONE)
     {
         throw CxException("Failed to find HW device type: CUDA");
     }
+    CELUX_DEBUG("Found CUDA hardware device type");
 
     // Initialize hardware device context
     AVBufferRef* hw_ctx = nullptr;
     FF_CHECK(av_hwdevice_ctx_create(&hw_ctx, type, nullptr, nullptr, 0));
-
+    CELUX_DEBUG("Created CUDA hardware device context");
     hwDeviceCtx.reset(hw_ctx);
 
     // Initialize hardware frames context
@@ -24,60 +26,66 @@ void Encoder::initHWAccel()
     {
         throw CxException("Failed to create hardware frames context");
     }
-
+    CELUX_DEBUG("Created CUDA hardware frames context");
     AVHWFramesContext* frames = reinterpret_cast<AVHWFramesContext*>(frames_ctx->data);
-    frames->format = codecCtx->pix_fmt;  // Hardware pixel format
+    frames->format = AV_PIX_FMT_CUDA;    // Hardware pixel format
     frames->sw_format = AV_PIX_FMT_NV12; // Software pixel format (input format)
     frames->width = properties.width;
     frames->height = properties.height;
     frames->initial_pool_size = 20;
-
+    CELUX_DEBUG("Set CUDA hardware frames context properties");
     int ret = av_hwframe_ctx_init(frames_ctx);
     if (ret < 0)
     {
-        throw CxException(ret);
+        throw CxException("Failed to initialize hardware frames context: " +
+                          celux::errorToString(ret));
     }
 
     hwFramesCtx.reset(frames_ctx);
 }
 
-void Encoder::initCodecContext(const AVCodec* codec, const VideoProperties& props)
+void Encoder::configureCodecContext(const AVCodec* codec, const VideoProperties& props)
 {
-    // Call base class implementation
-    celux::Encoder::initCodecContext(codec, props);
+    CELUX_DEBUG("Configuring Codec Context with HW Acceleration\n");
 
-    // If hardware acceleration is enabled, set hw_device_ctx and get_format callback
-    if (hwDeviceCtx)
+    // Set hardware device and frames context in codec context
+    codecCtx->hw_device_ctx = av_buffer_ref(hwDeviceCtx.get());
+    if (!codecCtx->hw_device_ctx)
     {
-        codecCtx->hw_device_ctx = av_buffer_ref(hwDeviceCtx.get());
-        if (!codecCtx->hw_device_ctx)
-        {
-            throw CxException("Failed to reference HW device context");
-        }
-//        codecCtx->get_format = getHWFormat;
-        codecCtx->pix_fmt = AV_PIX_FMT_CUDA;
+        throw CxException("Failed to reference HW device context");
     }
 
     codecCtx->hw_frames_ctx = av_buffer_ref(hwFramesCtx.get());
+    if (!codecCtx->hw_frames_ctx)
+    {
+        throw CxException("Failed to reference HW frames context");
+    }
+
+    // Set pixel format to CUDA
+    codecCtx->pix_fmt = AV_PIX_FMT_CUDA;
+    codecCtx->sw_pix_fmt = AV_PIX_FMT_NV12;
 
     // Set encoder options (these can be adjusted as needed)
-    av_opt_set(codecCtx->priv_data, "preset", "p5", 0);  // Example: NVENC preset
-    av_opt_set(codecCtx->priv_data, "rc", "constqp", 0); // Rate control mode
-    av_opt_set(codecCtx->priv_data, "qp", "23", 0);      // Quantization parameter
+    av_opt_set(codecCtx->priv_data, "preset", "p7", 0);  // Example: NVENC preset
+    codecCtx->gop_size = 12;
+    codecCtx->max_b_frames = 0;
 
-    // Convert the raw buffer to AVFrame using the converter
+    // Configure frame for hardware encoding
     frame.get()->hw_frames_ctx = av_buffer_ref(hwFramesCtx.get());
     frame.get()->format = AV_PIX_FMT_CUDA;
-    FF_CHECK(av_hwframe_get_buffer(hwFramesCtx.get(), frame.get(), 0));
+    
 
-    // Open the codec
-    FF_CHECK(avcodec_open2(codecCtx.get(), codec, nullptr));
+    // Allocate buffer for frame
+    FF_CHECK(av_hwframe_get_buffer(hwFramesCtx.get(), frame.get(), 0));
+    CELUX_DEBUG("Allocated CUDA frame buffer");
+    frame.get()->width = props.width;
+    frame.get()->height = props.height;
 }
 
 enum AVPixelFormat Encoder::getHWFormat(AVCodecContext* ctx,
                                         const enum AVPixelFormat* pix_fmts)
 {
-    for (const enum AVPixelFormat* p = pix_fmts; *p != -1; p++)
+    for (const enum AVPixelFormat* p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
     {
         if (*p == AV_PIX_FMT_CUDA) // Example: CUDA pixel format
         {

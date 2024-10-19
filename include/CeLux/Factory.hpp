@@ -59,19 +59,20 @@ class Factory
     {
         int width = props.width;
         int height = props.height;
-        int fps = props.fps;
-        std::cout << "Creating Encoder with width: " << width << ", height: " << height
-				  << ", fps: " << fps << std::endl;
+        double fps = props.fps;
+        CELUX_DEBUG("Creating Encoder with width: " + std::to_string(width) +
+					", height: " + std::to_string(height) + ", fps: " +
+					std::to_string(fps));
         switch (backend)
 
         {
-            std::cout << "Creating CPU encoder\n" << std::endl;
+            CELUX_DEBUG("Creating CPU encoder\n");
         case celux::backend::CPU:
             return std::make_unique<celux::backends::cpu::Encoder>(
                 filename, props, std::move(converter));
 #ifdef CUDA_ENABLED 
         case celux::backend::CUDA:
-            std::cout << "Creating CUDA encoder\n" << std::endl;
+            CELUX_DEBUG("Creating CUDA encoder\n");
             return std::make_unique<celux::backends::gpu::cuda::Encoder>(
                 filename, props, std::move(converter));
 #endif // CUDA_ENABLED

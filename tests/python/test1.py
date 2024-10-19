@@ -9,11 +9,14 @@ import logging
 import requests
 import sys
 import os
-import cv2  # For visual confirmation
+import cv2
+import torch  # For visual confirmation
 
 # Adjust the path to include celux
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import celux_cuda as celux
+
+#celux.set_log_level(celux.LogLevel.debug)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -50,27 +53,28 @@ def process_video_with_visualization(video_path, output_path=None):
     try:
         frame_count = 0
         start = time.time()
-
-        with celux.VideoReader(video_path, device = "cuda", d_type="uint8") as reader:
+        STREAM = torch.cuda.Stream("cuda")
+        WRITESTREAM = torch.cuda.Stream("cuda")
+        with celux.VideoReader(video_path, device = "cuda", d_type="uint8", stream = STREAM) as reader:
             writer = None
+           
             if output_path:
-                writer = celux.VideoWriter(output_path, 1920, 1080, 24.0,  device = "cuda")
-                
+                writer = celux.VideoWriter(output_path, reader.get_properties()["width"],
+                                           reader.get_properties()["height"], reader.get_properties()["fps"],
+                                           device = "cuda", stream = WRITESTREAM)
+
             for frame in reader:
+                frame_cpu = frame.cpu()
+                if writer:
+                    writer(frame)
                 # Display the frame using OpenCV
-                cv2.imshow("Video Frame", frame.cpu().numpy())
+                cv2.imshow("Video Frame", frame_cpu.numpy())
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
                     break
 
-                # Write frame to output if writer is enabled
-                if writer:
-                    writer(frame)
-
+            
                 frame_count += 1
-
-            if writer:
-                writer.close()
 
         end = time.time()
         logging.info(f"Time taken: {end - start} seconds")
@@ -112,6 +116,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--save-output",
+        default=True,
         action="store_true",
         help="Enable this flag to save the processed video to an output file."
     )

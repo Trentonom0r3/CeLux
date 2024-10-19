@@ -57,7 +57,9 @@ Encoder& Encoder::operator=(Encoder&& other) noexcept
 
 void Encoder::initialize(const std::string& outputPath, const VideoProperties& props)
 {
+
     properties = props;
+    CELUX_DEBUG("Initializing encoder with fps: {}", properties.fps);
     openFile(outputPath, props);
     initHWAccel(); // Virtual function
     const AVCodec* codec = avcodec_find_encoder_by_name(props.codecName.c_str());
@@ -65,6 +67,21 @@ void Encoder::initialize(const std::string& outputPath, const VideoProperties& p
     {
         throw CxException("Encoder not found: " + props.codecName);
     }
+    AVFrame* frame = av_frame_alloc();
+    if (!frame)
+    {
+        throw CxException("Could not allocate AVFrame");
+    }
+    frame->format = props.pixelFormat;
+    frame->width = props.width;
+    frame->height = props.height;
+    int ret = av_frame_get_buffer(frame, 32);
+    if (ret < 0)
+    {
+        throw CxException("Could not allocate frame buffer");
+    }
+    this->frame = Frame(frame);
+    CELUX_DEBUG("Encoder initialized successfully");
     initCodecContext(codec, props);
 
     // Create new stream
@@ -75,7 +92,7 @@ void Encoder::initialize(const std::string& outputPath, const VideoProperties& p
     }
 
     // Copy codec parameters to stream
-    int ret = avcodec_parameters_from_context(stream->codecpar, codecCtx.get());
+    ret = avcodec_parameters_from_context(stream->codecpar, codecCtx.get());
     if (ret < 0)
     {
         throw CxException("Failed to copy codec parameters to stream");
@@ -89,6 +106,7 @@ void Encoder::initialize(const std::string& outputPath, const VideoProperties& p
     {
         throw CxException("Error occurred when writing header to output file");
     }
+
 }
 
 void Encoder::openFile(const std::string& outputPath, const VideoProperties& props)
@@ -137,15 +155,18 @@ void Encoder::initCodecContext(const AVCodec* codec, const VideoProperties& prop
     codecCtx->gop_size = 12;
     codecCtx->max_b_frames = 0;
     codecCtx->pix_fmt = props.pixelFormat;
-
+    
     // Multi-threaded encoding
     codecCtx->thread_count = static_cast<int>(
         std::min(static_cast<unsigned int>(std::thread::hardware_concurrency()), 16u));
     codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
 
+    // Allow derived classes to configure additional codec parameters
+    configureCodecContext(codec, props);
     // Open the codec
     FF_CHECK(avcodec_open2(codecCtx.get(), codec, nullptr));
 }
+
 
 enum AVPixelFormat Encoder::getHWFormat(AVCodecContext* ctx,
                                         const enum AVPixelFormat* pix_fmts)
@@ -158,7 +179,6 @@ bool Encoder::encodeFrame(void* buffer)
 {
     try
     {
-
         if (!isOpen())
         {
             throw CxException("Encoder is not open");
@@ -167,25 +187,90 @@ bool Encoder::encodeFrame(void* buffer)
         try
         {
             converter->convert(frame, buffer);
+            CELUX_DEBUG("Encoder Successfully converted frame to : {}", av_get_pix_fmt_name(properties.pixelFormat));
         }
         catch (const std::exception& e)
         {
-            throw CxException("Error converting frame");
+            throw CxException("Error converting frame: " + std::string(e.what()));
         }
 
-        // Set PTS
+        // Set and scale PTS
         frame.get()->pts = pts++;
-
-        // Send the frame to the encoder
+        CELUX_DEBUG("Frame PTS set to: {}", frame.get()->pts);
+        frame.get()->pts = av_rescale_q(frame.get()->pts, {1, static_cast<int>(properties.fps)},
+                                  codecCtx->time_base);
+        CELUX_DEBUG("Scaled Frame PTS: {}", frame.get()->pts);
+        packet->pts = frame.get()->pts;
+        CELUX_DEBUG("Packet PTS: {}", packet->pts);
+        // Log frame's pixel format
+        CELUX_DEBUG("Frame pixel format: " + frame.getPixelFormatString());
+        // Send frame to encoder
         int ret = avcodec_send_frame(codecCtx.get(), frame.get());
 
         if (ret < 0)
         {
-            throw CxException("error sending frame to encoder" + celux::errorToString(ret));
+            if (ret == AVERROR(EAGAIN))
+            {
+                std::cerr << "AVERROR(EAGAIN) encountered. Draining encoder..."
+                          << std::endl;
+
+                // Drain encoder
+                while (true)
+                {
+                    ret = avcodec_receive_packet(codecCtx.get(), packet);
+                    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                    {
+                        break;
+                    }
+                    else if (ret < 0)
+                    {
+                        std::cerr << "Error during draining encoder: "
+                                  << celux::errorToString(ret) << std::endl;
+                        throw CxException("Error during encoding while draining: " +
+                                          celux::errorToString(ret));
+                    }
+
+                    // Rescale PTS and DTS
+                    av_packet_rescale_ts(packet, codecCtx->time_base,
+                                         stream->time_base);
+                    packet->stream_index = stream->index;
+
+                    // Write packet
+                    ret = av_interleaved_write_frame(formatCtx.get(), packet);
+                    if (ret < 0)
+                    {
+                        av_packet_unref(packet);
+                        std::cerr << "Error writing packet during EAGAIN handling: "
+                                  << celux::errorToString(ret) << std::endl;
+                        throw CxException(
+                            "Error writing packet during EAGAIN handling: " +
+                            celux::errorToString(ret));
+                    }
+
+                    av_packet_unref(packet);
+                }
+
+                // Retry sending frame
+                ret = avcodec_send_frame(codecCtx.get(), frame.get());
+                if (ret < 0)
+                {
+                    std::cerr << "Error sending frame after draining: "
+                              << celux::errorToString(ret) << std::endl;
+                    throw CxException("Error sending frame after draining: " +
+                                      celux::errorToString(ret));
+                }
+            }
+            else
+            {
+                std::cerr << "Error sending frame to encoder: "
+                          << celux::errorToString(ret) << std::endl;
+                throw CxException("Error sending frame to encoder: " +
+                                  celux::errorToString(ret));
+            }
         }
 
-        // Receive and write packets
-        while (ret >= 0)
+        // Receive packets from encoder
+        while (true)
         {
             ret = avcodec_receive_packet(codecCtx.get(), packet);
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
@@ -194,19 +279,25 @@ bool Encoder::encodeFrame(void* buffer)
             }
             else if (ret < 0)
             {
-                throw CxException("Error during encoding");
+                std::cerr << "Error during encoding: " << celux::errorToString(ret)
+                          << std::endl;
+                throw CxException("Error during encoding: " +
+                                  celux::errorToString(ret));
             }
 
-            // Rescale PTS and DTS to stream time base
+            // Rescale PTS and DTS
             av_packet_rescale_ts(packet, codecCtx->time_base, stream->time_base);
             packet->stream_index = stream->index;
 
-            // Write the packet
+            // Write packet
             ret = av_interleaved_write_frame(formatCtx.get(), packet);
             if (ret < 0)
             {
                 av_packet_unref(packet);
-                throw CxException("Error writing packet to output file");
+                std::cerr << "Error writing packet to output file: "
+                          << celux::errorToString(ret) << std::endl;
+                throw CxException("Error writing packet to output file: " +
+                                  celux::errorToString(ret));
             }
 
             av_packet_unref(packet);
@@ -216,10 +307,14 @@ bool Encoder::encodeFrame(void* buffer)
     }
     catch (const std::exception& e)
     {
-		std::cerr << "Error in Write Frame: " << e.what() << std::endl;
-		return false;
-	}
+        CELUX_DEBUG("Error in Write Frame: " + std::string(e.what()));
+        return false;
+    }
 }
+
+void Encoder::configureCodecContext(const AVCodec* codec, const VideoProperties& props){
+    // do nothing
+};
 
 bool Encoder::finalize()
 {
@@ -283,6 +378,10 @@ bool Encoder::isOpen() const
 
 void Encoder::close()
 {
+    if (converter)
+    {
+        converter->synchronize();
+    }
     finalize();
     if (packet)
     {
@@ -295,7 +394,7 @@ void Encoder::close()
     formatCtx.reset();
     hwDeviceCtx.reset();
     hwFramesCtx.reset();
-    stream = nullptr;
+    //stream = nullptr;
 }
 
 std::vector<std::string> Encoder::listSupportedEncoders() const

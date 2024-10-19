@@ -65,9 +65,9 @@ PYBIND11_MODULE(celux, m)
         // VideoWriter bindings
         py::class_<VideoWriter>(m, "VideoWriter")
         .def(py::init<const std::string&, int, int, float, const std::string&,
-                      const std::string&>(),
+                      const std::string&, std::optional<torch::Stream>>(),
              py::arg("file_path"), py::arg("width"), py::arg("height"), py::arg("fps"),
-             py::arg("device") = "cuda", py::arg("dtype") = "uint8")
+             py::arg("device") = "cuda", py::arg("dtype") = "uint8", py::arg("stream") = std::nullopt)
         .def("write_frame", &VideoWriter::writeFrame, py::arg("frame"))
         .def("supported_codecs", &VideoWriter::supportedCodecs)
         .def("__call__", &VideoWriter::writeFrame, py::arg("frame"))

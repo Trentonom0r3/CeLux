@@ -203,6 +203,13 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.5 (2024-10-19)
+
+- **Pre-Release Update:**
+  - (somewhat) Fixed `VideoWriter` class. Working on `cuda` for now, but `cpu` still has incorrect output.
+  - Added `VideoWriter`, and `LogLevel` definitions to `.pyi` stub file.
+  - Adjusted github actions to publish to `pypi`.
+
 ### Version 0.3.4.1 (2024-10-19)
 
 - **Pre-Release Update:**

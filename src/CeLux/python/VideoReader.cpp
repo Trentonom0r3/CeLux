@@ -148,7 +148,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "Exception in VideoReader constructor: " << ex.what() << std::endl;
+        CELUX_DEBUG("Exception in VideoReader constructor: ");
         throw; // Re-throw exception after logging
     }
 }
@@ -224,7 +224,7 @@ void VideoReader::bufferFrames()
 
 torch::Tensor VideoReader::readFrame()
 {
-    CELUX_DEBUG("Reading frame at index: {}", currentIndex);
+    CELUX_TRACE("Reading frame at index: {}", currentIndex);
     if (tensorBuffer_->isStopped() && tensorBuffer_->size() == 0)
     {
         // No more frames available

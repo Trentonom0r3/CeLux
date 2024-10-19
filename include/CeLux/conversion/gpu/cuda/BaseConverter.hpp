@@ -73,9 +73,11 @@ template <typename T> ConverterBase<T>::~ConverterBase()
 // Synchronize Method
 template <typename T> void ConverterBase<T>::synchronize()
 {
+    CELUX_DEBUG("Synchronizing CUDA Stream");
     cudaError_t err = cudaStreamSynchronize(conversionStream);
     if (err != cudaSuccess)
     {
+        CELUX_DEBUG("Failed to synchronize CUDA stream");
         throw std::runtime_error("Failed to synchronize CUDA stream");
     }
 }

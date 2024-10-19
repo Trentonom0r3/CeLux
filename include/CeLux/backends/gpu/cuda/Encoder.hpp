@@ -4,6 +4,7 @@
 
 namespace celux::backends::gpu::cuda
 {
+
 class Encoder : public celux::Encoder
 {
   public:
@@ -12,20 +13,17 @@ class Encoder : public celux::Encoder
             const std::string& hwType = "cuda")
         : celux::Encoder(std::move(converter))
     {
-        std::cout << "Initializing CUDA Encoder, in constructor\n" << std::endl;
         hwAccelType = hwType;
         this->initialize(outputPath, props);
     }
 
-    ~Encoder() override
-    {
-        finalize();
-    }
-
   protected:
     void initHWAccel() override;
-    void initCodecContext(const AVCodec* codec, const VideoProperties& props) override;
     enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
                                    const enum AVPixelFormat* pix_fmts) override;
-};
+    void configureCodecContext(const AVCodec* codec,
+                               const VideoProperties& props) override;
+
+}; // class Encoder
 } // namespace celux::backends::gpu::cuda
+

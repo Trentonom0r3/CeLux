@@ -48,6 +48,9 @@ class Encoder
     virtual void initHWAccel(); // Default does nothing
     virtual void initCodecContext(const AVCodec* codec, const VideoProperties& props);
     virtual int64_t convertTimestamp(double timestamp) const;
+    // Add a new virtual method for configuring codec context
+    virtual void configureCodecContext(const AVCodec* codec,
+                                       const VideoProperties& props);
 
     // Virtual callback for hardware pixel formats
     virtual enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
