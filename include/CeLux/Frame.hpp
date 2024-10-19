@@ -1,7 +1,7 @@
 // Frame.hpp
 #pragma once
 
-#include "FFException.hpp" // Custom exception class for FFmpeg errors
+#include "CxException.hpp" // Custom exception class for FFmpeg errors
 
 namespace celux
 {

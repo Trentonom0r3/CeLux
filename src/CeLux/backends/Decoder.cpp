@@ -61,23 +61,28 @@ void Decoder::initialize(const std::string& filePath)
     }
 
     initCodecContext(codec);
-
     // Populate video properties
     VideoProperties vp;
     vp.width = codecCtx->width;
     vp.height = codecCtx->height;
     vp.fps = av_q2d(formatCtx->streams[videoStreamIndex]->avg_frame_rate);
-    vp.duration = (formatCtx->duration != AV_NOPTS_VALUE)
-                      ? static_cast<double>(formatCtx->duration) / AV_TIME_BASE
-                      : 0.0;
+    vp.duration =
+        (formatCtx->streams[videoStreamIndex]->duration != AV_NOPTS_VALUE)
+            ? static_cast<double>(formatCtx->streams[videoStreamIndex]->duration) *
+                  av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
+            : 0.0;
     vp.pixelFormat = codecCtx->pix_fmt;
     vp.hasAudio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
                    AVMEDIA_TYPE_AUDIO);
 
     // Calculate total frames if possible
-    if (vp.fps > 0 && vp.duration > 0)
+    if (formatCtx->streams[videoStreamIndex]->nb_frames > 0)
     {
-        vp.totalFrames = vp.duration * vp.fps;
+        vp.totalFrames = formatCtx->streams[videoStreamIndex]->nb_frames;
+    }
+    else if (vp.fps > 0 && vp.duration > 0)
+    {
+        vp.totalFrames = static_cast<int>(vp.fps * vp.duration);
     }
     else
     {
@@ -85,6 +90,7 @@ void Decoder::initialize(const std::string& filePath)
     }
 
     properties = vp;
+
     pkt.reset(av_packet_alloc());
     codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
 

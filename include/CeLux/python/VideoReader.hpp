@@ -4,7 +4,8 @@
 #define VIDEOREADER_HPP
 
 #include "Factory.hpp"
-#include <torch/extension.h>
+#include <TensorBuffer.hpp>
+
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
 
@@ -18,16 +19,11 @@ enum class CopyType
 class VideoReader
 {
   public:
-    /**
-     * @brief Constructs a VideoReader object.
-     *
-     * @param filePath Path to the video file.
-     * @param useHardware Flag to indicate whether to use hardware acceleration.
-     * @param hwType Type of hardware acceleration (e.g., "cuda").
-     * @param config Configuration for frame processing.
-     */
+
     VideoReader(const std::string& filePath, const std::string& device = "cuda",
-                const std::string& dtype = "uint8");
+                const std::string& dtype = "uint8", const int bufferSize = 10,
+                std::optional<torch::Stream> stream = std::nullopt);
+
 
     /**
      * @brief Destructor for VideoReader.
@@ -106,7 +102,11 @@ class VideoReader
     void sync();
 
   private:
-
+    void bufferFrames();
+    std::unique_ptr<TensorRingBuffer> tensorBuffer_;
+    std::thread bufferThread_;
+    std::atomic<bool> stopBuffering_;
+    torch::Dtype torchDataType_;
     bool seekToFrame(int frame_number);
 
     /**

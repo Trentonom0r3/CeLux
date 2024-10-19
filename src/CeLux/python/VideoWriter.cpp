@@ -69,8 +69,8 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         }
         std::cout << "Creating encoder\n" << std::endl;
         // Create the converter using the factory
-        convert = celux::Factory::createConverter(
-            backend, celux::ConversionType::RGBToNV12, dtype);
+      //  convert = celux::Factory::createConverter(
+         //   backend, celux::ConversionType::RGBToNV12, dtype, nostream;
         std::cout << "Converter created\n" << std::endl;
 
       encoder = celux::Factory::createEncoder(backend, filePath, props, std::move(convert));

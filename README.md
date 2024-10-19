@@ -203,6 +203,13 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.3 (2024-10-19)
+
+- **Pre-Release Update:**
+  - Added `buffer_size` and `stream` arguments.
+    - Choose Pre-Decoded Frame buffer size, and pass your own cuda stream.
+  - Some random cleanup and small refactorings.
+
 ### Version 0.3.1 (2024-10-17)
 
 - **Pre-Release Update:**

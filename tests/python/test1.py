@@ -58,7 +58,7 @@ def process_video_with_visualization(video_path, output_path=None):
                 
             for frame in reader:
                 # Display the frame using OpenCV
-               # cv2.imshow("Video Frame", frame.cpu().numpy())
+                cv2.imshow("Video Frame", frame.cpu().numpy())
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
                     break

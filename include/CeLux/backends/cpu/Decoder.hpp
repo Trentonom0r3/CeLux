@@ -17,8 +17,8 @@ class Decoder : public celux::Decoder
 
     ~Decoder() override
     {
-    	// Cleanup
-	}
+        // Cleanup
+    }
 
     // No need to override methods unless specific behavior is needed
 };

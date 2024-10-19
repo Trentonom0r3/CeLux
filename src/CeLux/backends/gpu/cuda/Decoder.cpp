@@ -1,5 +1,6 @@
 // CUDA Decoder.cpp
 #include "backends/gpu/cuda/Decoder.hpp"
+//include cuda streams
 using namespace celux::error;
 
 namespace celux::backends::gpu::cuda
@@ -30,7 +31,6 @@ void Decoder::initHWAccel()
     FF_CHECK_MSG(av_hwdevice_ctx_create(&hw_ctx, type, nullptr, nullptr, 0),
                  std::string("Failed to create HW device context:"));
     hwDeviceCtx.reset(hw_ctx);
-    std::cout << "Created HW device context: cuda" << std::endl;
 }
 
 enum AVPixelFormat Decoder::getHWFormat(AVCodecContext* ctx,

@@ -3,20 +3,20 @@ name: Release and Benchmark Tests
 on:
   push:
     branches: [master]
+    paths:
+      - 'build.py'
   workflow_dispatch:
-  release:
-    types: [published]
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest  # Changed to Ubuntu for better compatibility
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3  # Updated to the latest version
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4  # Updated to the latest version
         with:
           python-version: '3.12.7'
 
@@ -24,64 +24,31 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
-      - name: Extract Version from build.py
+      - name: Get version from build.py
         id: get_version
-        shell: pwsh
         run: |
-          $VERSION = (Get-Content build.py | Select-String 'VERSION = "' | ForEach-Object { $_ -match 'VERSION = \"([^\"]+)\"'; $matches[1] })
-          echo "version=$VERSION" >> $GITHUB_ENV
+          VERSION=$(python -c "import build; print(build.VERSION)")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Build the Packages
         run: |
-          python build.py --version ${{ env.version }}
-        working-directory: ./CeLux
-
-      - name: List contents after build
-        run: ls -R
-        working-directory: ./CeLux
+          python build.py 
 
       - name: Create GitHub Release
-        if: always()
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: v${{ env.version }}
-          name: v${{ env.version }}
-          body: "Automated release of version ${{ env.version }}"
+          tag: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          body: "Automated release of version ${{ env.VERSION }}"
           draft: false
           prerelease: false
           artifacts: |
-            ./CeLux/dist/*.whl
-            ./CeLux/dist/*.tar.gz
-        continue-on-error: true
+            dist/*.whl
+            dist/*.tar.gz
+        continue-on-error: true  # Retains the workflow even if this step fails
 
       - name: Handle Existing Tag (Optional)
         if: failure()
         run: |
           echo "Release tag already exists. Skipping release creation."
-
-  publish-to-pypi:
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12.7'
-
-      - name: Install Twine
-        run: |
-          python -m pip install --upgrade twine
-
-      - name: List contents of dist directory
-        run: ls ./CeLux/dist/
-
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI }}
-        run: |
-          twine upload ./CeLux/dist/*

@@ -1,15 +1,19 @@
 #include "Python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
 
+
 namespace py = pybind11;
+
 VideoReader::VideoReader(const std::string& filePath, const std::string& device,
-                         const std::string& dataType)
+                         const std::string& dataType, int buffer_size,
+                         std::optional<torch::Stream> stream)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
-      torchDevice(torch::kCPU)
+      torchDevice(torch::Device(torch::kCPU)), // Initialize with CPU by default
+      stopBuffering_(false), tensorBuffer_(nullptr)
 {
     try
     {
-        // Determine the backend enum from the device string
+        // Determine the backend and set torchDevice based on the device string
         celux::backend backend;
         if (device == "cuda")
         {
@@ -23,14 +27,12 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
                 throw std::runtime_error(
                     "No CUDA devices found. Please check your CUDA installation.");
             }
-          
-            torchDevice = torch::kCUDA;
+
             backend = celux::backend::CUDA;
             torchDevice = torch::Device(torch::kCUDA);
         }
         else if (device == "cpu")
         {
-            torchDevice = torch::kCPU;
             backend = celux::backend::CPU;
             torchDevice = torch::Device(torch::kCPU);
         }
@@ -63,9 +65,29 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
             throw std::invalid_argument("Unsupported dataType: " + dataType);
         }
 
-        // Create the converter using the factory
-        convert = celux::Factory::createConverter(
-            backend, celux::ConversionType::NV12ToRGB, dtype);
+        // Create the converter using the factory based on the backend and stream
+        if (backend == celux::backend::CUDA)
+        {
+            if (stream.has_value())
+            {
+                convert = celux::Factory::createConverter(
+                    backend, celux::ConversionType::NV12ToRGB, dtype,
+                   stream);
+            }
+            else
+            {
+                convert = celux::Factory::createConverter(
+                    backend, celux::ConversionType::NV12ToRGB, dtype,
+                    std::nullopt);
+            }
+        }
+        else // CPU backend
+        {
+            // Assuming the converter for CPU does not require a CUDA stream
+            convert = celux::Factory::createConverter(
+                backend, celux::ConversionType::NV12ToRGB, dtype,
+                std::nullopt); // Pass a default or dummy stream for CPU
+        }
 
         // Create the decoder using the factory
         decoder = celux::Factory::createDecoder(backend, filePath, std::move(convert));
@@ -76,29 +98,42 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         // Initialize tensors based on backend and data type
         if (backend == celux::backend::CUDA)
         {
+            // Initialize RGBTensor on CUDA device
             RGBTensor = torch::empty(
                 {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
+                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
 
-            // For CUDA, cpuTensor is not used. You might want to remove it or keep it
-            // for CPU operations. If keeping, initialize it on CPU.
+            // Initialize cpuTensor on CPU if needed for CPU operations
             cpuTensor = torch::empty(
                 {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torch::kCUDA));
+                torch::TensorOptions().dtype(torchDataType).device(torch::kCPU));
         }
-        else // CPU
+        else // CPU backend
         {
-            // For CPU, initialize cpuTensor on CPU
+            // Initialize cpuTensor on CPU
             cpuTensor = torch::empty(
                 {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torch::kCPU));
+                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
 
-            // RGBTensor is not used on CPU. You might want to remove it or keep it for
-            // GPU operations. If keeping, initialize it on CUDA.
+            // If RGBTensor is not used on CPU, consider not initializing it
+            // Alternatively, initialize it on CPU if needed
             RGBTensor = torch::empty(
                 {properties.height, properties.width, 3},
                 torch::TensorOptions().dtype(torchDataType).device(torch::kCPU));
         }
+
+        // Configure BufferConfig
+        BufferConfig config;
+        config.device = torchDevice;
+        config.dtype = torchDataType;
+        config.shape = {properties.height, properties.width, 3};
+        config.queueSize = buffer_size;
+
+        // Initialize tensorBuffer_
+        tensorBuffer_ = std::make_unique<TensorRingBuffer>(config);
+
+        // Start the background thread for buffering frames
+        bufferThread_ = std::thread(&VideoReader::bufferFrames, this);
     }
     catch (const std::exception& ex)
     {
@@ -106,6 +141,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         throw; // Re-throw exception after logging
     }
 }
+
 
 VideoReader::~VideoReader()
 {
@@ -137,55 +173,81 @@ void VideoReader::setRange(int start, int end)
     start_frame = start;
     end_frame = end;
 }
-
-void VideoReader::close()
+void VideoReader::bufferFrames()
 {
-    if (convert)
+    while (!stopBuffering_)
     {
-        convert->synchronize();
-        convert.reset();
-    }
-    if (decoder)
-    {
-        decoder->close(); // Assuming Decoder has a close method
-        decoder.reset();
+        bool success = tensorBuffer_->produce(
+            [this](torch::Tensor& tensor)
+            {
+                int result;
+
+                {
+
+                    // Decode the next frame into 'tensor'
+                    result = decoder->decodeNextFrame(tensor.data_ptr());
+                }
+
+                if (result == 1) // Frame decoded successfully
+                {
+                    return true;
+                }
+                else if (result == 0) // End of video stream
+                {
+                    stopBuffering_ = true;
+                    tensorBuffer_->stop();
+                    return false;
+                }
+                else // Decoding failed
+                {
+                    // Handle error as needed
+                    stopBuffering_ = true;
+                    tensorBuffer_->stop();
+                    return false;
+                }
+            });
+
+        if (!success || stopBuffering_)
+            break;
     }
 }
 
 torch::Tensor VideoReader::readFrame()
 {
-    int result;
-
-    // Release GIL during decoding
+    if (tensorBuffer_->isStopped() && tensorBuffer_->size() == 0)
     {
-        py::gil_scoped_release release;
-        result = decoder->decodeNextFrame(RGBTensor.data_ptr());
+        // No more frames available
+        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8));
     }
 
-    if (result == 1) // Frame decoded successfully
+    torch::Tensor frame = tensorBuffer_->consume();
+    if (!frame.defined() || frame.numel() == 0)
     {
-        // No need to acquire GIL for tensor operations if they don't interact with
-        // Python
+        // No frame available
+        // No more frames available
+        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8));
+    }
 
-        // Acquire GIL before returning tensor to Pytho
-        cpuTensor.copy_(RGBTensor, /*non_blocking=*/true);
-        py::gil_scoped_acquire acquire;
-        return cpuTensor;
-    }
-    else if (result == 0) // End of video stream
-    {
-        // Acquire GIL before throwing exception
-        py::gil_scoped_acquire acquire;
-        throw py::stop_iteration();
-    }
-    else // Decoding failed
-    {
-        // Acquire GIL before throwing exception
-        py::gil_scoped_acquire acquire;
-        throw std::runtime_error("Failed to decode the next frame.");
-    }
+    return frame;
 }
 
+void VideoReader::close()
+{
+    stopBuffering_ = true;
+    tensorBuffer_->stop();
+
+    if (bufferThread_.joinable())
+    {
+        bufferThread_.join();
+    }
+
+    // Clean up decoder and other resources
+    if (decoder)
+    {
+        decoder->close();
+        decoder.reset();
+    }
+}
 
 bool VideoReader::seek(double timestamp)
 {
@@ -244,14 +306,15 @@ VideoReader& VideoReader::iter()
     return *this;
 }
 
- torch::Tensor VideoReader::next()
+torch::Tensor VideoReader::next()
 {
     if (end_frame >= 0 && currentIndex > end_frame)
     {
         throw py::stop_iteration(); // Stop iteration if range is exhausted
     }
+    py::gil_scoped_release release;
 
-     torch::Tensor frame = readFrame();
+    torch::Tensor frame = readFrame();
     if (frame.numel() == 0)
     {
         throw py::stop_iteration(); // Stop iteration if no more frames are available

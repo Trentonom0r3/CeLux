@@ -6,6 +6,7 @@
 #include <backends/cpu/Encoder.hpp>
 
 #ifdef CUDA_ENABLED
+#include <c10/cuda/CUDAStream.h>
 #include <backends/gpu/cuda/Encoder.hpp>
 #endif
 

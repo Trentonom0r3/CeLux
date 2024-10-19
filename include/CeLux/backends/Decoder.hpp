@@ -1,7 +1,7 @@
 // Decoder.hpp
 #pragma once
 
-#include "FFException.hpp"
+#include "CxException.hpp"
 #include <Frame.hpp> 
 #include <Conversion.hpp>
 

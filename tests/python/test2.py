@@ -9,9 +9,12 @@ import logging
 import requests
 import sys
 import os
+import torch
 
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux_cuda as celux
+
+STREAM = torch.cuda.Stream("cuda")
 
 from requests.exceptions import RequestException
 
@@ -52,7 +55,7 @@ def processVideoCuda(videoPath):
     try:
         frameCount = 0
         start = time.time()
-        with celux.VideoReader(videoPath, device = "cuda" , d_type="uint8") as reader:
+        with celux.VideoReader(videoPath, device = "cuda" , d_type="uint8", stream = STREAM) as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(

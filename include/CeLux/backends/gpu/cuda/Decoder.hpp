@@ -15,7 +15,7 @@ class Decoder : public celux::Decoder
         initialize(filePath);
     }
 
-    ~Decoder() override ;
+    ~Decoder() override;
 
   protected:
     void initHWAccel() override;

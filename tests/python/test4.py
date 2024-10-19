@@ -1,6 +1,6 @@
 """
-This script checks the performance of the VideoReader class with torch and numpy frames.
-It provides real-time visual confirmation of frames using OpenCV and writes frames to an output file.
+This test is designed to help determine the optimal buffer size for the VideoReader class.
+It measures the performance (FPS) of the VideoReader with various buffer sizes.
 """
 
 import time
@@ -9,149 +9,126 @@ import logging
 import requests
 import sys
 import os
-import cv2  # For visual confirmation
-import threading
-from queue import Queue, Empty
 
-# Adjust the path to include ffmpy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux
+import celux_cuda as celux
 
+from requests.exceptions import RequestException
+
+# Configure logging for nicer output
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-def download_video(url, output_path):
+def downloadVideo(url, outputPath):
     """
-    Downloads a video from the specified URL.
+    Downloads a video from the given URL to the specified output path.
+
+    Args:
+        url (str): The URL of the video to download.
+        outputPath (str): The path where the video will be saved.
     """
     try:
         response = requests.get(url, stream=True)
         response.raise_for_status()
-        with open(output_path, "wb") as file:
-            logging.info(f"Downloading {url} to {output_path}")
+        with open(outputPath, "wb") as file:
+            logging.info(f"Downloading {url} to {outputPath}")
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
                     file.write(chunk)
-    except requests.RequestException as e:
+    except RequestException as e:
         logging.error(f"Failed to download video: {e}")
         raise
 
-def frame_writer_thread(output_path, frame_queue, stop_event, as_numpy):
+def processVideo(videoPath, device, buffer_size):
     """
-    Writes frames from the queue to the output video file in a separate thread.
-    """
-    try:
-        with celux.VideoWriter(output_path, 1920, 1080, 24.0, as_numpy=as_numpy) as writer:
-            while not stop_event.is_set():
-                try:
-                    frame = frame_queue.get(timeout=1)  # Timeout prevents blocking on join
-                    if frame is None:
-                        break
-                    writer(frame)
-                except Empty:
-                    continue
-    except Exception as e:
-        logging.error(f"Error in writer thread: {e}")
+    Processes the video to count frames and measure performance.
 
-def display_frames(video_path, frame_queue, stop_event, as_numpy):
-    """
-    Reads and displays frames in real-time using OpenCV.
+    Args:
+        videoPath (str): The path to the video file.
+        device (str): The device to use ('cuda' or 'cpu').
+        buffer_size (int): The buffer size to use.
+
+    Returns:
+        float: The frames per second achieved during processing.
     """
     try:
-        with celux.VideoReader(video_path, device = "cuda", d_type="uint8") as reader:
+        frameCount = 0
+        start = time.time()
+        with celux.VideoReader(videoPath, device=device, d_type="uint8", buffer_size=buffer_size) as reader:
             for frame in reader:
-                if stop_event.is_set():
-                    break
-
-                # Display the frame
-                cv2.imshow("Video Frame", frame.cpu().numpy() if not as_numpy else frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    logging.info("Stopping early - 'q' pressed.")
-                    stop_event.set()
-                    break
-
-                # Put the frame in the queue for writing
-                frame_queue.put(frame)
-
-            frame_queue.put(None)  # Signal that reading is complete
-
+                if frameCount == 0:
+                    logging.info(f"Frame data: {frame.shape}, {frame.dtype}, {frame.device}")
+                frameCount += 1
+        end = time.time()
+        total_time = end - start
+        fps = frameCount / total_time
+        logging.info(f"Device: {device.upper()}, Buffer Size: {buffer_size}")
+        logging.info(f"Time taken: {total_time:.4f} seconds")
+        logging.info(f"Total Frames: {frameCount}")
+        logging.info(f"FPS: {fps:.2f}")
+        return fps
     except Exception as e:
-        logging.error(f"Error in display thread: {e}")
-    finally:
-        cv2.destroyAllWindows()
-
-def threaded_processing(video_path, output_path, as_numpy):
-    """
-    Launches separate threads for frame display and writing.
-    """
-    frame_queue = Queue(maxsize=10)  # Limit queue size to control memory usage
-    stop_event = threading.Event()
-
-    # Start the writer thread if saving is enabled
-    writer_thread = None
-    if output_path:
-        writer_thread = threading.Thread(
-            target=frame_writer_thread, args=(output_path, frame_queue, stop_event, as_numpy)
-        )
-        writer_thread.start()
-
-    # Start the display thread
-    display_thread = threading.Thread(
-        target=display_frames, args=(video_path, frame_queue, stop_event, as_numpy)
-    )
-    display_thread.start()
-
-    logging.info("Starting threaded video processing...")
-    start = time.time()
-
-    # Wait for the display thread to finish
-    display_thread.join()
-
-    # If writer thread is running, wait for it to finish
-    if writer_thread:
-        writer_thread.join()
-
-    end = time.time()
-    logging.info(f"Total time for threaded processing: {end - start:.2f} seconds")
+        logging.error(f"Error processing video: {e}")
+        raise
 
 def main(args):
     if args.mode == "lite":
-        video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        video_path = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
+        videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        videoPath = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
     else:
-        video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        video_path = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
+        videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
 
-    if not os.path.exists(video_path):
-        download_video(video_url, video_path)
+    if not os.path.exists(videoPath):
+        downloadVideo(videoUrl, videoPath)
     else:
-        logging.info(f"Video already exists at {video_path}")
+        logging.info(f"Video already exists at {videoPath}")
 
-    output_path = "./output.mp4" if args.save_output else None
+    # Define the buffer sizes to test
+    buffer_sizes = [1, 2, 5, 10, 20, 50, 100]
 
-    logging.info(f"Running threaded processing with as_numpy={args.as_numpy}...")
-    threaded_processing(video_path, output_path, args.as_numpy)
+    # Test on CUDA device
+    device = "cuda"
+    logging.info(f"Processing video with {device.upper()}")
+    fps_results_cuda = {}
+    for buffer_size in buffer_sizes:
+        logging.info(f"Testing buffer size: {buffer_size}")
+        fps = processVideo(videoPath, device=device, buffer_size=buffer_size)
+        fps_results_cuda[buffer_size] = fps
+
+    print("")
+
+    # Test on CPU device
+    device = "cpu"
+    logging.info(f"Processing video with {device.upper()}")
+    fps_results_cpu = {}
+    for buffer_size in buffer_sizes:
+        logging.info(f"Testing buffer size: {buffer_size}")
+        fps = processVideo(videoPath, device=device, buffer_size=buffer_size)
+        fps_results_cpu[buffer_size] = fps
+
+    # Output the results
+    print("\nFPS Results for CUDA:")
+    for buffer_size in buffer_sizes:
+        fps = fps_results_cuda.get(buffer_size, 0)
+        print(f"Buffer Size: {buffer_size}, FPS: {fps:.2f}")
+
+    print("\nFPS Results for CPU:")
+    for buffer_size in buffer_sizes:
+        fps = fps_results_cpu.get(buffer_size, 0)
+        print(f"Buffer Size: {buffer_size}, FPS: {fps:.2f}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Real-time video processing with threaded display and writing.")
+    parser = argparse.ArgumentParser()
+
+    # Add 'lite' for GitHub Actions and 'full' for local testing
     parser.add_argument(
         "--mode",
         type=str,
         default="lite",
+        help="The mode to run the test in. 'lite' for GitHub Actions and 'full' for local testing.",
         choices=["lite", "full"],
-        help="Choose 'lite' for GitHub Actions testing or 'full' for local testing."
-    )
-    parser.add_argument(
-        "--as-numpy",
-        action="store_true",
-        default=False,
-        help="Use this flag to enable processing with NumPy arrays instead of torch tensors."
-    )
-    parser.add_argument(
-        "--save-output",
-        action="store_true",
-        help="Enable this flag to save the processed video to an output file."
     )
     args = parser.parse_args()
 

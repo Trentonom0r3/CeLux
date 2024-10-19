@@ -4,7 +4,7 @@
 
 #include <Decoders.hpp>
 #include <Encoders.hpp> // Assuming you have header files that declare Encoder classes
-
+#include <torch/extension.h>
 namespace celux
 {
 
@@ -90,9 +90,10 @@ class Factory
      * @param dtype Data type (UINT8, FLOAT16, FLOAT32).
      * @return std::unique_ptr<IConverter> Pointer to the created Converter.
      */
+
     static std::unique_ptr<celux::conversion::IConverter>
     createConverter(celux::backend device, celux::ConversionType type,
-                    celux::dataType dtype)
+                    celux::dataType dtype, std::optional<torch::Stream> stream)
     {
         // CPU only supports float32 and uint8
         if (device == celux::backend::CPU && dtype == celux::dataType::FLOAT16)
@@ -160,23 +161,30 @@ class Factory
         // For CUDA backend
         if (device == celux::backend::CUDA)
         {
+            if (!stream.has_value())
+            {
+				stream = c10::cuda::getStreamFromPool();
+			}
+            //make a cuda stream
+            c10::cuda::CUDAStream cStream(stream.value());
             switch (type)
             {
             case celux::ConversionType::RGBToNV12:
                 if (dtype == celux::dataType::UINT8)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::RGBToNV12<uint8_t>>();
+                        celux::conversion::gpu::cuda::RGBToNV12<uint8_t>>(cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT16)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::RGBToNV12<half>>();
+                        celux::conversion::gpu::cuda::RGBToNV12<half>>(cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT32)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::RGBToNV12<float>>();
+                        celux::conversion::gpu::cuda::RGBToNV12<float>>(
+                        cStream.stream());
                 }
                 break;
 
@@ -184,17 +192,19 @@ class Factory
                 if (dtype == celux::dataType::UINT8)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::NV12ToRGB<uint8_t>>();
+                        celux::conversion::gpu::cuda::NV12ToRGB<uint8_t>>(
+                        cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT16)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::NV12ToRGB<half>>();
+                        celux::conversion::gpu::cuda::NV12ToRGB<half>>(cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT32)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::NV12ToRGB<float>>();
+                        celux::conversion::gpu::cuda::NV12ToRGB<float>>(
+                        cStream.stream());
                 }
                 break;
 
@@ -202,17 +212,19 @@ class Factory
                 if (dtype == celux::dataType::UINT8)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::BGRToNV12<uint8_t>>();
+                        celux::conversion::gpu::cuda::BGRToNV12<uint8_t>>(
+                        cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT16)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::BGRToNV12<half>>();
+                        celux::conversion::gpu::cuda::BGRToNV12<half>>(cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT32)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::BGRToNV12<float>>();
+                        celux::conversion::gpu::cuda::BGRToNV12<float>>(
+                        cStream.stream());
                 }
                 break;
 
@@ -220,17 +232,19 @@ class Factory
                 if (dtype == celux::dataType::UINT8)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::NV12ToBGR<uint8_t>>();
+                        celux::conversion::gpu::cuda::NV12ToBGR<uint8_t>>(
+                        cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT16)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::NV12ToBGR<half>>();
+                        celux::conversion::gpu::cuda::NV12ToBGR<half>>(cStream.stream());
                 }
                 else if (dtype == celux::dataType::FLOAT32)
                 {
                     return std::make_unique<
-                        celux::conversion::gpu::cuda::NV12ToBGR<float>>();
+                        celux::conversion::gpu::cuda::NV12ToBGR<float>>(
+                        cStream.stream());
                 }
                 break;
 

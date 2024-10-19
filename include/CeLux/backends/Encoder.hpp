@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FFException.hpp"
+#include "CxException.hpp"
 #include <Conversion.hpp>
 #include <Frame.hpp>
 
