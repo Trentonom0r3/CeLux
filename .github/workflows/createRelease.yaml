@@ -34,6 +34,10 @@ jobs:
         run: |
           python build.py 
 
+      - name: List dist contents
+        run: |
+          ls -la dist/
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -48,7 +52,16 @@ jobs:
             dist/*.tar.gz
         continue-on-error: true  # Retains the workflow even if this step fails
 
+      - name: Publish to PyPI
+        if: success()
+        uses: pypa/gh-action-pypi-publish@v1.4.2
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          skip_existing: true  # Skip uploading if the package version already exists
+          packages_dir: dist  # Directory where the built packages are located
+
       - name: Handle Existing Tag (Optional)
         if: failure()
         run: |
-          echo "Release tag already exists. Skipping release creation."
+          echo "Release tag already exists or another error occurred. Skipping release creation."
