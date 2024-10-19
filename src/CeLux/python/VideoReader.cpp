@@ -13,31 +13,39 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
 {
     try
     {
+        CELUX_INFO("Creating VideoReader");
         // Determine the backend and set torchDevice based on the device string
         celux::backend backend;
         if (device == "cuda")
         {
             if (!torch::cuda::is_available())
             {
+                CELUX_CRITICAL("CUDA is not available. Please install a "
+                							   "CUDA-enabled version of celux.");
                 throw std::runtime_error("CUDA is not available. Please install a "
                                          "CUDA-enabled version of celux.");
             }
             if (torch::cuda::device_count() == 0)
             {
+                CELUX_CRITICAL("No CUDA devices found. Please check your CUDA installation.");
                 throw std::runtime_error(
                     "No CUDA devices found. Please check your CUDA installation.");
             }
 
             backend = celux::backend::CUDA;
             torchDevice = torch::Device(torch::kCUDA);
+            CELUX_DEBUG("Using CUDA device for VideoReader");
+            CELUX_TRACE("CUDA device count: {}", torch::cuda::device_count());
         }
         else if (device == "cpu")
         {
+            CELUX_TRACE("Using CPU device for VideoReader");
             backend = celux::backend::CPU;
             torchDevice = torch::Device(torch::kCPU);
         }
         else
         {
+            CELUX_CRITICAL("Unsupported device: {}" + device);
             throw std::invalid_argument("Unsupported device: " + device);
         }
 
@@ -70,12 +78,14 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         {
             if (stream.has_value())
             {
+                CELUX_TRACE("Creating converter with provided CUDA stream");
                 convert = celux::Factory::createConverter(
                     backend, celux::ConversionType::NV12ToRGB, dtype,
                    stream);
             }
             else
             {
+                CELUX_TRACE("Creating converter with default CUDA stream");
                 convert = celux::Factory::createConverter(
                     backend, celux::ConversionType::NV12ToRGB, dtype,
                     std::nullopt);
@@ -83,6 +93,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         }
         else // CPU backend
         {
+            CELUX_TRACE("Creating converter for CPU");
             // Assuming the converter for CPU does not require a CUDA stream
             convert = celux::Factory::createConverter(
                 backend, celux::ConversionType::NV12ToRGB, dtype,
@@ -183,7 +194,6 @@ void VideoReader::bufferFrames()
                 int result;
 
                 {
-
                     // Decode the next frame into 'tensor'
                     result = decoder->decodeNextFrame(tensor.data_ptr());
                 }
@@ -214,6 +224,7 @@ void VideoReader::bufferFrames()
 
 torch::Tensor VideoReader::readFrame()
 {
+    CELUX_DEBUG("Reading frame at index: {}", currentIndex);
     if (tensorBuffer_->isStopped() && tensorBuffer_->size() == 0)
     {
         // No more frames available
@@ -238,12 +249,23 @@ void VideoReader::close()
 
     if (bufferThread_.joinable())
     {
+        CELUX_DEBUG("Joining buffer thread");
         bufferThread_.join();
     }
 
+    if (convert) {
+		CELUX_DEBUG("Closing converter");
+        CELUX_DEBUG("Synchronizing Converter");
+        convert->synchronize();
+		convert.reset();
+	}
+    else {
+		CELUX_DEBUG("Converter is null");
+	}
     // Clean up decoder and other resources
     if (decoder)
     {
+        CELUX_DEBUG("Closing decoder");
         decoder->close();
         decoder.reset();
     }
@@ -344,7 +366,7 @@ void VideoReader::sync()
 {
     // Release GIL during synchronization
     {
-        py::gil_scoped_release release;
+       // py::gil_scoped_release release;
         if (convert)
         {
             convert->synchronize();

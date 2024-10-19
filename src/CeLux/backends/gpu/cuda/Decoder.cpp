@@ -13,7 +13,7 @@ void Decoder::initCodecContext(const AVCodec* codec)
     // Set hardware-specific get_format
     if (hwDeviceCtx)
     {
-        codecCtx->get_format = Decoder::getHWFormat; // Assign the static function
+        codecCtx->get_format = Decoder::getHWFormat; // Assign the static function 
     }
 }
 

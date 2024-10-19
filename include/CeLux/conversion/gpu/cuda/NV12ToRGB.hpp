@@ -64,6 +64,7 @@ template <typename T> void NV12ToRGB<T>::convert(celux::Frame& frame, void* buff
     int height = frame.getHeight();
     int rgbStride = width * 3;
 
+
     if constexpr (std::is_same<T, uint8_t>::value)
     {
         // Call the kernel for uint8_t

@@ -203,6 +203,15 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.4.1 (2024-10-19)
+
+- **Pre-Release Update:**
+  - Added logging utility for debugging purposes.
+    ```py
+    import celux
+    celux.set_log_level(celux.LogLevel.debug)
+    ```
+
 ### Version 0.3.3 (2024-10-19)
 
 - **Pre-Release Update:**

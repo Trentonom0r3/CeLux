@@ -172,7 +172,10 @@ add_library(CeLuxLib STATIC ${SOURCES})
 if(ENABLE_CUDA)
     target_compile_definitions(CeLuxLib PUBLIC CUDA_ENABLED)
 endif()
-
+find_package(spdlog CONFIG REQUIRED)
+message(STATUS "spdlog found: ${spdlog_VERSION}")
+   find_package(fmt CONFIG REQUIRED)
+   message(STATUS "fmt found: ${fmt_VERSION}")
 target_include_directories(CeLuxLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include/CeLux
     ${CMAKE_SOURCE_DIR}/include/CeLux/conversion
@@ -185,6 +188,8 @@ target_include_directories(CeLuxLib PUBLIC
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
+    ${spdlog_INCLUDE_DIRS} #- this does not work
+    ${fmt_INCLUDE_DIRS}
 )
 
 if(ENABLE_CUDA)
@@ -215,6 +220,8 @@ target_link_libraries(CeLuxLib PUBLIC
     ${OLE32_LIB}
     ${FFMPEG_STATIC_LIBS}
     ${TORCH_LIBRARIES}
+    spdlog::spdlog_header_only
+    fmt::fmt-header-only
 )
 
 if(ENABLE_CUDA)
@@ -249,6 +256,8 @@ target_include_directories(celux PUBLIC
     ${FFMPEG_INCLUDE_DIRS}
     ${pybind11_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
+    ${spdlog_INCLUDE_DIRS} #- this does not work
+        ${fmt_INCLUDE_DIRS}
 )
 
 set_target_properties(celux PROPERTIES
@@ -284,6 +293,8 @@ target_link_libraries(celux PUBLIC
     ${TORCH_PYTHON_LIBRARY}
     ${FFMPEG_STATIC_LIBS}
     ${PYTHON_LIBRARY}
+    spdlog::spdlog_header_only
+    fmt::fmt-header-only
 )
 
 if(ENABLE_CUDA)

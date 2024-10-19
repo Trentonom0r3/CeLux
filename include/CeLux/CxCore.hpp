@@ -11,6 +11,7 @@
 #include <stdexcept> // For std::runtime_error
 #include <string>
 #include <thread>
+#include <Logger.hpp>
 
 #include <vector>
 extern "C"

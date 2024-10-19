@@ -48,9 +48,11 @@ ConverterBase<T>::ConverterBase(cudaStream_t stream) : conversionStream(stream)
 {
     if (stream == nullptr)
     {
+        CELUX_DEBUG("Stream was nullptr, creating new Stream");
         cudaError_t err = cudaStreamCreate(&conversionStream);
         if (err != cudaSuccess)
         {
+            CELUX_CRITICAL("Failed to create CUDA stream in ConverterBase");
             throw std::runtime_error("Failed to create CUDA stream");
         }
     }
@@ -59,8 +61,10 @@ ConverterBase<T>::ConverterBase(cudaStream_t stream) : conversionStream(stream)
 // Destructor
 template <typename T> ConverterBase<T>::~ConverterBase()
 {
+    CELUX_DEBUG("Destroying ConverterBase");
     if (conversionStream)
     {
+        CELUX_DEBUG("Destroying CUDA Stream");
         synchronize();
         cudaStreamDestroy(conversionStream);
     }

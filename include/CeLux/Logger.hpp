@@ -1,83 +1,44 @@
-#include <iostream>
-#include <mutex>
-#include <string>
+// src/logger.h
+
+#ifndef CELEX_LOGGER_H
+#define CELEX_LOGGER_H
+
+#include <memory>
+#include <spdlog/spdlog.h>
+
+namespace celux
+{
 
 class Logger
 {
   public:
-    enum class Level
-    {
-        DEBUG = 0,
-        INFO,
-        WARN,
-        ERROR,
-        NONE // No logging
-    };
+    // Retrieves the singleton instance
+    static std::shared_ptr<spdlog::logger>& get_logger();
 
-    static Logger& getInstance()
-    {
-        static Logger instance; // Guaranteed to be thread-safe
-        return instance;
-    }
-
-    // Function to set the global logging level
-    void setLogLevel(Level level)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        logLevel = level;
-    }
-
-    // Logging functions for different levels
-    void logDebug(const std::string& message)
-    {
-        log(Level::DEBUG, "DEBUG", message);
-    }
-
-    void logInfo(const std::string& message)
-    {
-        log(Level::INFO, "INFO", message);
-    }
-
-    void logWarn(const std::string& message)
-    {
-        log(Level::WARN, "WARN", message);
-    }
-
-    void logError(const std::string& message)
-    {
-        log(Level::ERROR, "ERROR", message);
-    }
+    // Configures the logger's verbosity
+    static void set_level(spdlog::level::level_enum level);
 
   private:
-    Level logLevel = Level::INFO;
-    std::mutex mutex_;
+    Logger() = default;
+    ~Logger() = default;
 
-    // Private constructor for singleton pattern
-    Logger()
-    {
-    }
+    // Deleted to prevent copying
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
 
-    // Core logging function
-    void log(Level level, const std::string& levelStr, const std::string& message)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (level >= logLevel)
-        {
-            std::cout << "[" << levelStr << "] " << message << std::endl;
-        }
-    }
+    static std::shared_ptr<spdlog::logger> logger_instance;
 };
 
-// Global function to set logging level
-void setGlobalLogLevel(Logger::Level level)
-{
-    Logger::getInstance().setLogLevel(level);
-}
+} // namespace celux
 
 
-//define helper macros
-#define LOG_DEBUG(message) Logger::getInstance().logDebug(message)
-#define LOG_INFO(message) Logger::getInstance().logInfo(message)
-#define LOG_WARN(message) Logger::getInstance().logWarn(message)
-#define LOG_ERROR(message) Logger::getInstance().logError(message)
+//conveniece macros
+#define CELUX_TRACE(...) celux::Logger::get_logger()->trace(__VA_ARGS__)
+#define CELUX_DEBUG(...) celux::Logger::get_logger()->debug(__VA_ARGS__)
+#define CELUX_INFO(...) celux::Logger::get_logger()->info(__VA_ARGS__)
+#define CELUX_WARN(...) celux::Logger::get_logger()->warn(__VA_ARGS__)
+#define CELUX_ERROR(...) celux::Logger::get_logger()->error(__VA_ARGS__)
+#define CELUX_CRITICAL(...) celux::Logger::get_logger()->critical(__VA_ARGS__)
 
+
+#endif // CELEX_LOGGER_H

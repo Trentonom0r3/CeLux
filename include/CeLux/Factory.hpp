@@ -169,6 +169,7 @@ class Factory
             c10::cuda::CUDAStream cStream(stream.value());
             switch (type)
             {
+
             case celux::ConversionType::RGBToNV12:
                 if (dtype == celux::dataType::UINT8)
                 {

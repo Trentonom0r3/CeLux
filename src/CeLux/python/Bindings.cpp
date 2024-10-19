@@ -7,14 +7,9 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(celux, m)
 {
+
     // VideoReader bindings
-    // VideoReader bindings
-    #ifndef CUDA_ENABLED
-    py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, const std::string&, const std::string&, int>(),
-             py::arg("input_path"), py::arg("device") = "cuda",
-             py::arg("d_type") = "uint8", py::arg("buffer_size") = 10)
-    #else
+
     py::class_<VideoReader>(m, "VideoReader")
         .def(py::init<const std::string&, const std::string&, const std::string&, int,
                       std::optional<torch::Stream>>(),
@@ -22,7 +17,6 @@ PYBIND11_MODULE(celux, m)
              py::arg("d_type") = "uint8", py::arg("buffer_size") = 10,
              py::arg("stream") = std::nullopt,
              "Initialize a VideoReader with optional CUDA stream")
-    #endif
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)
@@ -87,4 +81,16 @@ PYBIND11_MODULE(celux, m)
                  self.close();
                  return false;
              });
+    py::enum_<spdlog::level::level_enum>(m, "LogLevel")
+        .value("trace", spdlog::level::trace)
+        .value("debug", spdlog::level::debug)
+        .value("info", spdlog::level::info)
+        .value("warn", spdlog::level::warn)
+        .value("error", spdlog::level::err)
+        .value("critical", spdlog::level::critical)
+        .value("off", spdlog::level::off)
+        .export_values();
+
+    m.def("set_log_level", &celux::Logger::set_level, "Set the logging level for CeLux",
+          py::arg("level"));
 }

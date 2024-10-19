@@ -16,6 +16,7 @@ namespace celux
 		NV12ToRGB,
 		BGRToNV12,
 		NV12ToBGR,
+		YUV420ToRGB,
 	};
 }
 
