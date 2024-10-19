@@ -73,7 +73,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 with cx.VideoReader(
     "path/to/input/video.mp4",
     device=device,      # "cpu" or "cuda"
-    dtype="uint8"       # Options: "uint8", "float32", "float16"
+    d_type="uint8"       # Options: "uint8", "float32", "float16"
 ) as reader:
     for frame in reader:
         # Frame is a PyTorch tensor in HWC format
@@ -83,9 +83,9 @@ with cx.VideoReader(
 **Parameters:**
 
 - `device` (str): Device to use. Can be `"cpu"` or `"cuda"`.
-- `dtype` (str): Data type of the output frames (`"uint8"`, `"float32"`, or `"float16"`).
+- `d_type` (str): Data type of the output frames (`"uint8"`, `"float32"`, or `"float16"`).
 
-**Note:** If you set `dtype` to `"float"` or `"half"`, the frame values will be normalized between `0.0` and `1.0`.
+**Note:** If you set `d_type` to `"float"` or `"half"`, the frame values will be normalized between `0.0` and `1.0`.
 
 ### 📜 Detailed Usage
 
@@ -97,8 +97,7 @@ with cx.VideoReader(
 reader = cx.VideoReader(
     "path/to/video.mp4",
     device="cuda",        # Use "cpu" or "cuda"
-    dtype="float32",      # Data type: "uint8", "float32", "float16"
-    frame_range=[10, 20]  # Optional: Read frames 10 to 20
+    d_type="float32",      # Data type: "uint8", "float32", "float16"
 )
 ```
 
