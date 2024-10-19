@@ -106,7 +106,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
             // Initialize cpuTensor on CPU if needed for CPU operations
             cpuTensor = torch::empty(
                 {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torch::kCPU));
+                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
         }
         else // CPU backend
         {
@@ -119,7 +119,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
             // Alternatively, initialize it on CPU if needed
             RGBTensor = torch::empty(
                 {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torch::kCPU));
+                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
         }
 
         // Configure BufferConfig

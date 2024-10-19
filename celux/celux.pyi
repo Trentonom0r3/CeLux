@@ -11,7 +11,8 @@ class VideoProperties(TypedDict):
     has_audio: bool
 
 class VideoReader:
-    def __init__(self, input_path: str, device: str = "cuda", d_type: str = "uint8") -> None:
+    def __init__(self, input_path: str, device: str = "cuda", d_type: str = "uint8",
+                 buffer_size: int = 10, stream : torch.Stream = None) -> None:
         """
         Initialize the VideoReader object.
 
@@ -19,6 +20,8 @@ class VideoReader:
             input_path (str): Path to the video file.
             device (str): Device to be used. Default is "cuda".
             d_type (str): Data type of the frames (e.g., "uint8"). Default is "uint8".
+            buffer_size (int): Size of the buffer for reading frames. Default is 10.
+            stream (torch.Stream): CUDA stream to use for reading frames. Default is None.
         """
         ...
 
