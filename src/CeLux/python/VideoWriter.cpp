@@ -80,7 +80,7 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
 				backend, celux::ConversionType::RGBToNV12, dtype, stream.value());
 		}
         CELUX_DEBUG("Converter created\n");
-
+        intermediateFrame = torch::empty({height, width, 3}, torchDataType);
       encoder = celux::Factory::createEncoder(backend, filePath, props, std::move(convert));
       CELUX_DEBUG("Encoder created\n");
     }
@@ -102,8 +102,9 @@ bool VideoWriter::writeFrame(torch::Tensor tensorFrame)
     try
     {
         CELUX_DEBUG("Writing frame\n");
+        intermediateFrame.copy_(tensorFrame, true);
         // If tensor is already on GPU, just get the pointer
-        encoder->encodeFrame(tensorFrame.data_ptr());
+        return encoder->encodeFrame(intermediateFrame.data_ptr());
     }
     catch (const std::exception& ex)
     {

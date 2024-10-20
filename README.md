@@ -1,13 +1,17 @@
+[![License](https://img.shields.io/badge/license-AGPL%203.0-blue.svg)](LICENSE)
+[![PyPI Version](https://img.shields.io/pypi/v/celux)](https://pypi.org/project/celux/)
+[![PyPI Version CUDA](https://img.shields.io/pypi/v/celux-cuda)](https://pypi.org/project/celux-cuda/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Trentonom0r3/celux/createRelease.yaml?branch=main)](https://github.com/Trentonom0r3/celux/actions)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/celux)](https://pypi.org/project/celux/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/celux)](https://pypi.org/project/celux/)
 
-![License](https://img.shields.io/badge/license-AGPL%203.0-blue.svg)
-![PyPI Version](https://img.shields.io/pypi/v/celux)
-![PyPI Version CUDA](https://img.shields.io/pypi/v/celux-cuda)
 
 # CeLux
 
 **CeLux** is a high-performance Python library for video processing, leveraging the power of FFmpeg. It delivers some of the fastest decode times for full HD videos globally, enabling efficient and seamless video decoding directly into PyTorch tensors.
 
 The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (light), reflecting its commitment to speed and efficiency.
+
 
 ## 🚀 Features
 
@@ -202,6 +206,16 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.6 (2024-10-19)
+
+- **Pre-Release Update:**
+  - Fixed `VideoWriter` class.
+    - Both `cpu` and `cuda` arguments now work properly.
+  - **Encoder Functionality:**
+    - Enabled encoder support for both CPU and CUDA backends.
+    - Users can now encode videos directly from PyTorch tensors.
+  - Update Github Actions, add tests.
+
 ### Version 0.3.5 (2024-10-19)
 
 - **Pre-Release Update:**
@@ -230,8 +244,7 @@ We welcome contributions! Follow these steps to contribute:
 - **Pre-Release Update:**
   - Adjusted Frame Range End in `VideoReader` to be exclusive to match `cv2` behavior.
   - Removed unnecessary error throws.
-  - Encoder **DOES NOT** work currenty. *WiP.*
-
+  - **Encoder Functionality:** Now fully operational for both CPU and CUDA.
 
 ### Version 0.3.0 (2024-10-17)
 
@@ -289,6 +302,42 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **[PyTorch](https://pytorch.org/):** For tensor operations and CUDA support.
 - **[Vcpkg](https://github.com/microsoft/vcpkg):** Simplifies cross-platform dependency management.
 - **[@NevermindNilas](https://github.com/NevermindNilas):** For assistance with testing, API suggestions, and more.
+
+# 📈 **Benchmarks**
+<!-- BENCHMARKS_START -->
+
+### 🖥️ **System Specifications**
+
+| Specification         | Details                                 |
+|-----------------------|-----------------------------------------|
+| **Processor**         | Intel64 Family 6 Model 154 Stepping 3, GenuineIntel |
+| **Architecture**      | AMD64 |
+| **Python Version**    | 3.12.7 (CPython) |
+| **Python Build**      | tags/v3.12.7:0b05ead Oct  1 2024 03:06:41 |
+| **Operating System**  | Windows 11 |
+| **CPU Brand**         | 12th Gen Intel(R) Core(TM) i7-12700H |
+| **CPU Frequency**     | 2.3000 GHz |
+| **L2 Cache Size**     | 11776 KB |
+| **L3 Cache Size**     | 24576 KB |
+| **Number of Cores**   | 20 |
+
+
+| Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
+|--------------------------------|---------------|------------|--------|
+| Test Video Reader Cpu Benchmark | 0.81          | 0.01       | 442.44 |
+| Test Video Reader Cuda Benchmark | 15.33          | 3.23       | 933.49 |
+| Test Video Writer Benchmark | 1.64          | 0.06       | 219.78 |
+
+
+### 📊 **Benchmark Visualizations**
+
+![FPS Comparison](scripts/benchmarks/fps_comparison.png)
+
+![Mean Time Comparison](scripts/benchmarks/mean_time_comparison.png)
+
+
+
+<!-- BENCHMARKS_END -->
 
 ## ❓ FAQ
 

@@ -179,6 +179,7 @@ bool Encoder::encodeFrame(void* buffer)
 {
     try
     {
+        CELUX_DEBUG("Encoding frame...");
         if (!isOpen())
         {
             throw CxException("Encoder is not open");
@@ -305,6 +306,11 @@ bool Encoder::encodeFrame(void* buffer)
 
         return true;
     }
+    catch (const CxException& e)
+    {
+		CELUX_DEBUG("Error in Write Frame: {]", e.what());
+		return false;
+	}
     catch (const std::exception& e)
     {
         CELUX_DEBUG("Error in Write Frame: " + std::string(e.what()));

@@ -11,10 +11,13 @@ class Encoder : public celux::Encoder
             std::unique_ptr<celux::conversion::IConverter> converter = nullptr)
         : celux::Encoder(std::move(converter))
     {
-        initialize(outputPath, props);
+        this->initialize(outputPath, props);
     }
 
-
+    ~Encoder()
+    {
+        this->close();
+    }
     // No need to override methods unless specific behavior is needed
 };
 } // namespace celux::backends::cpu

@@ -1,0 +1,5 @@
+{
+    "test_video_reader_cpu_benchmark": 360.0,
+    "test_video_reader_cuda_benchmark": 14315.0,
+    "test_video_writer_benchmark": 360.0
+}

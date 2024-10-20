@@ -17,6 +17,8 @@ class Encoder : public celux::Encoder
         this->initialize(outputPath, props);
     }
 
+
+
   protected:
     void initHWAccel() override;
     enum AVPixelFormat getHWFormat(AVCodecContext* ctx,

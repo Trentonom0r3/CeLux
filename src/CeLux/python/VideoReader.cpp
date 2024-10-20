@@ -239,7 +239,7 @@ torch::Tensor VideoReader::readFrame()
         return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8));
     }
 
-    return frame;
+    return frame.clone();
 }
 
 void VideoReader::close()
@@ -343,7 +343,7 @@ torch::Tensor VideoReader::next()
     }
 
     currentIndex++;
-    return frame;
+    return frame.clone();
 }
 
 void VideoReader::enter()

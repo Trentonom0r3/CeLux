@@ -16,7 +16,7 @@ import torch  # For visual confirmation
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 import celux_cuda as celux
 
-#celux.set_log_level(celux.LogLevel.debug)
+celux.set_log_level(celux.LogLevel.debug)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -55,24 +55,22 @@ def process_video_with_visualization(video_path, output_path=None):
         start = time.time()
         STREAM = torch.cuda.Stream("cuda")
         WRITESTREAM = torch.cuda.Stream("cuda")
-        with celux.VideoReader(video_path, device = "cuda", d_type="uint8", stream = STREAM) as reader:
+        with celux.VideoReader(video_path, device = "cpu", d_type="uint8") as reader:
             writer = None
-           
+            #print(reader.get_properties()["total_frames"])
             if output_path:
                 writer = celux.VideoWriter(output_path, reader.get_properties()["width"],
                                            reader.get_properties()["height"], reader.get_properties()["fps"],
-                                           device = "cuda", stream = WRITESTREAM)
+                                           device = "cpu")
 
             for frame in reader:
-                frame_cpu = frame.cpu()
                 if writer:
                     writer(frame)
                 # Display the frame using OpenCV
-                cv2.imshow("Video Frame", frame_cpu.numpy())
+                cv2.imshow("Video Frame", frame.numpy())
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
                     break
-
             
                 frame_count += 1
 
