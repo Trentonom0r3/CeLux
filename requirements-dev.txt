@@ -7,7 +7,7 @@ flake8
 black
 isort
 # PyTorch and related libraries with CUDA support
-torch==2.2.0+cu121121
+torch==2.2.0+cu121
 
 numpy
 opencv-python-headless
