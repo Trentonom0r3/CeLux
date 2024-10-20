@@ -1,7 +1,6 @@
 [![License](https://img.shields.io/badge/license-AGPL%203.0-blue.svg)](LICENSE)
 [![PyPI Version](https://img.shields.io/pypi/v/celux)](https://pypi.org/project/celux/)
 [![PyPI Version CUDA](https://img.shields.io/pypi/v/celux-cuda)](https://pypi.org/project/celux-cuda/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Trentonom0r3/celux/createRelease.yaml?branch=main)](https://github.com/Trentonom0r3/celux/actions)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/celux)](https://pypi.org/project/celux/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/celux)](https://pypi.org/project/celux/)
 
