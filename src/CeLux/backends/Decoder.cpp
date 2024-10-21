@@ -288,6 +288,12 @@ void Decoder::close()
     {
         hwDeviceCtx.reset();
     }
+    if (converter)
+    {
+        CELUX_DEBUG("Synchronizing converter in Decoder Destructor");
+        converter->synchronize();
+		converter.reset();
+	}
     videoStreamIndex = -1;
     properties = VideoProperties{};
 }

@@ -123,10 +123,6 @@ class VideoReader
 
     std::unique_ptr<celux::conversion::IConverter> convert;
 
-    // Buffers
-    torch::Tensor RGBTensor; // For RGB conversion (GPU)
-    torch::Tensor cpuTensor; // For CPU conversion (CPU)
-    celux::Frame frame;      // Decoded frame
     int start_frame = 0;
     int end_frame = -1; // -1 indicates no limit
 

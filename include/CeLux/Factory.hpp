@@ -164,7 +164,8 @@ class Factory
         {
             if (!stream.has_value())
             {
-				stream = c10::cuda::getStreamFromPool();
+                CELUX_DEBUG("Creating CUDA stream for converter\n");
+				stream = c10::cuda::getStreamFromPool(true);
 			}
             //make a cuda stream
             c10::cuda::CUDAStream cStream(stream.value());

@@ -8,20 +8,23 @@
 
 struct BufferConfig
 {
-    torch::IntArrayRef shape;
+    int height;
+    int width;
+    int channels = 3;
     torch::Dtype dtype;
     torch::Device device;
     size_t queueSize;
 
-    BufferConfig(const torch::IntArrayRef& shape, torch::Dtype dtype,
+    BufferConfig(int height, int width, int channels, torch::Dtype dtype,
                  const torch::Device& device, size_t queueSize)
-        : shape(shape), dtype(dtype), device(device), queueSize(queueSize)
+        : height(height), width(width), channels(channels), dtype(dtype),
+        device(device), queueSize(queueSize)
     {
+    
     }
 
-    BufferConfig() : shape(), dtype(torch::kUInt8), device(torch::kCPU), queueSize(1)
-    {
-    }
+    BufferConfig() : BufferConfig(0, 0, 3, torch::kUInt8, torch::kCPU, 1)
+	{}
 };
 
 class TensorRingBuffer

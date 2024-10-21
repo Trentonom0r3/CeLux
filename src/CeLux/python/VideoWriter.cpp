@@ -17,8 +17,10 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         props.pixelFormat = AV_PIX_FMT_NV12;
         // Determine the backend enum from the device string
         celux::backend backend;
+        torch::DeviceType deviceType;
         if (device == "cuda")
         {
+            deviceType = torch::kCUDA;
             props.codecName = "h264_nvenc";
             if (!torch::cuda::is_available())
             {
@@ -36,6 +38,7 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         else if (device == "cpu")
         {
 
+            deviceType = torch::kCPU;
             props.codecName = "libx264";
             backend = celux::backend::CPU;
         }
@@ -80,8 +83,8 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
 				backend, celux::ConversionType::RGBToNV12, dtype, stream.value());
 		}
         CELUX_DEBUG("Converter created\n");
-        intermediateFrame = torch::empty({height, width, 3}, torchDataType);
-      encoder = celux::Factory::createEncoder(backend, filePath, props, std::move(convert));
+        intermediateFrame = torch::empty({height, width, 3}, torch::TensorOptions().dtype(torchDataType).device(deviceType));
+         encoder = celux::Factory::createEncoder(backend, filePath, props, std::move(convert));
       CELUX_DEBUG("Encoder created\n");
     }
     catch (const std::exception& ex)
@@ -101,17 +104,54 @@ bool VideoWriter::writeFrame(torch::Tensor tensorFrame)
 {
     try
     {
-        CELUX_DEBUG("Writing frame\n");
-        intermediateFrame.copy_(tensorFrame, true);
-        // If tensor is already on GPU, just get the pointer
-        return encoder->encodeFrame(intermediateFrame.data_ptr());
+        CELUX_DEBUG("Writing frame");
+
+        // Validate input tensor
+        if (!tensorFrame.is_contiguous())
+        {
+            CELUX_WARN("Input tensor is not contiguous. Making it contiguous.");
+            tensorFrame = tensorFrame.contiguous();
+        }
+
+        // Ensure tensor is on the correct device
+        if (tensorFrame.device() != intermediateFrame.device())
+        {
+            CELUX_DEBUG("Input tensor is on a different device. Moving it to the "
+                        "encoder's device.");
+            tensorFrame = tensorFrame.to(intermediateFrame.device());
+        }
+
+        // Ensure data types match
+        if (tensorFrame.dtype() != intermediateFrame.dtype())
+        {
+            CELUX_DEBUG("Input tensor dtype does not match intermediate frame. Casting "
+                        "tensor.");
+            tensorFrame = tensorFrame.to(intermediateFrame.dtype());
+        }
+
+        // Copy data into the intermediate frame
+        intermediateFrame.copy_(tensorFrame, /*non_blocking=*/true);
+        CELUX_DEBUG("Frame data copied to intermediateFrame");
+
+        // Encode the frame
+        bool success = encoder->encodeFrame(intermediateFrame.data_ptr());
+
+        if (!success)
+        {
+            CELUX_ERROR("Failed to encode frame");
+            return false;
+        }
+
+        CELUX_DEBUG("Frame encoded successfully");
+        return true;
     }
     catch (const std::exception& ex)
     {
-        CELUX_DEBUG("Exception in writeFrame: ");
-        throw; // Re-throw exception after logging
+        CELUX_ERROR("Exception in writeFrame: {}", ex.what());
+        return false; // Indicate failure
     }
 }
+
 
 std::vector<std::string> VideoWriter::supportedCodecs()
 {
@@ -120,8 +160,29 @@ std::vector<std::string> VideoWriter::supportedCodecs()
 
 void VideoWriter::close()
 {
-    if (convert)
+    try
     {
-        convert->synchronize();
+        CELUX_DEBUG("Closing VideoWriter");
+
+        if (encoder)
+        {
+            CELUX_DEBUG("Finalizing encoder");
+            encoder->finalize(); // Ensure all buffered frames are processed
+            encoder.reset();     // Release the encoder
+            CELUX_DEBUG("Encoder finalized and reset");
+        }
+
+        if (intermediateFrame.defined())
+        {
+            intermediateFrame = torch::Tensor(); // Release the tensor
+            CELUX_DEBUG("Intermediate frame tensor released");
+        }
+
+        CELUX_DEBUG("VideoWriter closed successfully");
+    }
+    catch (const std::exception& ex)
+    {
+        CELUX_ERROR("Exception in close(): {}", ex.what());
+        // Handle or re-throw as needed
     }
 }

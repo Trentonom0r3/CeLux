@@ -12,8 +12,8 @@ import os
 import torch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux_cuda as celux
-celux.set_log_level(celux.LogLevel.info)
+import celux_cuda as cx
+cx.set_log_level(cx.LogLevel.trace)
 STREAM = torch.cuda.Stream("cuda")
 
 from requests.exceptions import RequestException
@@ -68,12 +68,16 @@ def processVideoCuda(videoPath):
     try:
         frameCount = 0
         start = time.time()
-        with celux.VideoReader(videoPath, device = "cuda" , d_type="uint8", stream = STREAM) as reader:
+        with cx.VideoReader(videoPath, device = "cuda" , d_type="uint8", stream = STREAM) as reader:
+            writer = cx.VideoWriter("./output_cuda.mp4", reader.get_properties()["width"],
+                                reader.get_properties()["height"], reader.get_properties()["fps"],
+                                device = "cuda")
             for frame in reader:
                 if frameCount == 0:
                     logging.info(
                         f"Frame data: {frame.shape, frame.dtype, frame.device}"
                     )
+                writer(frame)
                 frameCount += 1
         end = time.time()
         logging.info(f"Time taken: {end-start} seconds")
@@ -94,15 +98,18 @@ def processVideoCPU(videoPath):
     try:
         frameCount = 0
         start = time.time()
-        # Hardcoded to as_numpy false until fixed
-        # Until then, this still decodes on GPU
-        with celux.VideoReader(videoPath, device = "cpu", d_type="uint8") as reader:
+        with cx.VideoReader(videoPath, device = "cpu", d_type="uint8") as reader:
+            writer = cx.VideoWriter("./output_cpu.mp4", reader.get_properties()["width"],
+                                reader.get_properties()["height"], reader.get_properties()["fps"],
+                                device = "cpu")
             for frame in reader:
                 if frameCount == 0:
-                    logging.info(f"Frame data: {frame.shape, frame.dtype, frame.device}")
-                    # Just to make sure it's a on cpu array
-                    frame.numpy()
+                    logging.info(
+                        f"Frame data: {frame.shape, frame.dtype, frame.device}"
+                    )
+                writer(frame.clone().cpu())
                 frameCount += 1
+        
         end = time.time()
         logging.info(f"Time taken: {end-start} seconds")
         logging.info(f"Total Frames: {frameCount}")
@@ -125,13 +132,17 @@ def main(args):
     else:
         logging.info(f"Video already exists at {videoPath}")
 
+
+    
     logging.info("Processing video with CUDA")
     processVideoCuda(videoPath)
-
+    
+    
     print("")
-
+    
     logging.info("Processing video with CPU")
     processVideoCPU(videoPath)
+
 
 
 if __name__ == "__main__":

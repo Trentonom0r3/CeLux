@@ -106,38 +106,13 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         // Retrieve video properties
         properties = decoder->getVideoProperties();
 
-        // Initialize tensors based on backend and data type
-        if (backend == celux::backend::CUDA)
-        {
-            // Initialize RGBTensor on CUDA device
-            RGBTensor = torch::empty(
-                {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
-
-            // Initialize cpuTensor on CPU if needed for CPU operations
-            cpuTensor = torch::empty(
-                {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
-        }
-        else // CPU backend
-        {
-            // Initialize cpuTensor on CPU
-            cpuTensor = torch::empty(
-                {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
-
-            // If RGBTensor is not used on CPU, consider not initializing it
-            // Alternatively, initialize it on CPU if needed
-            RGBTensor = torch::empty(
-                {properties.height, properties.width, 3},
-                torch::TensorOptions().dtype(torchDataType).device(torchDevice));
-        }
-
         // Configure BufferConfig
         BufferConfig config;
         config.device = torchDevice;
         config.dtype = torchDataType;
-        config.shape = {properties.height, properties.width, 3};
+        config.width = properties.width;
+        config.height = properties.height;
+        config.channels = 3; // RGB
         config.queueSize = buffer_size;
 
         // Initialize tensorBuffer_
@@ -228,7 +203,7 @@ torch::Tensor VideoReader::readFrame()
     if (tensorBuffer_->isStopped() && tensorBuffer_->size() == 0)
     {
         // No more frames available
-        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8));
+        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8).device(torchDevice));
     }
 
     torch::Tensor frame = tensorBuffer_->consume();
@@ -236,7 +211,7 @@ torch::Tensor VideoReader::readFrame()
     {
         // No frame available
         // No more frames available
-        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8));
+        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8).device(torchDevice));
     }
 
     return frame.clone();
@@ -253,15 +228,6 @@ void VideoReader::close()
         bufferThread_.join();
     }
 
-    if (convert) {
-		CELUX_DEBUG("Closing converter");
-        CELUX_DEBUG("Synchronizing Converter");
-        convert->synchronize();
-		convert.reset();
-	}
-    else {
-		CELUX_DEBUG("Converter is null");
-	}
     // Clean up decoder and other resources
     if (decoder)
     {
@@ -343,7 +309,7 @@ torch::Tensor VideoReader::next()
     }
 
     currentIndex++;
-    return frame.clone();
+    return frame;
 }
 
 void VideoReader::enter()

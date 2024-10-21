@@ -102,7 +102,9 @@ def getMetadataCeLux(videoPath):
     video = celux.VideoReader(videoPath, "cpu")
 
     metadata = video.get_properties()
-
+    codecs = video.supported_codecs()
+    for codec in codecs:
+        logging.info(f"Codec: {codec}")
     logging.info("CeLux Metadata:")
     logging.info(f"Total Frames: {metadata['total_frames']}")
     logging.info(f"Width: {metadata['width']}")

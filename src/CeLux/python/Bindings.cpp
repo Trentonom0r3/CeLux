@@ -17,7 +17,7 @@ PYBIND11_MODULE(celux, m)
              py::arg("d_type") = "uint8", py::arg("buffer_size") = 10,
              py::arg("stream") = std::nullopt,
              "Initialize a VideoReader with optional CUDA stream")
-        .def("read_frame", &VideoReader::readFrame, py::return_value_policy::take_ownership)
+        .def("read_frame", &VideoReader::readFrame, py::return_value_policy::reference)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)
         .def("get_properties", &VideoReader::getProperties)
@@ -25,7 +25,7 @@ PYBIND11_MODULE(celux, m)
         .def(
             "__iter__", [](VideoReader& self) -> VideoReader& { return self.iter(); },
             py::return_value_policy::reference_internal)
-        .def("__next__", &VideoReader::next, py::return_value_policy::take_ownership)
+        .def("__next__", &VideoReader::next, py::return_value_policy::reference)
         .def(
             "__enter__",
             [](VideoReader& self) -> VideoReader&

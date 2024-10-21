@@ -9,9 +9,9 @@ import sys
 import os
 
 # Adjust the path to include celux
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-import celux
+import celux_cuda as celux
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -114,3 +114,6 @@ def test_video_writer_benchmark(benchmark, video_properties):
     if Path(OUTPUT_VIDEO).exists():
         Path(OUTPUT_VIDEO).unlink()
         logger.info("Cleaned up output video.")
+
+
+#pytest tests\benchmarks\ --benchmark-only --benchmark-json=benchmark_results.json --html=benchmark_report.html

@@ -205,6 +205,13 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.7 (2024-10-21)
+
+- **Pre-Release Update:**
+  - Fixed remaining issues with `VideoWriter` class.
+    - Both `cpu` and `cuda` arguments NOW work properly.
+  - Few Small bug fixes regarding synchronization and memory management. 
+
 ### Version 0.3.6 (2024-10-19)
 
 - **Pre-Release Update:**
@@ -323,9 +330,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 | Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|---------------|------------|--------|
-| Test Video Reader Cpu Benchmark | 0.81          | 0.01       | 442.44 |
-| Test Video Reader Cuda Benchmark | 15.33          | 3.23       | 933.49 |
-| Test Video Writer Benchmark | 1.64          | 0.06       | 219.78 |
+| Test Video Reader Cpu Benchmark | 0.80          | 0.01       | 452.61 |
+| Test Video Reader Cuda Benchmark | 15.48          | 3.48       | 924.46 |
+| Test Video Writer Benchmark | 1.49          | 0.01       | 242.28 |
 
 
 ### 📊 **Benchmark Visualizations**

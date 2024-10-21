@@ -28,6 +28,7 @@ template <typename T> class ConverterBase : public IConverter
 
   protected:
     cudaStream_t conversionStream;
+    bool passedInStream = false;
 };
 
 // Template Definitions
@@ -56,6 +57,10 @@ ConverterBase<T>::ConverterBase(cudaStream_t stream) : conversionStream(stream)
             throw std::runtime_error("Failed to create CUDA stream");
         }
     }
+    else
+    {
+		passedInStream = true;
+	}
 }
 
 // Destructor
@@ -64,9 +69,12 @@ template <typename T> ConverterBase<T>::~ConverterBase()
     CELUX_DEBUG("Destroying ConverterBase");
     if (conversionStream)
     {
-        CELUX_DEBUG("Destroying CUDA Stream");
         synchronize();
-        cudaStreamDestroy(conversionStream);
+        if (!passedInStream)
+        {
+            CELUX_DEBUG("Destroying CUDA Stream");
+            cudaStreamDestroy(conversionStream);
+        }
     }
 }
 

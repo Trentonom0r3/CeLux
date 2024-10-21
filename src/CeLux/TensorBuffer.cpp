@@ -10,7 +10,7 @@ TensorRingBuffer::TensorRingBuffer(const BufferConfig& config)
     buffer_.reserve(bufferSize_);
     for (size_t i = 0; i < bufferSize_; ++i)
     {
-        buffer_.emplace_back(torch::empty(config_.shape, torch::TensorOptions()
+        buffer_.emplace_back(torch::empty({config.height, config.width, config.channels}, torch::TensorOptions()
                                                              .dtype(config_.dtype)
                                                              .device(config_.device)
                                                              .requires_grad(false)));
