@@ -35,7 +35,6 @@ PYBIND11_MODULE(celux, m)
             },
             py::return_value_policy::reference_internal)
         .def("__exit__", &VideoReader::exit)
-        .def("sync", &VideoReader::sync)
         .def("reset", &VideoReader::reset)
         .def(
             "__call__",

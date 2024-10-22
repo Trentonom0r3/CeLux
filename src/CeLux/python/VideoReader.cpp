@@ -8,8 +8,8 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
                          const std::string& dataType, int buffer_size,
                          std::optional<torch::Stream> stream)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
-      torchDevice(torch::Device(torch::kCPU)), // Initialize with CPU by default
-      stopBuffering_(false), tensorBuffer_(nullptr)
+      torchDevice(torch::Device(torch::kCPU))
+     
 {
     try
     {
@@ -106,20 +106,8 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         // Retrieve video properties
         properties = decoder->getVideoProperties();
 
-        // Configure BufferConfig
-        BufferConfig config;
-        config.device = torchDevice;
-        config.dtype = torchDataType;
-        config.width = properties.width;
-        config.height = properties.height;
-        config.channels = 3; // RGB
-        config.queueSize = buffer_size;
-
-        // Initialize tensorBuffer_
-        tensorBuffer_ = std::make_unique<TensorRingBuffer>(config);
-
-        // Start the background thread for buffering frames
-        bufferThread_ = std::thread(&VideoReader::bufferFrames, this);
+        tensor = torch::empty({properties.height, properties.width, 3},
+            							  torch::TensorOptions().dtype(torchDataType).device(torchDevice));
     }
     catch (const std::exception& ex)
     {
@@ -159,75 +147,23 @@ void VideoReader::setRange(int start, int end)
     start_frame = start;
     end_frame = end;
 }
-void VideoReader::bufferFrames()
-{
-    while (!stopBuffering_)
-    {
-        bool success = tensorBuffer_->produce(
-            [this](torch::Tensor& tensor)
-            {
-                int result;
 
-                {
-                    // Decode the next frame into 'tensor'
-                    result = decoder->decodeNextFrame(tensor.data_ptr());
-                }
 
-                if (result == 1) // Frame decoded successfully
-                {
-                    return true;
-                }
-                else if (result == 0) // End of video stream
-                {
-                    stopBuffering_ = true;
-                    tensorBuffer_->stop();
-                    return false;
-                }
-                else // Decoding failed
-                {
-                    // Handle error as needed
-                    stopBuffering_ = true;
-                    tensorBuffer_->stop();
-                    return false;
-                }
-            });
-
-        if (!success || stopBuffering_)
-            break;
-    }
-}
 
 torch::Tensor VideoReader::readFrame()
 {
-    CELUX_TRACE("Reading frame at index: {}", currentIndex);
-    if (tensorBuffer_->isStopped() && tensorBuffer_->size() == 0)
+    
+    bool success = decoder->decodeNextFrame(tensor.data_ptr());
+    if (!success)
     {
-        // No more frames available
-        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8).device(torchDevice));
-    }
+		return torch::Tensor(); // Return an empty tensor if decoding failed
+	}
 
-    torch::Tensor frame = tensorBuffer_->consume();
-    if (!frame.defined() || frame.numel() == 0)
-    {
-        // No frame available
-        // No more frames available
-        return torch::empty({0}, torch::TensorOptions().dtype(torch::kUInt8).device(torchDevice));
-    }
-
-    return frame.clone();
+    return tensor;
 }
 
 void VideoReader::close()
 {
-    stopBuffering_ = true;
-    tensorBuffer_->stop();
-
-    if (bufferThread_.joinable())
-    {
-        CELUX_DEBUG("Joining buffer thread");
-        bufferThread_.join();
-    }
-
     // Clean up decoder and other resources
     if (decoder)
     {
@@ -243,7 +179,7 @@ bool VideoReader::seek(double timestamp)
 
     // Release GIL during seeking
     {
-        py::gil_scoped_release release;
+        //py::gil_scoped_release release;
         success = decoder->seek(timestamp);
     }
 
@@ -276,7 +212,7 @@ void VideoReader::reset()
 
 bool VideoReader::seekToFrame(int frame_number)
 {
-    if (frame_number < 0 || frame_number >= properties.totalFrames)
+    if (frame_number < 0 || frame_number > properties.totalFrames)
     {
         return false; // Out of range
     }
@@ -298,17 +234,21 @@ torch::Tensor VideoReader::next()
 {
     if (end_frame >= 0 && currentIndex > end_frame)
     {
+        CELUX_DEBUG("Range exhausted");
         throw py::stop_iteration(); // Stop iteration if range is exhausted
     }
+   
     py::gil_scoped_release release;
-
+    CELUX_DEBUG("Reading next frame in Iter");
     torch::Tensor frame = readFrame();
-    if (frame.numel() == 0)
+    if (!frame.defined() || frame.numel() == 0)
     {
+        CELUX_DEBUG("No more frames available for Iteration");
         throw py::stop_iteration(); // Stop iteration if no more frames are available
     }
-
-    currentIndex++;
+   // CELUX_DEBUG("Incrementing currentIndex");
+   currentIndex++;
+    CELUX_DEBUG("Returning frame");
     return frame;
 }
 
@@ -326,16 +266,4 @@ void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
 int VideoReader::length() const
 {
     return properties.totalFrames;
-}
-
-void VideoReader::sync()
-{
-    // Release GIL during synchronization
-    {
-       // py::gil_scoped_release release;
-        if (convert)
-        {
-            convert->synchronize();
-        }
-    }
 }

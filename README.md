@@ -205,6 +205,15 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.8 (2024-10-21)
+ 
+- **Pre-Release Update:**
+  - Removed Buffering from `VideoWriter`, resulting in **INSANE** performance gains.
+  - Fixed threading issue with `VideoWriter`, now properly utilizes available threads.
+  - Removed `sync` method from `VideoWriter`. 
+    - Synchronization can be manually handled by the user or by letting the `VideoWriter` do so on destruction. 
+  - Updated Benchmarks to reflect new version.
+
 ### Version 0.3.7 (2024-10-21)
 
 - **Pre-Release Update:**
@@ -330,9 +339,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 | Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|---------------|------------|--------|
-| Test Video Reader Cpu Benchmark | 0.80          | 0.01       | 452.61 |
-| Test Video Reader Cuda Benchmark | 15.48          | 3.48       | 924.46 |
-| Test Video Writer Benchmark | 1.49          | 0.01       | 242.28 |
+| Test Video Reader Cpu Benchmark | 9.05          | 2.34       | 1582.51 |
+| Test Video Reader Cuda Benchmark | 8.06          | 0.33       | 1776.58 |
+| Test Video Writer Benchmark | 33.82          | 1.88       | 423.22 |
 
 
 ### 📊 **Benchmark Visualizations**

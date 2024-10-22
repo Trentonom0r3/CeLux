@@ -140,11 +140,6 @@ class VideoReader:
         """
         ...
 
-    def sync(self) -> None:
-        """
-        Synchronize the video reader (if required for hardware operations).
-        """
-        ...
 
     def reset(self) -> None:
         """

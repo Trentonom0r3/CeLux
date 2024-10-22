@@ -1,14 +1,7 @@
 from typing import List, Dict, Optional, Any, Union, TypedDict, Tuple
 import torch
 from enum import Enum
-class VideoProperties(TypedDict):
-    width: int
-    height: int
-    fps: float
-    duration: float
-    total_frames: int
-    pixel_format: str
-    has_audio: bool
+
 
 class VideoReader:
     def __init__(self, input_path: str, device: str = "cuda", d_type: str = "uint8",
@@ -77,12 +70,12 @@ class VideoReader:
         """
         ...
 
-    def get_properties(self) -> VideoProperties:
+    def get_properties(self) -> dict:
         """
         Get properties of the video.
 
         Returns:
-            VideoProperties: A dictionary containing specific video properties.
+            A dictionary containing specific video properties.
             Contains the following:
             - width: Width of the video.
             - height: Height of the video.
@@ -147,11 +140,6 @@ class VideoReader:
         """
         ...
 
-    def sync(self) -> None:
-        """
-        Synchronize the video reader (if required for hardware operations).
-        """
-        ...
 
     def reset(self) -> None:
         """

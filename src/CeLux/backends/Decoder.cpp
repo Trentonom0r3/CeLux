@@ -59,7 +59,7 @@ void Decoder::initialize(const std::string& filePath)
     {
         throw CxException("Unsupported codec!");
     }
-
+    CELUX_DEBUG("CODEC: " + std::string(codec->name));
     initCodecContext(codec);
     // Populate video properties
     VideoProperties vp;
@@ -158,11 +158,12 @@ void Decoder::initCodecContext(const AVCodec* codec)
        // codecCtx->get_format = getHWFormat; // Assign the member function
     }
 
+    codecCtx->thread_count = static_cast<int>(
+        std::min(static_cast<unsigned int>(std::thread::hardware_concurrency()), 16u));
+    codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
     // Open codec
     FF_CHECK_MSG(avcodec_open2(codecCtx.get(), codec, nullptr),
                  std::string("Failed to open codec:"));
-    codecCtx->thread_count = std::thread::hardware_concurrency();
-    codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
 }
 
 enum AVPixelFormat Decoder::getHWFormat(AVCodecContext* ctx,
@@ -174,27 +175,49 @@ enum AVPixelFormat Decoder::getHWFormat(AVCodecContext* ctx,
 
 bool Decoder::decodeNextFrame(void* buffer)
 {
-    bool frameProcessed = false;
+    int ret;
+
     if (buffer == nullptr)
     {
         throw CxException("Buffer is null");
     }
 
-    while (!frameProcessed)
+    while (true)
     {
-        // Attempt to read a packet from the video file
-        int ret = av_read_frame(formatCtx.get(), pkt.get());
-        if (ret < 0)
+        // Attempt to receive a decoded frame
+        ret = avcodec_receive_frame(codecCtx.get(), frame.get());
+        if (ret == AVERROR(EAGAIN))
         {
-            if (ret == AVERROR_EOF)
-            {
-                // End of file: flush the decoder
-                FF_CHECK(avcodec_send_packet(codecCtx.get(), nullptr));
-            }
-            else
-            {
-                throw CxException("Error reading frame");
-            }
+            // Need to feed more packets
+            // Proceed to read the next packet
+        }
+        else if (ret == AVERROR_EOF)
+        {
+            // No more frames to decode
+            return false;
+        }
+        else if (ret < 0)
+        {
+            throw CxException("Error during decoding");
+        }
+        else
+        {
+            // Successfully received a frame
+            converter->convert(frame, buffer);
+            av_frame_unref(frame.get());
+            return true;
+        }
+
+        // Read the next packet from the video file
+        ret = av_read_frame(formatCtx.get(), pkt.get());
+        if (ret == AVERROR_EOF)
+        {
+            // End of file: flush the decoder
+            FF_CHECK(avcodec_send_packet(codecCtx.get(), nullptr));
+        }
+        else if (ret < 0)
+        {
+            throw CxException("Error reading frame");
         }
         else
         {
@@ -206,42 +229,9 @@ bool Decoder::decodeNextFrame(void* buffer)
             // Release the packet back to FFmpeg
             av_packet_unref(pkt.get());
         }
-
-        // Attempt to receive a decoded frame
-        while (true)
-        {
-            ret = avcodec_receive_frame(codecCtx.get(), frame.get());
-            if (ret == AVERROR(EAGAIN))
-            {
-                // Decoder needs more data; proceed to read the next packet
-                break;
-            }
-            else if (ret == AVERROR_EOF)
-            {
-                // No more frames to decode
-                return false;
-            }
-            else if (ret < 0)
-            {
-                throw CxException("Error during decoding");
-            }
-
-                converter->convert(frame, buffer);
-
-            frameProcessed = true;
-            break; // Successfully processed one frame
-        }
-
-        // Exit the outer loop if a frame was processed
-        if (frameProcessed)
-        {
-            break;
-        }
     }
-    av_packet_unref(pkt.get());
-    av_frame_unref(frame.get());
-    return frameProcessed;
 }
+
 
 bool Decoder::seek(double timestamp)
 {

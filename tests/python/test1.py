@@ -13,8 +13,8 @@ import cv2
 import torch  # For visual confirmation
 
 # Adjust the path to include celux
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux_cuda as celux
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux
 
 celux.set_log_level(celux.LogLevel.debug)
 
@@ -41,6 +41,18 @@ def download_video(url, output_path):
     except requests.RequestException as e:
         logging.error(f"Failed to download video: {e}")
         raise
+    
+def process_frame(frame):
+    """
+    Processes a single frame.
+
+    Args:
+        frame (torch.Tensor): The frame to process.
+    """
+    # Perform some processing on the frame
+    #do something with the frame
+    frame.mul_(1)
+    return frame
 
 def process_video_with_visualization(video_path, output_path=None):
     """
@@ -53,9 +65,9 @@ def process_video_with_visualization(video_path, output_path=None):
     try:
         frame_count = 0
         start = time.time()
-        STREAM = torch.cuda.Stream("cuda")
-        WRITESTREAM = torch.cuda.Stream("cuda")
-        with celux.VideoReader(video_path, device = "cpu", d_type="uint8") as reader:
+        STREAM = torch.cuda.Stream()
+        WRITESTREAM = torch.cuda.Stream()
+        with celux.VideoReader(video_path, device = "cuda", d_type="uint8", stream = STREAM) as reader:
             writer = None
             #print(reader.get_properties()["total_frames"])
             if output_path:
@@ -65,9 +77,10 @@ def process_video_with_visualization(video_path, output_path=None):
 
             for frame in reader:
                 if writer:
-                    writer(frame)
+                   # process_frame(frame)
+                    writer(frame.cpu())
                 # Display the frame using OpenCV
-                cv2.imshow("Video Frame", frame.numpy())
+                cv2.imshow("Video Frame", frame.cpu().numpy())
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
                     break

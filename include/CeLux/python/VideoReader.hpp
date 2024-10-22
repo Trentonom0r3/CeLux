@@ -4,7 +4,6 @@
 #define VIDEOREADER_HPP
 
 #include "Factory.hpp"
-#include <TensorBuffer.hpp>
 
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
@@ -99,14 +98,7 @@ class VideoReader
     int length() const;
     void setRange(int start, int end);
 
-    void sync();
-
   private:
-    void bufferFrames();
-    std::unique_ptr<TensorRingBuffer> tensorBuffer_;
-    std::thread bufferThread_;
-    std::atomic<bool> stopBuffering_;
-    torch::Dtype torchDataType_;
     bool seekToFrame(int frame_number);
 
     /**
@@ -122,6 +114,7 @@ class VideoReader
     torch::Device torchDevice;
 
     std::unique_ptr<celux::conversion::IConverter> convert;
+    torch::Tensor tensor;
 
     int start_frame = 0;
     int end_frame = -1; // -1 indicates no limit
