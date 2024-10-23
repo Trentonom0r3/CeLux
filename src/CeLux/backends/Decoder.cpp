@@ -1,16 +1,17 @@
 // Decoder.cpp
 #include "Decoder.hpp"
+#include <Factory.hpp>
 using namespace celux::error;
 
 namespace celux
 {
 
-Decoder::Decoder(std::unique_ptr<celux::conversion::IConverter> converter)
-    : converter(std::move(converter)), formatCtx(nullptr), codecCtx(nullptr),
-      pkt(av_packet_alloc()), videoStreamIndex(-1)
+Decoder::Decoder(std::optional<torch::Stream> stream)
+    : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr),
+      pkt(av_packet_alloc()), videoStreamIndex(-1), decoderStream(std::move(stream))
 {
     CELUX_DEBUG("Decoder constructed");
-    // Constructor does minimal work
+
 }
 
 Decoder::~Decoder()
@@ -54,6 +55,11 @@ Decoder& Decoder::operator=(Decoder&& other) noexcept
 
 void Decoder::initialize(const std::string& filePath)
 {
+    // Example usage
+    converter = celux::Factory::createConverter(
+        isHwAccel ? torch::kCUDA : torch::kCPU, celux::ConversionType::NV12ToRGB,
+        decoderStream);
+
     CELUX_INFO("Initializing decoder with file: {}", filePath);
     openFile(filePath);
     initHWAccel(); // Virtual function

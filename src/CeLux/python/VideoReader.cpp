@@ -48,28 +48,13 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
             throw std::invalid_argument("Unsupported device: " + device);
         }
 
-        if (stream.has_value())
-        {
-            CELUX_TRACE("Creating converter with provided CUDA stream");
-            convert = celux::Factory::createConverter(
-                torchDevice, celux::ConversionType::NV12ToRGB, stream);
-            CELUX_DEBUG("Converter created with provided CUDA stream");
-        }
-        else
-        {
-            CELUX_TRACE("Creating converter with defaults");
-            convert = celux::Factory::createConverter(
-                torchDevice, celux::ConversionType::NV12ToRGB, std::nullopt);
-            CELUX_DEBUG("Converter created with default CUDA stream");
-        }
-
         torch::Dtype torchDataType;
 
         torchDataType = torch::kUInt8;
         CELUX_DEBUG("DataType mapped to UINT8");
 
         decoder =
-            celux::Factory::createDecoder(torchDevice, filePath, std::move(convert));
+            celux::Factory::createDecoder(torchDevice, filePath, stream);
         CELUX_DEBUG("Decoder created successfully");
 
         // Retrieve video properties

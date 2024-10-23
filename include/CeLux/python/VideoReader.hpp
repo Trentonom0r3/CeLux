@@ -101,7 +101,6 @@ class VideoReader
     std::unique_ptr<celux::Decoder> decoder;
     celux::Decoder::VideoProperties properties;
 
-    std::unique_ptr<celux::conversion::IConverter> convert;
     torch::Tensor tensor;
 
     int start_frame = 0;

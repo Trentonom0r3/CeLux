@@ -23,7 +23,7 @@ class Decoder
     };
     Decoder() = default;
     // Constructor
-    Decoder(std::unique_ptr<celux::conversion::IConverter> converter = nullptr);
+    Decoder(std::optional<torch::Stream> stream);
 
     // Destructor
     virtual ~Decoder();
@@ -45,6 +45,8 @@ class Decoder
     virtual std::vector<std::string> listSupportedDecoders() const;
     AVCodecContext* getCtx();
 
+    //getter for bit depth
+    int getBitDepth() const;
   protected:
     // Initialization method
     void initialize(const std::string& filePath);
@@ -105,8 +107,9 @@ class Decoder
     int videoStreamIndex;
     VideoProperties properties;
     Frame frame;
-
+    bool isHwAccel;
     std::unique_ptr<celux::conversion::IConverter> converter;
     AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
+    std::optional<torch::Stream> decoderStream;
 };
 } // namespace celux

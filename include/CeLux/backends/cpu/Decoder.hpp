@@ -8,16 +8,11 @@ namespace celux::backends::cpu
 class Decoder : public celux::Decoder
 {
   public:
-    Decoder(const std::string& filePath,
-            std::unique_ptr<celux::conversion::IConverter> converter = nullptr)
-        : celux::Decoder(std::move(converter))
+    Decoder(const std::string& filePath, std::optional<torch::Stream> stream)
+        : celux::Decoder(celux::Decoder())
     {
+        isHwAccel = false;
         initialize(filePath);
-    }
-
-    ~Decoder() override
-    {
-        // Cleanup
     }
 
     // No need to override methods unless specific behavior is needed

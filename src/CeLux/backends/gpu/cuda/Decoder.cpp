@@ -45,6 +45,7 @@ void Decoder::initHWAccel()
         CELUX_ERROR("Failed to find HW device type: cuda");
         throw CxException("Failed to find HW device type: cuda");
     }
+
     CELUX_DEBUG("HW device type 'cuda' found: {}", av_hwdevice_get_type_name(type));
 
     // Initialize hardware device context
