@@ -19,7 +19,6 @@ The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (li
 - **🔗 Direct Decoding to Tensors:** Decode video frames directly into PyTorch tensors for immediate processing.
 - **🖥️ Hardware Acceleration Support:** Utilize CUDA for GPU-accelerated decoding, significantly improving performance.
 - **🔄 Easy Integration:** Seamlessly integrates with existing Python workflows, making it easy to incorporate into your projects.
-- **🗂️ Supports Multiple Data Types:** Handle video frames in `uint8`, `float32`, or `float16` data types.
 
 ## 📦 Installation
 
@@ -76,8 +75,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 with cx.VideoReader(
     "path/to/input/video.mp4",
-    device=device,      # "cpu" or "cuda"
-    d_type="uint8"       # Options: "uint8", "float32", "float16"
+    device=device     # "cpu" or "cuda"
 ) as reader:
     for frame in reader:
         # Frame is a PyTorch tensor in HWC format
@@ -87,9 +85,6 @@ with cx.VideoReader(
 **Parameters:**
 
 - `device` (str): Device to use. Can be `"cpu"` or `"cuda"`.
-- `d_type` (str): Data type of the output frames (`"uint8"`, `"float32"`, or `"float16"`).
-
-**Note:** If you set `d_type` to `"float"` or `"half"`, the frame values will be normalized between `0.0` and `1.0`.
 
 ### 📜 Detailed Usage
 
@@ -101,7 +96,6 @@ with cx.VideoReader(
 reader = cx.VideoReader(
     "path/to/video.mp4",
     device="cuda",        # Use "cpu" or "cuda"
-    d_type="float32",      # Data type: "uint8", "float32", "float16"
 )
 ```
 
