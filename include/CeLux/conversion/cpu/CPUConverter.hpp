@@ -14,7 +14,7 @@ namespace cpu
  *
  * @tparam T Data type used for conversion (e.g., uint8_t, float).
  */
-template <typename T> class ConverterBase : public IConverter
+class ConverterBase : public IConverter
 {
   public:
     /**

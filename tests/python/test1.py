@@ -13,8 +13,8 @@ import cv2
 import torch  # For visual confirmation
 
 # Adjust the path to include celux
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux_cuda as celux
 
 celux.set_log_level(celux.LogLevel.debug)
 
@@ -67,7 +67,7 @@ def process_video_with_visualization(video_path, output_path=None):
         start = time.time()
         STREAM = torch.cuda.Stream()
         WRITESTREAM = torch.cuda.Stream()
-        with celux.VideoReader(video_path, device = "cuda", d_type="uint8", stream = STREAM) as reader:
+        with celux.VideoReader(video_path, device = "cuda")([0,50]) as reader:
             writer = None
             #print(reader.get_properties()["total_frames"])
             if output_path:
@@ -79,6 +79,7 @@ def process_video_with_visualization(video_path, output_path=None):
                 if writer:
                    # process_frame(frame)
                     writer(frame.cpu())
+               
                 # Display the frame using OpenCV
                 cv2.imshow("Video Frame", frame.cpu().numpy())
                 if cv2.waitKey(1) & 0xFF == ord('q'):

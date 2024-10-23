@@ -28,10 +28,10 @@ def video_properties():
     Fixture to obtain video properties once for reuse in benchmarks.
     Also generates total_frames.json for benchmark reporting.
     """
-    with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu", d_type="uint8") as reader:
+    with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu") as reader:
         props_cpu = reader.get_properties()
     
-    with celux.VideoReader(SAMPLE_VIDEO_CUDA, device="cuda", d_type="uint8") as reader:
+    with celux.VideoReader(SAMPLE_VIDEO_CUDA, device="cuda") as reader:
         props_cuda = reader.get_properties()
     
     total_frames = {
@@ -58,7 +58,7 @@ def test_video_reader_cpu_benchmark(benchmark, video_properties):
     
     def read_video():
         logger.info("Starting VideoReader CPU benchmark.")
-        with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu", d_type="uint8") as reader:
+        with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu") as reader:
             for frame in reader:
                 pass  # Process frame without storing
         logger.info("Completed VideoReader CPU benchmark.")
@@ -77,7 +77,7 @@ def test_video_reader_cuda_benchmark(benchmark, video_properties):
     
     def read_video():
         logger.info("Starting VideoReader CUDA benchmark.")
-        with celux.VideoReader(SAMPLE_VIDEO_CUDA, device="cuda", d_type="uint8") as reader:
+        with celux.VideoReader(SAMPLE_VIDEO_CUDA, device="cuda") as reader:
             for frame in reader:
                 pass  # Process frame without storing
         logger.info("Completed VideoReader CUDA benchmark.")
@@ -96,10 +96,9 @@ def test_video_writer_benchmark(benchmark, video_properties):
             width=video_properties["cuda"]['width'],
             height=video_properties["cuda"]['height'],
             fps=video_properties["cuda"]['fps'],
-            device="cuda",
-            d_type="uint8"
+            device="cuda"
         ) as writer:
-            with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cuda", d_type="uint8") as reader:
+            with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cuda") as reader:
                 for frame in reader:
                     writer.write_frame(frame)
         logger.info("Completed VideoWriter benchmark.")
@@ -107,7 +106,7 @@ def test_video_writer_benchmark(benchmark, video_properties):
     benchmark(write_video)
     
     # Verify the output video
-    with celux.VideoReader(OUTPUT_VIDEO, device="cuda", d_type="uint8") as output_reader:
+    with celux.VideoReader(OUTPUT_VIDEO, device="cuda") as output_reader:
         assert len(output_reader) == video_properties["cuda"]['total_frames']
     
     # Clean up the output video after benchmarking

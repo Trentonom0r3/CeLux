@@ -1,19 +1,17 @@
-from typing import List, Dict, Optional, Any, Union, TypedDict, Tuple
+from typing import List, Optional, Any, Union, Tuple
 import torch
 from enum import Enum
 
 
 class VideoReader:
-    def __init__(self, input_path: str, device: str = "cuda", d_type: str = "uint8",
-                 buffer_size: int = 10, stream : torch.Stream = None) -> None:
+    def __init__(self, input_path: str, device: str = "cuda",
+stream : torch.Stream = None) -> None:
         """
         Initialize the VideoReader object.
 
         Args:
             input_path (str): Path to the video file.
             device (str): Device to be used. Default is "cuda".
-            d_type (str): Data type of the frames (e.g., "uint8"). Default is "uint8".
-            buffer_size (int): Size of the buffer for reading frames. Default is 10.
             stream (torch.Stream): CUDA stream to use for reading frames. Default is None.
         """
         ...
@@ -149,7 +147,7 @@ class VideoReader:
 
 class VideoWriter:
     def __init__(self, file_path: str, width: int, height: int, fps: float, 
-                 device: str = "cuda", d_type: str = "uint8",
+                 device: str = "cuda", 
                  stream : torch.Stream = None) -> None:
         """
         Initialize the VideoWriter object.
@@ -160,7 +158,6 @@ class VideoWriter:
             height (int): Height of the video frames.
             fps (float): Frames per second for the output video.
             device (str): Device to be used. Default is "cuda".
-            d_type (str): Data type of the frames (e.g., "uint8"). Default is "uint8".
             stream (torch.Stream): CUDA stream to use for writing frames. Default is None.
         """
         ...

@@ -34,6 +34,14 @@ if(ENABLE_CUDA)
     # Include CUDA directories
     include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
     link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+
+    # Include NPP headers
+    include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
+
+    # List of NPP libraries
+    set(NPP_LIBRARIES
+        nppicc.lib   # Core functions for image processing
+    )
 endif()
 
 # ------------------------------
@@ -159,7 +167,6 @@ file(GLOB_RECURSE SOURCES_COMMON
 
 if(ENABLE_CUDA)
     file(GLOB_RECURSE SOURCES_CUDA
-        "src/CeLux/cuda/*.cu"
         "src/CeLux/conversion/gpu/cuda*.cpp"
     )
     set(SOURCES ${SOURCES_COMMON} ${SOURCES_CUDA})
@@ -228,6 +235,7 @@ if(ENABLE_CUDA)
     target_link_libraries(CeLuxLib PUBLIC
         CUDA::cudart
         "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib"
+        ${NPP_LIBRARIES}
     )
 endif()
 
@@ -257,7 +265,7 @@ target_include_directories(celux PUBLIC
     ${pybind11_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
     ${spdlog_INCLUDE_DIRS} #- this does not work
-        ${fmt_INCLUDE_DIRS}
+    ${fmt_INCLUDE_DIRS}
 )
 
 set_target_properties(celux PROPERTIES

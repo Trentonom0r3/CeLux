@@ -12,8 +12,7 @@ class VideoWriter
 {
   public:
     VideoWriter(const std::string& filePath, int width, int height, float fps,
-        const std::string& device,
-        const std::string& d_type, std::optional<torch::Stream> stream = std::nullopt);
+        const std::string& device, std::optional<torch::Stream> stream = std::nullopt);
 
     ~VideoWriter();
 
@@ -29,9 +28,8 @@ class VideoWriter
 
   private:
     std::unique_ptr<celux::Encoder> encoder;
-
+    torch::DeviceType deviceType;
     std::unique_ptr<celux::conversion::IConverter> convert;
-    torch::Tensor intermediateFrame;
 };
 
 #endif // VideoWriter_HPP

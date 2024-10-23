@@ -14,11 +14,11 @@ namespace celux
 	{
 		RGBToNV12,
 		NV12ToRGB,
-		BGRToNV12,
-		NV12ToBGR,
 		YUV420ToRGB,
+		RGBToYUV420,
 	};
 }
+
 
 #endif
 

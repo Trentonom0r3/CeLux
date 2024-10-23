@@ -206,6 +206,17 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.3.9 (2024-10-21)
+ 
+- **Pre-Release Update:**
+  - Prep for **0.4.0** release.
+    - **0.4.x** release will be characterized by new codec and pixel format support!
+    - Removed `d_type` and `buffer_size` arguments from `VideoReader` and `VideoWriter`.
+      - Output and Input tensors are now, by standard, `UINT8`, `HWC` format.
+    - Standardized to `YUV420P` for now.
+    - Swapped custom `CUDA` kernels for `nppi`. 
+    - various cleanup and small refactorings.
+
 ### Version 0.3.8 (2024-10-21)
  
 - **Pre-Release Update:**
@@ -336,13 +347,14 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 | **L2 Cache Size**     | 11776 KB |
 | **L3 Cache Size**     | 24576 KB |
 | **Number of Cores**   | 20 |
+| **GPU #1**           | NVIDIA GeForce RTX 3060 Laptop GPU (6.00 GB) |
 
 
 | Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|---------------|------------|--------|
-| Test Video Reader Cpu Benchmark | 9.05          | 2.34       | 1582.51 |
-| Test Video Reader Cuda Benchmark | 8.06          | 0.33       | 1776.58 |
-| Test Video Writer Benchmark | 33.82          | 1.88       | 423.22 |
+| Test Video Reader Cpu Benchmark | 8.15          | 0.15       | 1757.29 |
+| Test Video Reader Cuda Benchmark | 7.89          | 0.02       | 1814.61 |
+| Test Video Writer Benchmark | 33.54          | 0.41       | 426.86 |
 
 
 ### 📊 **Benchmark Visualizations**
@@ -371,6 +383,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 ## 🚤 Roadmap
 
+- **Support for Additional Codecs:**
+  - Expand the range of supported video codecs.
+  
 - **Audio Processing:**
   - Introduce capabilities for audio extraction and processing.
 
@@ -380,5 +395,3 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **Cross-Platform Support:**
   - Improve compatibility with different operating systems and hardware configurations.
 
-- **Support for Additional Codecs:**
-  - Expand the range of supported video codecs.

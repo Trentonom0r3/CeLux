@@ -12,8 +12,10 @@
 #include <string>
 #include <thread>
 #include <Logger.hpp>
-
+#include <torch/extension.h>
 #include <vector>
+#include <optional>
+
 extern "C"
 {
 #include <libavcodec/avcodec.h>

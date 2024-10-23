@@ -1,14 +1,26 @@
-# scripts/update_readme_benchmarks.py
-
 import json
 import sys
 from pathlib import Path
 import logging
 import matplotlib.pyplot as plt
+import torch  # Ensure torch is imported
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
+
+def get_gpu_info():
+    """Retrieve GPU information using torch.cuda."""
+    gpus = []
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            gpu_props = torch.cuda.get_device_properties(i)
+            gpu = {
+                'name': gpu_props.name,
+                'memory_total': gpu_props.total_memory  # in bytes
+            }
+            gpus.append(gpu)
+    return gpus
 
 def load_json(json_path):
     """Load JSON data from a file."""
@@ -26,8 +38,6 @@ def extract_system_specs(machine_info):
     specs_md = "### 🖥️ **System Specifications**\n\n"
     specs_md += "| Specification         | Details                                 |\n"
     specs_md += "|-----------------------|-----------------------------------------|\n"
-    
-    # Removed "Node Name"
     
     # Processor Information
     specs_md += f"| **Processor**         | {machine_info.get('processor', 'N/A')} |\n"
@@ -49,9 +59,26 @@ def extract_system_specs(machine_info):
     cpu_info = machine_info.get('cpu', {})
     specs_md += f"| **CPU Brand**         | {cpu_info.get('brand_raw', 'N/A')} |\n"
     specs_md += f"| **CPU Frequency**     | {cpu_info.get('hz_actual_friendly', 'N/A')} |\n"
-    specs_md += f"| **L2 Cache Size**     | {cpu_info.get('l2_cache_size', 'N/A') // 1024} KB |\n"
-    specs_md += f"| **L3 Cache Size**     | {cpu_info.get('l3_cache_size', 'N/A') // 1024} KB |\n"
+    # Handle cases where cache sizes might not be integers
+    l2_cache = cpu_info.get('l2_cache_size', None)
+    l3_cache = cpu_info.get('l3_cache_size', None)
+    l2_cache_str = f"{l2_cache // 1024} KB" if isinstance(l2_cache, int) else "N/A"
+    l3_cache_str = f"{l3_cache // 1024} KB" if isinstance(l3_cache, int) else "N/A"
+    specs_md += f"| **L2 Cache Size**     | {l2_cache_str} |\n"
+    specs_md += f"| **L3 Cache Size**     | {l3_cache_str} |\n"
     specs_md += f"| **Number of Cores**   | {cpu_info.get('count', 'N/A')} |\n"
+    
+    # GPU Details
+    gpus = get_gpu_info()
+    if gpus:
+        for i, gpu in enumerate(gpus):
+            gpu_name = gpu.get('name', 'N/A')
+            gpu_memory = gpu.get('memory_total', 'N/A')
+            if isinstance(gpu_memory, int):
+                gpu_memory = f"{gpu_memory / (1024 ** 3):.2f} GB"
+            specs_md += f"| **GPU #{i + 1}**           | {gpu_name} ({gpu_memory}) |\n"
+    else:
+        specs_md += f"| **GPU**               | N/A |\n"
     
     return specs_md
 
@@ -129,6 +156,10 @@ def generate_fps_plot(data, total_frames_mapping, output_path):
         else:
             logger.warning(f"Total frames for benchmark '{bench_name}' not found. Skipping plot for this benchmark.")
 
+    if not fps_values:
+        logger.warning("No FPS data available to plot.")
+        return
+
     # Create bar chart
     plt.figure(figsize=(10, 6))
     bars = plt.bar(bench_names, fps_values, color='skyblue')
@@ -184,6 +215,10 @@ def generate_mean_time_plot(data, total_frames_mapping, output_path):
             logger.info(f"Plotting Benchmark '{bench_name}': Mean Time = {mean_time:.2f}s")
         else:
             logger.warning(f"Total frames for benchmark '{bench_name}' not found. Skipping plot for this benchmark.")
+
+    if not mean_times:
+        logger.warning("No Mean Time data available to plot.")
+        return
 
     # Create bar chart
     plt.figure(figsize=(10, 6))
@@ -299,4 +334,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-#python scripts\update_readme_benchmarks.py benchmark_results.json README.md

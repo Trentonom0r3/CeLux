@@ -32,7 +32,7 @@ class test:
                 print(reader.get_properties())
                 input("Press Enter to continue.")
                 for frame in reader:
-                    cv2.imshow("Video Frame", frame.cpu().numpy())
+                    
                     #me(frame)
                     frameCount += 1
                    # print(frameCount)

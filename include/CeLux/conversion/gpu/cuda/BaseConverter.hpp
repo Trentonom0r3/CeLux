@@ -6,6 +6,7 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 #include <type_traits>
+#include <nppi_color_conversion.h>
 
 namespace celux
 {
@@ -16,7 +17,7 @@ namespace gpu
 namespace cuda
 {
 
-template <typename T> class ConverterBase : public IConverter
+class ConverterBase : public IConverter
 {
   public:
     ConverterBase();
@@ -28,24 +29,23 @@ template <typename T> class ConverterBase : public IConverter
 
   protected:
     cudaStream_t conversionStream;
+    NppStreamContext nppStreamContext;
     bool passedInStream = false;
 };
 
-// Template Definitions
 
-// Default Constructor
-template <typename T> ConverterBase<T>::ConverterBase()
+inline ConverterBase::ConverterBase()
 {
     cudaError_t err = cudaStreamCreate(&conversionStream);
     if (err != cudaSuccess)
     {
         throw std::runtime_error("Failed to create CUDA stream");
     }
+    nppStreamContext.hStream = this->conversionStream;
 }
 
-// Constructor with Stream Parameter
-template <typename T>
-ConverterBase<T>::ConverterBase(cudaStream_t stream) : conversionStream(stream)
+
+inline ConverterBase::ConverterBase(cudaStream_t stream) : conversionStream(stream)
 {
     if (stream == nullptr)
     {
@@ -61,10 +61,10 @@ ConverterBase<T>::ConverterBase(cudaStream_t stream) : conversionStream(stream)
     {
 		passedInStream = true;
 	}
+    nppStreamContext.hStream = this->conversionStream;
 }
 
-// Destructor
-template <typename T> ConverterBase<T>::~ConverterBase()
+inline ConverterBase::~ConverterBase()
 {
     CELUX_DEBUG("Destroying ConverterBase");
     if (conversionStream)
@@ -78,8 +78,7 @@ template <typename T> ConverterBase<T>::~ConverterBase()
     }
 }
 
-// Synchronize Method
-template <typename T> void ConverterBase<T>::synchronize()
+inline void ConverterBase::synchronize()
 {
     CELUX_DEBUG("Synchronizing CUDA Stream");
     cudaError_t err = cudaStreamSynchronize(conversionStream);
@@ -90,8 +89,7 @@ template <typename T> void ConverterBase<T>::synchronize()
     }
 }
 
-// Get Stream Method
-template <typename T> cudaStream_t ConverterBase<T>::getStream() const
+inline cudaStream_t ConverterBase::getStream() const
 {
     return conversionStream;
 }

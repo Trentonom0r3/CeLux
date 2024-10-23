@@ -20,8 +20,8 @@ import cv2
 import requests
 import sys
 
-#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux_cuda as celux
 
 from requests.exceptions import RequestException
 
@@ -99,7 +99,7 @@ def getMetadataCeLux(videoPath):
     Get metadata from the video file using CeLux.
     """
 
-    video = celux.VideoReader(videoPath, "cpu")
+    video = celux.VideoReader(videoPath)
 
     metadata = video.get_properties()
     codecs = video.supported_codecs()

@@ -8,21 +8,12 @@
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
 
-// Enum for copy types
-enum class CopyType
-{
-    HOST,
-    DEVICE
-};
-
 class VideoReader
 {
   public:
-
     VideoReader(const std::string& filePath, const std::string& device = "cuda",
-                const std::string& dtype = "uint8", const int bufferSize = 10,
-                std::optional<torch::Stream> stream = std::nullopt);
 
+                std::optional<torch::Stream> stream = std::nullopt);
 
     /**
      * @brief Destructor for VideoReader.
@@ -79,7 +70,7 @@ class VideoReader
      *
      * @return  torch::Tensor Next frame as torch::Tensor or py::array<uint8_t>.
      */
-     torch::Tensor next();
+    torch::Tensor next();
 
     /**
      * @brief Enter method for Python context manager.
@@ -109,9 +100,6 @@ class VideoReader
     // Member variables
     std::unique_ptr<celux::Decoder> decoder;
     celux::Decoder::VideoProperties properties;
-    std::string device;
-
-    torch::Device torchDevice;
 
     std::unique_ptr<celux::conversion::IConverter> convert;
     torch::Tensor tensor;

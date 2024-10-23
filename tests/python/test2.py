@@ -11,9 +11,10 @@ import sys
 import os
 import torch
 
-#ys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-import celux
-celux.set_log_level(celux.LogLevel.info)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import celux_cuda as celux
+
+
 STREAM = torch.cuda.Stream("cuda")
 
 from requests.exceptions import RequestException
@@ -68,7 +69,7 @@ def processVideoCuda(videoPath):
     try:
         frameCount = 0
         start = time.time()
-        with celux.VideoReader(videoPath, device = "cuda" , d_type="uint8", stream = STREAM) as reader:
+        with celux.VideoReader(videoPath, device = "cuda", stream = STREAM) as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(
@@ -96,7 +97,7 @@ def processVideoCPU(videoPath):
         start = time.time()
         # Hardcoded to as_numpy false until fixed
         # Until then, this still decodes on GPU
-        with celux.VideoReader(videoPath, device = "cpu", d_type="uint8") as reader:
+        with celux.VideoReader(videoPath, device = "cpu") as reader:
             for frame in reader:
                 if frameCount == 0:
                     logging.info(f"Frame data: {frame.shape, frame.dtype, frame.device}")

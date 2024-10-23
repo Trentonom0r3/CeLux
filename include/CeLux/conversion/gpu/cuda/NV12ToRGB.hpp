@@ -5,21 +5,13 @@
 #include "BaseConverter.hpp"
 #include "Frame.hpp"
 
-extern "C"
+// Helper function to check if the frame is a hardware frame
+inline bool is_hw_frame(const AVFrame* frame)
 {
-    // Host functions for different data types
-    void nv12_to_rgb(const unsigned char* yPlane, const unsigned char* uvPlane,
-                     int width, int height, int yStride, int uvStride,
-                     unsigned char* rgbOutput, int rgbStride, cudaStream_t stream);
-
-    void nv12_to_rgb_float(const unsigned char* yPlane, const unsigned char* uvPlane,
-                           int width, int height, int yStride, int uvStride,
-                           float* rgbOutput, int rgbStride, cudaStream_t stream);
-
-    void nv12_to_rgb_half(const unsigned char* yPlane, const unsigned char* uvPlane,
-                          int width, int height, int yStride, int uvStride,
-                          __half* rgbOutput, int rgbStride, cudaStream_t stream);
+    return frame->hw_frames_ctx != nullptr;
 }
+
+
 namespace celux
 {
 namespace conversion
@@ -29,7 +21,7 @@ namespace gpu
 namespace cuda
 {
 
-template <typename T> class NV12ToRGB : public ConverterBase<T>
+class NV12ToRGB : public ConverterBase
 {
   public:
     NV12ToRGB();
@@ -41,62 +33,35 @@ template <typename T> class NV12ToRGB : public ConverterBase<T>
 
 // Template Definitions
 
-template <typename T> NV12ToRGB<T>::NV12ToRGB() : ConverterBase<T>()
+inline NV12ToRGB::NV12ToRGB() : ConverterBase()
 {
 }
 
-template <typename T>
-NV12ToRGB<T>::NV12ToRGB(cudaStream_t stream) : ConverterBase<T>(stream)
+inline NV12ToRGB::NV12ToRGB(cudaStream_t stream) : ConverterBase(stream)
 {
 }
 
-template <typename T> NV12ToRGB<T>::~NV12ToRGB()
+inline NV12ToRGB::~NV12ToRGB()
 {
 }
 
-template <typename T> void NV12ToRGB<T>::convert(celux::Frame& frame, void* buffer)
+inline void NV12ToRGB::convert(celux::Frame& frame, void* buffer)
 {
-    const unsigned char* yPlane = frame.getData(0);
-    const unsigned char* uvPlane = frame.getData(1);
-    int yStride = frame.getLineSize(0);
-    int uvStride = frame.getLineSize(1);
-    int width = frame.getWidth();
-    int height = frame.getHeight();
-    int rgbStride = width * 3;
+    if (!is_hw_frame(frame.get()))
+    {
+        CELUX_ERROR("Frame is not a hardware frame");
+		throw std::runtime_error("Frame is not a hardware frame");
+	}
+    const Npp8u* pSrc[2] = {frame.getData(0), frame.getData(1)};
+    int rSrcStep = frame.getLineSize(0); // Y plane stride
 
+    Npp8u* pDst = static_cast<Npp8u*>(buffer);
+    int nDstStep = frame.getWidth() * 3;
 
-    if constexpr (std::is_same<T, uint8_t>::value)
-    {
-        // Call the kernel for uint8_t
-        nv12_to_rgb(yPlane, uvPlane, width, height, yStride, uvStride,
-                    static_cast<uint8_t*>(buffer), rgbStride, this->conversionStream);
-    }
-    else if constexpr (std::is_same<T, float>::value)
-    {
-        // Call the kernel for float
-        nv12_to_rgb_float(yPlane, uvPlane, width, height, yStride, uvStride,
-                          static_cast<float*>(buffer), rgbStride,
-                          this->conversionStream);
-    }
-    else if constexpr (std::is_same<T, __half>::value)
-    {
-        // Call the kernel for __half
-        nv12_to_rgb_half(yPlane, uvPlane, width, height, yStride, uvStride,
-                         static_cast<__half*>(buffer), rgbStride,
-                         this->conversionStream);
-    }
-    else
-    {
-        static_assert(sizeof(T) == 0, "Unsupported data type for NV12ToRGB");
-    }
+    NppiSize oSizeROI = {frame.getWidth(), frame.getHeight()};
 
-    // Check for kernel launch errors
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess)
-    {
-        throw std::runtime_error("CUDA kernel launch failed: " +
-                                 std::string(cudaGetErrorString(err)));
-    }
+    NppStatus status = nppiNV12ToRGB_8u_P2C3R_Ctx(pSrc, rSrcStep, pDst, nDstStep,
+                                                  oSizeROI, nppStreamContext);
 }
 
 } // namespace cuda

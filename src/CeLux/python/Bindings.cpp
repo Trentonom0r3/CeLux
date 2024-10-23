@@ -11,10 +11,9 @@ PYBIND11_MODULE(celux, m)
     // VideoReader bindings
 
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, const std::string&, const std::string&, int,
+        .def(py::init<const std::string&, const std::string&,
                       std::optional<torch::Stream>>(),
              py::arg("input_path"), py::arg("device") = "cuda",
-             py::arg("d_type") = "uint8", py::arg("buffer_size") = 10,
              py::arg("stream") = std::nullopt,
              "Initialize a VideoReader with optional CUDA stream")
         .def("read_frame", &VideoReader::readFrame, py::return_value_policy::reference)
@@ -61,12 +60,13 @@ PYBIND11_MODULE(celux, m)
             },
             py::return_value_policy::reference_internal);
 
-        // VideoWriter bindings
-        py::class_<VideoWriter>(m, "VideoWriter")
+    // VideoWriter bindings
+    py::class_<VideoWriter>(m, "VideoWriter")
         .def(py::init<const std::string&, int, int, float, const std::string&,
-                      const std::string&, std::optional<torch::Stream>>(),
+                std::optional<torch::Stream>>(),
              py::arg("file_path"), py::arg("width"), py::arg("height"), py::arg("fps"),
-             py::arg("device") = "cuda", py::arg("d_type") = "uint8", py::arg("stream") = std::nullopt)
+             py::arg("device") = "cuda", 
+             py::arg("stream") = std::nullopt)
         .def("write_frame", &VideoWriter::writeFrame, py::arg("frame"))
         .def("supported_codecs", &VideoWriter::supportedCodecs)
         .def("__call__", &VideoWriter::writeFrame, py::arg("frame"))
