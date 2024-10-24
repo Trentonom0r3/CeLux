@@ -66,18 +66,19 @@ void Decoder::initialize(const std::string& filePath)
 
     const AVCodec* codec =
         avcodec_find_decoder(formatCtx->streams[videoStreamIndex]->codecpar->codec_id);
-
+    if (isHwAccel)
+    {
+        codec = avcodec_find_decoder_by_name(std::string(codec->name).append("_cuvid").c_str());
+    }
     if (!codec)
     {
         CELUX_ERROR("Unsupported codec for file: {}", filePath);
         throw CxException("Unsupported codec!");
     }
 
-    CELUX_DEBUG("BASE DECODER: Decoder using codec: {}", codec->name);
-
     initCodecContext(codec);
 
-    // Populate video properties
+    properties.codec = codec->name;
     properties.width = codecCtx->width;
     properties.height = codecCtx->height;
     properties.fps = av_q2d(formatCtx->streams[videoStreamIndex]->avg_frame_rate);
@@ -88,12 +89,25 @@ void Decoder::initialize(const std::string& filePath)
                   av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
             : 0.0;
 
-    properties.pixelFormat = codecCtx->pix_fmt;
+    properties.pixelFormat =
+        isHwAccel ? codecCtx->sw_pix_fmt
+                  : codecCtx->pix_fmt;
     properties.hasAudio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
                            AVMEDIA_TYPE_AUDIO);
+    properties.bitDepth = getBitDepth();
 
     CELUX_DEBUG("BASE DECODER: Video properties populated");
+    const AVPixFmtDescriptor* desc =
+        av_pix_fmt_desc_get(isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt);
+    if (!desc)
+    {
+        CELUX_WARN("Unknown pixel format, defaulting to NV12ToRGB");
+    }
 
+    int bitDepth = desc->comp[0].depth;
+    CELUX_INFO("Pixel format: {}, bit depth: {}",
+        av_get_pix_fmt_name(isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt),
+			   bitDepth);
     // Calculate total frames if possible
     if (formatCtx->streams[videoStreamIndex]->nb_frames > 0)
     {
@@ -119,6 +133,9 @@ void Decoder::initialize(const std::string& filePath)
     frame = Frame(); // Fallback to CPU Frame
 
     CELUX_DEBUG("BASE DECODER: Decoder initialization completed");
+
+    CELUX_INFO("BASE DECODER: Decoder using codec: {}, and pixel format: {}",
+                codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
 }
 
 void Decoder::openFile(const std::string& filePath)
@@ -409,7 +426,7 @@ int64_t Decoder::convertTimestamp(double timestamp) const
 int Decoder::getBitDepth() const
 {
     CELUX_TRACE("Getting bit depth");
-    return av_get_bits_per_pixel(av_pix_fmt_desc_get(codecCtx->pix_fmt));
+    return av_get_bits_per_pixel(av_pix_fmt_desc_get(isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt));
 }
 
 } // namespace celux

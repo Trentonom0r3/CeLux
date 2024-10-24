@@ -20,6 +20,8 @@ class Decoder
         double totalFrames;
         AVPixelFormat pixelFormat;
         bool hasAudio;
+        int bitDepth;
+        std::string codec;
     };
     Decoder() = default;
     // Constructor
@@ -50,7 +52,7 @@ class Decoder
   protected:
     // Initialization method
     void initialize(const std::string& filePath);
-
+    bool isHardwareAccelerated(const AVCodec* codec);
     // Virtual methods for customization
     virtual void openFile(const std::string& filePath);
     virtual void initHWAccel(); // Default does nothing

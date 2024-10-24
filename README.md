@@ -200,6 +200,12 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.4.1 (2024-10-24)
+  - Refactor slightly, move `tests/python` into `tests`.
+  - Added new test to download videos of various bitdepth and codec types.
+  - Added new dictionary options to `VideoReader.get_properties()`;
+    - `codec`: **The name of the codec being used.**
+    - `bit_depth`: **The bit-depth of the video.**
 ### Version 0.4.0 (2024-10-23)
   - Moved to `FFmpeg` static libraries!
     - Startup times are improved. All libs that can be static, are static. 

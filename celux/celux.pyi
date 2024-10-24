@@ -80,7 +80,9 @@ stream : torch.Stream = None) -> None:
             - fps: Frames per second of the video.
             - duration: Duration of the video in seconds.
             - total_frames: Total number of frames in the video.
+            - codec: Codec used for the video.
             - pixel_format: Pixel format of the video.
+            - bit_depth: Bit depth of the video.
             - has_audio: Whether the video has an audio stream.
         """
         ...

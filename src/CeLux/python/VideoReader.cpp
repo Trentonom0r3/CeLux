@@ -207,6 +207,8 @@ py::dict VideoReader::getProperties() const
                                 ? av_get_pix_fmt_name(properties.pixelFormat)
                                 : "Unknown";
     props["has_audio"] = properties.hasAudio;
+    props["bit_depth"] = properties.bitDepth;
+    props["codec"] = properties.codec;
     CELUX_INFO("Video properties retrieved and converted to Python dict");
     return props;
 }
