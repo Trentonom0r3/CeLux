@@ -41,4 +41,5 @@ class Logger
 #define CELUX_CRITICAL(...) celux::Logger::get_logger()->critical(__VA_ARGS__)
 
 
+
 #endif // CELEX_LOGGER_H

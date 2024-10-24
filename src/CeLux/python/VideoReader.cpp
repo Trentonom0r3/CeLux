@@ -19,7 +19,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         CELUX_INFO("Creating VideoReader instance");
         if (device == "cuda")
         {
-            CELUX_DEBUG("Device is set to CUDA");
+            CELUX_INFO("Device is set to CUDA");
             if (!torch::cuda::is_available())
             {
                 CELUX_CRITICAL("CUDA is not available. Please install a CUDA-enabled "
@@ -38,7 +38,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         }
         else if (device == "cpu")
         {
-            CELUX_DEBUG("Device is set to CPU");
+            CELUX_INFO("Device is set to CPU");
             CELUX_TRACE("Using CPU device for VideoReader");
             torchDevice = torch::Device(torch::kCPU);
         }
@@ -51,11 +51,11 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         torch::Dtype torchDataType;
 
         torchDataType = torch::kUInt8;
-        CELUX_DEBUG("DataType mapped to UINT8");
+        CELUX_INFO("DataType mapped to UINT8");
 
         decoder =
             celux::Factory::createDecoder(torchDevice, filePath, stream);
-        CELUX_DEBUG("Decoder created successfully");
+        CELUX_INFO("Decoder created successfully");
 
         // Retrieve video properties
         properties = decoder->getVideoProperties();
@@ -68,9 +68,9 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
         // Initialize tensor
         tensor = torch::empty(
             {properties.height, properties.width, 3},
-            torch::TensorOptions().dtype(torchDataType).device(torchDevice));
+            torch::TensorOptions().dtype(torchDataType).device(torchDevice)).contiguous();
 
-        CELUX_DEBUG("Torch tensor initialized with shape: [{}, {}, {}] :, "
+        CELUX_INFO("Torch tensor initialized with shape: [{}, {}, {}] :, "
                     "device: {}",
                     properties.height, properties.width, 3, device);
     }
@@ -94,12 +94,12 @@ void VideoReader::setRange(int start, int end)
     if (start < 0)
     {
         start = properties.totalFrames + start;
-        CELUX_DEBUG("Adjusted start_frame to {}", start);
+        CELUX_INFO("Adjusted start_frame to {}", start);
     }
     if (end < 0)
     {
         end = properties.totalFrames + end;
-        CELUX_DEBUG("Adjusted end_frame to {}", end);
+        CELUX_INFO("Adjusted end_frame to {}", end);
     }
 
     // Validate the adjusted frame range
@@ -120,7 +120,7 @@ void VideoReader::setRange(int start, int end)
 
     // Make end_frame exclusive by subtracting one
     end = end - 1;
-    CELUX_DEBUG("Adjusted end_frame to be exclusive: {}", end);
+    CELUX_INFO("Adjusted end_frame to be exclusive: {}", end);
 
     start_frame = start;
     end_frame = end;
@@ -138,7 +138,7 @@ torch::Tensor VideoReader::readFrame()
         return torch::Tensor(); // Return an empty tensor if decoding failed
     }
 
-    CELUX_DEBUG("Frame decoded successfully");
+    CELUX_TRACE("Frame decoded successfully");
     return tensor;
 }
 
@@ -148,20 +148,20 @@ void VideoReader::close()
     // Clean up decoder and other resources
     if (decoder)
     {
-        CELUX_DEBUG("Closing decoder");
+        CELUX_INFO("Closing decoder");
         decoder->close();
         decoder.reset();
         CELUX_INFO("Decoder closed and reset successfully");
     }
     else
     {
-        CELUX_DEBUG("Decoder already closed or was never initialized");
+        CELUX_INFO("Decoder already closed or was never initialized");
     }
 }
 
 bool VideoReader::seek(double timestamp)
 {
-    CELUX_INFO("Seeking to timestamp: {}", timestamp);
+    CELUX_TRACE("Seeking to timestamp: {}", timestamp);
     bool success;
 
     // Release GIL during seeking
@@ -172,7 +172,7 @@ bool VideoReader::seek(double timestamp)
 
     if (success)
     {
-        CELUX_DEBUG("Seek to timestamp {} successful", timestamp);
+        CELUX_TRACE("Seek to timestamp {} successful", timestamp);
     }
     else
     {
@@ -186,7 +186,7 @@ std::vector<std::string> VideoReader::supportedCodecs()
 {
     CELUX_TRACE("supportedCodecs() called");
     std::vector<std::string> codecs = decoder->listSupportedDecoders();
-    CELUX_DEBUG("Number of supported decoders: {}", codecs.size());
+    CELUX_INFO("Number of supported decoders: {}", codecs.size());
     for (const auto& codec : codecs)
     {
         CELUX_TRACE("Supported decoder: {}", codec);
@@ -207,7 +207,7 @@ py::dict VideoReader::getProperties() const
                                 ? av_get_pix_fmt_name(properties.pixelFormat)
                                 : "Unknown";
     props["has_audio"] = properties.hasAudio;
-    CELUX_DEBUG("Video properties retrieved and converted to Python dict");
+    CELUX_INFO("Video properties retrieved and converted to Python dict");
     return props;
 }
 
@@ -218,7 +218,7 @@ void VideoReader::reset()
     if (success)
     {
         currentIndex = 0;
-        CELUX_DEBUG("VideoReader reset successfully");
+        CELUX_INFO("VideoReader reset successfully");
     }
     else
     {
@@ -238,13 +238,13 @@ bool VideoReader::seekToFrame(int frame_number)
 
     // Convert frame number to timestamp in seconds
     double timestamp = static_cast<double>(frame_number) / properties.fps;
-    CELUX_DEBUG("Converted frame number {} to timestamp {} seconds", frame_number,
+    CELUX_INFO("Converted frame number {} to timestamp {} seconds", frame_number,
                 timestamp);
 
     bool success = seek(timestamp);
     if (success)
     {
-        CELUX_DEBUG("Seek to frame number {} successful", frame_number);
+        CELUX_INFO("Seek to frame number {} successful", frame_number);
     }
     else
     {
@@ -261,11 +261,11 @@ VideoReader& VideoReader::iter()
     bool success = seekToFrame(start_frame);
     if (success)
     {
-        CELUX_DEBUG("VideoReader successfully seeked to start_frame: {}", start_frame);
+        CELUX_TRACE("VideoReader successfully seeked to start_frame: {}", start_frame);
     }
     else
     {
-        CELUX_WARN("Failed to seek to start_frame: {}", start_frame);
+        CELUX_TRACE("Failed to seek to start_frame: {}", start_frame);
     }
     return *this;
 }
@@ -275,24 +275,24 @@ torch::Tensor VideoReader::next()
     CELUX_TRACE("next() called: Retrieving next frame");
     if (end_frame >= 0 && currentIndex > end_frame)
     {
-        CELUX_DEBUG("Frame range exhausted: currentIndex={}, end_frame={}",
+        CELUX_TRACE("Frame range exhausted: currentIndex={}, end_frame={}",
                     currentIndex, end_frame);
         throw py::stop_iteration(); // Stop iteration if range is exhausted
     }
 
     // py::gil_scoped_release release; // Uncomment if GIL management is needed
-    CELUX_DEBUG("Reading next frame in iteration");
+    CELUX_TRACE("Reading next frame in iteration");
     torch::Tensor frame = readFrame();
     if (!frame.defined() || frame.numel() == 0)
     {
-        CELUX_DEBUG("No more frames available for iteration");
+        CELUX_TRACE("No more frames available for iteration");
         throw py::stop_iteration(); // Stop iteration if no more frames are available
     }
-    CELUX_DEBUG("Frame retrieved successfully, currentIndex before increment: {}",
+    CELUX_TRACE("Frame retrieved successfully, currentIndex before increment: {}",
                 currentIndex);
     currentIndex++;
-    CELUX_DEBUG("currentIndex incremented to {}", currentIndex);
-    CELUX_INFO("Returning frame number {}", currentIndex - 1);
+    CELUX_TRACE("currentIndex incremented to {}", currentIndex);
+    CELUX_TRACE("Returning frame number {}", currentIndex - 1);
     return frame;
 }
 
@@ -300,7 +300,7 @@ void VideoReader::enter()
 {
     CELUX_TRACE("enter() called: VideoReader entering context manager");
     // Resources are already initialized in the constructor
-    CELUX_DEBUG("VideoReader is ready for use in context manager");
+    CELUX_INFO("VideoReader is ready for use in context manager");
 }
 
 void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
@@ -308,7 +308,7 @@ void VideoReader::exit(const py::object& exc_type, const py::object& exc_value,
 {
     CELUX_TRACE("exit() called: VideoReader exiting context manager");
     close(); // Close the video reader and free resources
-    CELUX_DEBUG("VideoReader resources have been cleaned up in context manager");
+    CELUX_INFO("VideoReader resources have been cleaned up in context manager");
 }
 
 int VideoReader::length() const

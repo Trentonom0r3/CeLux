@@ -35,6 +35,7 @@ class NV12ToRGB : public ConverterBase
 
 inline NV12ToRGB::NV12ToRGB() : ConverterBase()
 {
+    CELUX_INFO("Creating NV12 to RGB converter (CUDA)");
 }
 
 inline NV12ToRGB::NV12ToRGB(cudaStream_t stream) : ConverterBase(stream)
@@ -52,6 +53,7 @@ inline void NV12ToRGB::convert(celux::Frame& frame, void* buffer)
         CELUX_ERROR("Frame is not a hardware frame");
 		throw std::runtime_error("Frame is not a hardware frame");
 	}
+    CELUX_TRACE("Converting NV12 to RGB on GPU");
     const Npp8u* pSrc[2] = {frame.getData(0), frame.getData(1)};
     int rSrcStep = frame.getLineSize(0); // Y plane stride
 

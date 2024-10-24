@@ -73,12 +73,12 @@ def process_video_with_visualization(video_path, output_path=None):
             if output_path:
                 writer = celux.VideoWriter(output_path, reader.get_properties()["width"],
                                            reader.get_properties()["height"], reader.get_properties()["fps"],
-                                           device = "cpu")
+                                           device = "cuda")
 
             for frame in reader:
                 if writer:
                    # process_frame(frame)
-                    writer(frame.cpu())
+                    writer(frame)
                
                 # Display the frame using OpenCV
                 cv2.imshow("Video Frame", frame.cpu().numpy())

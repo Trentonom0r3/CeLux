@@ -19,7 +19,7 @@ Frame::Frame() : frame(av_frame_alloc())
         CELUX_ERROR("Failed to allocate AVFrame in default constructor");
         throw CxException("Failed to allocate AVFrame");
     }
-    CELUX_INFO("AVFrame allocated successfully in default constructor");
+    CELUX_DEBUG("Frame Class: AVFrame allocated successfully in default constructor");
 }
 
 /**
@@ -36,8 +36,46 @@ Frame::Frame(AVFrame* frame) : frame(frame)
         CELUX_ERROR("Null AVFrame provided to constructor");
         throw CxException("Null AVFrame provided");
     }
-    CELUX_INFO("Frame initialized with existing AVFrame pointer");
+    CELUX_DEBUG("Frame Class: Frame initialized with existing AVFrame pointer");
 }
+
+Frame::Frame(AVBufferRef* hw_frames_ref)
+ : frame(av_frame_alloc())
+ {
+     CELUX_DEBUG("Hardware Frame constructor called: Allocating new AVFrame with "
+                 "hardware frames context");
+
+     if (!frame)
+     {
+         CELUX_ERROR("Failed to allocate AVFrame in hardware constructor");
+         throw CxException("Failed to allocate AVFrame");
+     }
+
+     // Assign the hardware frames context reference to the frame
+     frame->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
+     if (!frame->hw_frames_ctx)
+     {
+         CELUX_ERROR("Failed to set hardware frames context in hardware constructor");
+         av_frame_free(&frame);
+         throw CxException("Failed to set hardware frames context");
+     }
+
+     // Optionally, set the format and other properties based on hw_frames_ctx
+     AVHWFramesContext* hw_frames_ctx_ptr = (AVHWFramesContext*)hw_frames_ref->data;
+     frame->format = hw_frames_ctx_ptr->sw_format;
+     frame->width = hw_frames_ctx_ptr->width;
+     frame->height = hw_frames_ctx_ptr->height;
+
+     // Allocate buffer with appropriate alignment
+     if (av_frame_get_buffer(frame, 32) < 0)
+     {
+         CELUX_ERROR("Failed to allocate buffer for hardware AVFrame");
+         av_frame_free(&frame);
+         throw CxException("Failed to allocate buffer for hardware AVFrame");
+     }
+
+     CELUX_DEBUG("Frame Class: Hardware AVFrame allocated and initialized successfully");
+ }
 
 /**
  * @brief Destructor that frees the AVFrame.
@@ -46,7 +84,7 @@ Frame::~Frame()
 {
     CELUX_DEBUG("Frame destructor called: Freeing AVFrame");
     av_frame_free(&frame);
-    CELUX_INFO("AVFrame freed successfully in destructor");
+    CELUX_DEBUG("Frame Class: AVFrame freed successfully in destructor");
 }
 
 /**
@@ -63,7 +101,7 @@ Frame::Frame(const Frame& other) : frame(av_frame_clone(other.frame))
         CELUX_ERROR("Failed to clone AVFrame in copy constructor");
         throw CxException("Failed to clone AVFrame");
     }
-    CELUX_INFO("AVFrame cloned successfully in copy constructor");
+    CELUX_DEBUG("Frame Class: AVFrame cloned successfully in copy constructor");
 }
 
 /**
@@ -91,7 +129,7 @@ Frame& Frame::operator=(const Frame& other)
             CELUX_ERROR("Failed to clone AVFrame during copy assignment");
             throw CxException("Failed to clone AVFrame during copy assignment");
         }
-        CELUX_INFO("AVFrame cloned successfully in copy assignment");
+        CELUX_DEBUG("Frame Class: AVFrame cloned successfully in copy assignment");
     }
     else
     {
@@ -109,7 +147,7 @@ Frame::Frame(Frame&& other) noexcept : frame(other.frame)
 {
     CELUX_DEBUG("Frame move constructor called: Transferring AVFrame ownership");
     other.frame = nullptr;
-    CELUX_INFO("AVFrame ownership transferred successfully in move constructor");
+    CELUX_DEBUG("Frame Class: AVFrame ownership transferred successfully in move constructor");
 }
 
 /**
@@ -131,7 +169,7 @@ Frame& Frame::operator=(Frame&& other) noexcept
         // Transfer ownership of the frame pointer
         frame = other.frame;
         other.frame = nullptr;
-        CELUX_INFO("AVFrame ownership transferred successfully in move assignment");
+        CELUX_DEBUG("Frame Class: AVFrame ownership transferred successfully in move assignment");
     }
     else
     {
@@ -276,7 +314,7 @@ Frame::operator bool() const
  */
 void Frame::allocateBuffer(int align)
 {
-    CELUX_INFO("Frame::allocateBuffer() called with alignment = {}", align);
+    CELUX_DEBUG("Frame Class: Frame::allocateBuffer() called with alignment = {}", align);
     if (av_frame_get_buffer(frame, align) < 0)
     {
         CELUX_ERROR("Failed to allocate buffer for AVFrame with alignment {}", align);
@@ -294,7 +332,7 @@ void Frame::allocateBuffer(int align)
  */
 void Frame::copyFrom(const Frame& other)
 {
-    CELUX_INFO("Frame::copyFrom() called: Copying data from another Frame");
+    CELUX_DEBUG("Frame Class: Frame::copyFrom() called: Copying data from another Frame");
     if (av_frame_copy(frame, other.frame) < 0)
     {
         CELUX_ERROR("Failed to copy data from source AVFrame");
@@ -341,7 +379,7 @@ void Frame::fillData(uint8_t* data, int size, int plane)
     }
 
     memcpy(frame->data[plane], data, size);
-    CELUX_INFO("Data filled into plane {} successfully, size = {}", plane, size);
+    CELUX_DEBUG("Frame Class: Data filled into plane {} successfully, size = {}", plane, size);
 }
 
 /**

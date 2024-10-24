@@ -10,6 +10,7 @@ option(ENABLE_CUDA "Enable CUDA support" ON)
 # Use vcpkg toolchain if on Windows
 if (WIN32)
     set(CMAKE_TOOLCHAIN_FILE "C:/Users/tjerf/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 # Conditionally include CUDA in the project languages
@@ -45,25 +46,36 @@ if(ENABLE_CUDA)
 endif()
 
 # ------------------------------
-# 3. Manually Specify FFmpeg Static Libraries (A)
+# 3. Manually Specify FFmpeg Static Libraries
 # ------------------------------
 
-# Define the vcpkg installation path
-set(VCPKG_INSTALLED_DIR "C:/Users/tjerf/vcpkg/installed/x64-windows")
+# Define the vcpkg installation path for FFmpeg static libraries
+set(FFMPEG_VCPKG_STATIC_DIR "C:/Users/tjerf/vcpkg/installed/x64-windows-static")
 
 # Specify the path to FFmpeg include directories
-set(FFMPEG_INCLUDE_DIRS "${VCPKG_INSTALLED_DIR}/include")
+set(FFMPEG_INCLUDE_DIRS "${FFMPEG_VCPKG_STATIC_DIR}/include")
+
+# Add WebP, x264, and x265 libraries to the list of FFmpeg dependencies
+set(FFMPEG_DEPENDENCIES
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebp.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdecoder.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdemux.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpmux.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libx264.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/x265-static.lib" #libsharpyuv.lib
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libsharpyuv.lib"
+)
 
 # List the static FFmpeg libraries you want to link against
 set(FFMPEG_STATIC_LIBS
-    "${VCPKG_INSTALLED_DIR}/lib/avutil.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/avcodec.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/avformat.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/avdevice.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/swscale.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/swresample.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/avfilter.lib"
-    "${VCPKG_INSTALLED_DIR}/lib/libx264.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avutil.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avcodec.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avformat.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avdevice.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swscale.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swresample.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avfilter.lib"
+    ${FFMPEG_DEPENDENCIES}
 )
 
 # ------------------------------

@@ -50,7 +50,8 @@ class YUV420PToRGB : public ConverterBase
         // Verify the pixel format
         if (frame.getPixelFormat() != AV_PIX_FMT_YUV420P)
         {
-            throw std::runtime_error("Frame pixel format is not YUV420P");
+            std::cout << "Format not YUV420. Format is actually: "
+                      << av_get_pix_fmt_name(frame.getPixelFormat()) << std::endl;
         }
 
         if (!swsContext)

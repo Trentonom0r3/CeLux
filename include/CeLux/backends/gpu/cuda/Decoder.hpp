@@ -15,14 +15,8 @@ class Decoder : public celux::Decoder
         initialize(filePath);
     }
 
-    ~Decoder() override;
-
   protected:
     void initHWAccel() override;
-    void initCodecContext(const AVCodec* codec) override;
-
-    static enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
-                                          const enum AVPixelFormat* pix_fmts);
 };
 
 } // namespace celux::backends::gpu::cuda

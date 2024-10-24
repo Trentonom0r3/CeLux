@@ -32,6 +32,16 @@ class Frame
     Frame(AVFrame* frame);
 
     /**
+     * @brief Constructor that allocates a hardware AVFrame using the specified hardware
+     * context.
+     *
+     * @param hw_frames_ctx Pointer to an initialized AVHWFramesContext.
+     * @throws FFException if AVFrame allocation or initialization fails.
+     */
+    Frame(AVBufferRef* hw_frames_ref);
+
+
+    /**
      * @brief Destructor that frees the AVFrame.
      */
     virtual ~Frame();
@@ -186,4 +196,3 @@ class Frame
     AVFrame* frame; ///< Pointer to the underlying AVFrame.
 };
 } // namespace celux
-

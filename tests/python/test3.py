@@ -119,7 +119,7 @@ def getMetadataCeLux(videoPath):
 
 if __name__ == "__main__":
     videoUrl = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-    videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
+    videoPath = r"C:\Users\tjerf\source\repos\CeLux\h264_8bit.mp4"
 
     if not os.path.exists(videoPath):
         downloadVideo(videoUrl, videoPath)

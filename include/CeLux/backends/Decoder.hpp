@@ -58,10 +58,7 @@ class Decoder
     virtual void initCodecContext(const AVCodec* codec);
     virtual int64_t convertTimestamp(double timestamp) const;
 
-    // Virtual callback for hardware pixel formats
-    virtual enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
-                                           const enum AVPixelFormat* pix_fmts);
-
+  
     // Deleters and smart pointers
     struct AVFormatContextDeleter
     {
@@ -110,6 +107,7 @@ class Decoder
     bool isHwAccel;
     std::unique_ptr<celux::conversion::IConverter> converter;
     AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
+    AVBufferRefPtr hwFramesCtx; // For hardware acceleration
     std::optional<torch::Stream> decoderStream;
 };
 } // namespace celux

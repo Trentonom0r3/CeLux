@@ -200,13 +200,21 @@ We welcome contributions! Follow these steps to contribute:
 
 ## 📈 Changelog
 
+### Version 0.4.0 (2024-10-23)
+  - Moved to `FFmpeg` static libraries!
+    - Startup times are improved. All libs that can be static, are static. 
+  - Adjusted logging to flow a little bit better, not overcrowd console unless desired. 
+    - Logging details more info on codecs. The Decoder selects the **BEST** codec for the video.
+  - Need to investigate if `NVDEC` is bottlenecked, or I've reached max performance capabilities. 
+    - It is curious that cpu benches at `1859 fps` and gpu benches at `1809 fps`.
+
 ### Version 0.3.9 (2024-10-21)
  
 - **Pre-Release Update:**
   - Prep for **0.4.0** release.
     - **0.4.x** release will be characterized by new codec and pixel format support!
     - Removed `d_type` and `buffer_size` arguments from `VideoReader` and `VideoWriter`.
-      - Output and Input tensors are now, by standard, `UINT8`, `HWC` format.
+      - Output and Input tensors are now, by standard, `UINT8`, `HWC` format, [0,255].
     - Standardized to `YUV420P` for now.
     - Swapped custom `CUDA` kernels for `nppi`. 
     - various cleanup and small refactorings.
@@ -346,9 +354,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 | Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|---------------|------------|--------|
-| Test Video Reader Cpu Benchmark | 8.15          | 0.15       | 1757.29 |
-| Test Video Reader Cuda Benchmark | 7.89          | 0.02       | 1814.61 |
-| Test Video Writer Benchmark | 33.54          | 0.41       | 426.86 |
+| Test Video Reader Cpu Benchmark | 7.70          | 0.05       | 1859.41 |
+| Test Video Reader Cuda Benchmark | 7.91          | 0.02       | 1809.11 |
+| Test Video Writer Benchmark | 33.15          | 0.61       | 431.88 |
 
 
 ### 📊 **Benchmark Visualizations**

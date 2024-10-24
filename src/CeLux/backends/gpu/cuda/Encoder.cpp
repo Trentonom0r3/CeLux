@@ -48,6 +48,7 @@ void Encoder::initHWAccel()
     frames->width = properties.width;
     frames->height = properties.height;
     frames->initial_pool_size = 20;
+    CELUX_DEBUG("Frame Context Created");
     CELUX_DEBUG("Set CUDA hardware frames context properties - Format: {}, SW_Format: "
                 "{}, Width: {}, Height: {}, Initial Pool Size: {}",
                 av_get_pix_fmt_name(frames->format),
