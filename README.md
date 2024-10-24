@@ -371,10 +371,6 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 ## ❓ FAQ
 
-### Q: Can I use **CeLux** without CUDA or GPU acceleration?
-
-**A:** Yes, you can set `device="cpu"` when initializing `VideoReader`. However, decoding performance will be significantly slower compared to GPU-accelerated decoding.
-
 ### Q: What video formats are supported?
 
 **A:** **CeLux** aims to support all video formats and codecs supported by FFmpeg. However, hardware-accelerated decoding is currently available for specific codecs like H.264 and HEVC. These are the only codecs tested so far.
