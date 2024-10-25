@@ -1,9 +1,9 @@
----
+
 name: "Bug Report"
 description: "Report an issue or unexpected behavior in CeLux"
 title: "[Bug] "
 labels: bug
----
+
 body:
   - type: markdown
     attributes:
