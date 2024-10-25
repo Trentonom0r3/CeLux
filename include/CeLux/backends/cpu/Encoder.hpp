@@ -7,11 +7,12 @@ namespace celux::backends::cpu
 class Encoder : public celux::Encoder
 {
   public:
-    Encoder(const std::string& outputPath, const VideoProperties& props,
-            std::unique_ptr<celux::conversion::IConverter> converter = nullptr)
-        : celux::Encoder(std::move(converter))
+    Encoder(const std::string& outputPath, int width, int height, double fps,
+            celux::EncodingFormats format, const std::string& codecName,
+            std::optional<torch::Stream> stream)
+        : celux::Encoder(outputPath, width, height, fps, format, codecName, stream)
     {
-        this->initialize(outputPath, props);
+        this->initialize();
     }
 
     // No need to override methods unless specific behavior is needed

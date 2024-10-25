@@ -180,6 +180,7 @@ file(GLOB_RECURSE SOURCES_COMMON
 if(ENABLE_CUDA)
     file(GLOB_RECURSE SOURCES_CUDA
         "src/CeLux/conversion/gpu/cuda*.cpp"
+        "src/CeLux/cuda/*.cu"
     )
     set(SOURCES ${SOURCES_COMMON} ${SOURCES_CUDA})
 else()

@@ -12,15 +12,14 @@ class VideoReader
 {
   public:
     VideoReader(const std::string& filePath, const std::string& device = "cuda",
-
+            
                 std::optional<torch::Stream> stream = std::nullopt);
 
     /**
      * @brief Destructor for VideoReader.
      */
     ~VideoReader();
-    VideoWriter* writerFromReader(const std::string& filePath,
-								  std::optional<torch::Stream> stream = std::nullopt);
+
     /**
      * @brief Read a frame from the video.
      *

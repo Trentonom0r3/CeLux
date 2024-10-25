@@ -117,7 +117,6 @@ void Decoder::initialize(const std::string& filePath)
     setProperties();
 
     converter = celux::Factory::createConverter(isHwAccel ? torch::kCUDA : torch::kCPU,
-                                                properties.bitDepth,
                                                 properties.pixelFormat, decoderStream);
 
     CELUX_DEBUG("BASE DECODER: Converter initialized. HW accel is {}",

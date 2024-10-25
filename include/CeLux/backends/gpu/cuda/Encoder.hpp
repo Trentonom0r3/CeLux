@@ -8,13 +8,14 @@ namespace celux::backends::gpu::cuda
 class Encoder : public celux::Encoder
 {
   public:
-    Encoder(const std::string& outputPath, const VideoProperties& props,
-            std::unique_ptr<celux::conversion::IConverter> converter = nullptr,
-            const std::string& hwType = "cuda")
-        : celux::Encoder(std::move(converter))
+    Encoder(const std::string& outputPath, int width, int height, double fps,
+            celux::EncodingFormats format, const std::string& codecName,
+            std::optional<torch::Stream> stream)
+        :
+        celux::Encoder(outputPath, width, height, fps, format, codecName, stream)
     {
-        hwAccelType = hwType;
-        this->initialize(outputPath, props);
+        hwAccelType = "cuda";
+        this->initialize();
     }
 
 
@@ -23,8 +24,7 @@ class Encoder : public celux::Encoder
     void initHWAccel() override;
     enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
                                    const enum AVPixelFormat* pix_fmts) override;
-    void configureCodecContext(const AVCodec* codec,
-                               const VideoProperties& props) override;
+    void configureCodecContext(const AVCodec* codec) override;
 
 }; // class Encoder
 } // namespace celux::backends::gpu::cuda

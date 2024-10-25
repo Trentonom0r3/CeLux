@@ -2,7 +2,7 @@ name: "Feature Request"
 description: "Suggest a new feature or improvement to CeLux"
 title: "[Feature Request] "
 labels: enhancement
-assignees: ''
+
 
 body:
   - type: markdown

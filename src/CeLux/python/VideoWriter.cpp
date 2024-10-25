@@ -4,34 +4,50 @@
 #include <Factory.hpp>
 #include <torch/extension.h>
 
+
 VideoWriter::VideoWriter(const std::string& filePath, int width, int height, float fps,
-                         const std::string& device,
+                         const std::string& device, celux::EncodingFormats format,
+                         celux::SupportedCodecs codec,
                          std::optional<torch::Stream> stream)
     : encoder(nullptr)
 {
     try
     {
         CELUX_INFO("Initializing VideoWriter");
-        CELUX_DEBUG("Creating VideoWriter with parameters - FilePath: {}, Width: {}, "
-                    "Height: {}, FPS: {}, Device: {}",
-                    filePath, width, height, fps, device);
+        //check if codec is H264 or H265, or H264_CUDA or H265_CUDA -- compare to device to assert.
+        // cpu should be H264 or H265, cuda should be H264_CUDA or H265_CUDA
+        //default to proper codec if wrong input sent, notife with CELUX_WARN
+        if (device == "cuda")
+		{
+			if (codec != celux::SupportedCodecs::H264_CUDA &&
+				codec != celux::SupportedCodecs::H265_CUDA)
+			{
+				CELUX_WARN("CUDA device specified but codec is not H264_CUDA or H265_CUDA. "
+						   "Defaulting to H264_CUDA");
+				codec = celux::SupportedCodecs::H264_CUDA;
+			}
+		}
+        else if (device == "cpu")
+		{
+			if (codec != celux::SupportedCodecs::H264 &&
+				codec != celux::SupportedCodecs::H265)
+			{
+				CELUX_WARN("CPU device specified but codec is not H264 or H265. "
+						   "Defaulting to H264");
+				codec = celux::SupportedCodecs::H264;
+			}
+		}
+		else
+            {
+            CELUX_ERROR("Unsupported device specified: {}", device);
+				throw std::invalid_argument("Unsupported device: " + device);
+			}
 
-        // Set up video properties
-        celux::Encoder::VideoProperties props;
-        props.width = width;
-        props.height = height;
-        props.fps = fps;
-        props.pixelFormat = AV_PIX_FMT_YUV420P;
-        props.bitDepth = 8;
-        CELUX_DEBUG(
-            "Video properties set - Width: {}, Height: {}, FPS: {}, PixelFormat: {}",
-            props.width, props.height, props.fps,
-            av_get_pix_fmt_name(props.pixelFormat));
 
         if (device == "cuda")
         {
             deviceType = torch::kCUDA;
-            props.codecName = "h264_nvenc";
+
             CELUX_DEBUG("Device set to CUDA");
 
             if (!torch::cuda::is_available())
@@ -53,7 +69,6 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         else if (device == "cpu")
         {
             deviceType = torch::kCPU;
-            props.codecName = "libx264";
             CELUX_INFO("Using CPU backend for VideoWriter");
         }
         else
@@ -62,27 +77,15 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
             throw std::invalid_argument("Unsupported device: " + device);
         }
 
-        torch::Dtype torchDataType = torch::kUInt8;
-
         CELUX_DEBUG("Creating converter using factory");
-        // Create the converter using the factory
-        if (!stream.has_value())
-        {
-            convert = celux::Factory::createConverter(deviceType, 8,
-                                                      AV_PIX_FMT_RGB24,
-                                                  std::nullopt);
-            CELUX_DEBUG("Converter created without custom stream");
-        }
-        else
-        {
-            convert = celux::Factory::createConverter(deviceType, 8,
-                                                      AV_PIX_FMT_RGB24, std::nullopt);
-            CELUX_DEBUG("Converter created with provided CUDA stream");
-        }
 
-        encoder = celux::Factory::createEncoder(deviceType, filePath, props,
-                                                std::move(convert));
-        CELUX_INFO("Encoder created successfully with codec: {}", props.codecName);
+        convert = celux::Factory::createConverter(
+            deviceType, celux::getConverterPixelFormat(format), stream);
+
+        encoder = celux::Factory::createEncoder(deviceType, filePath, height, width, fps,
+                                          format, celux::codecToString(codec), stream);
+        CELUX_INFO("Encoder created successfully with codec: {}",
+                   celux::codecToString(codec));
     }
     catch (const std::exception& ex)
     {
@@ -106,10 +109,12 @@ bool VideoWriter::writeFrame(torch::Tensor tensorFrame)
         CELUX_TRACE("writeFrame() called");
         CELUX_DEBUG("Writing frame");
         if (deviceType != tensorFrame.device().type())
-		{
-			CELUX_ERROR("Input tensor device type does not match VideoWriter device type");
-			throw std::invalid_argument("Input tensor device type does not match VideoWriter device type");
-		}
+        {
+            CELUX_ERROR(
+                "Input tensor device type does not match VideoWriter device type");
+            throw std::invalid_argument(
+                "Input tensor device type does not match VideoWriter device type");
+        }
         // Validate input tensor
         if (!tensorFrame.is_contiguous())
         {

@@ -60,12 +60,30 @@ PYBIND11_MODULE(celux, m)
             },
             py::return_value_policy::reference_internal);
 
+    py::enum_<celux::EncodingFormats>(m, "pixelFormat")
+        .value("YUV420P", celux::EncodingFormats::YUV420P)
+        .value("YUV420P10LE", celux::EncodingFormats::YUV420P10LE)
+        .value("P010LE", celux::EncodingFormats::P010LE)
+        .export_values();
+
+    py::enum_<celux::SupportedCodecs>(m, "codec")
+        .value("H264", celux::SupportedCodecs::H264)
+        .value("H265", celux::SupportedCodecs::H265)
+        .value("H264_CUDA", celux::SupportedCodecs::H264_CUDA)
+        .value("H265_CUDA", celux::SupportedCodecs::H265_CUDA)
+        .export_values();
     // VideoWriter bindings
     py::class_<VideoWriter>(m, "VideoWriter")
         .def(py::init<const std::string&, int, int, float, const std::string&,
-                std::optional<torch::Stream>>(),
+                      celux::EncodingFormats, celux::SupportedCodecs,
+                      std::optional<torch::Stream>>(),
              py::arg("file_path"), py::arg("width"), py::arg("height"), py::arg("fps"),
-             py::arg("device") = "cuda", 
+             py::arg("device") = "cuda",
+             py::arg("format") =
+                 celux::EncodingFormats::YUV420P, // 8 bit sw format -- requires input
+                                                  // to be in Uint8, rgb24
+             py::arg("codec") = celux::SupportedCodecs::H264,
+
              py::arg("stream") = std::nullopt)
         .def("write_frame", &VideoWriter::writeFrame, py::arg("frame"))
         .def("supported_codecs", &VideoWriter::supportedCodecs)
@@ -92,4 +110,13 @@ PYBIND11_MODULE(celux, m)
 
     m.def("set_log_level", &celux::Logger::set_level, "Set the logging level for CeLux",
           py::arg("level"));
+
+    /*	enum class EncodingFormats
+    {
+        YUV420P, // 8 bit sw format -- requires input to be in Uint8, rgb24
+                    // NV12, // 8 bit hw format
+        YUV420P10LE, // 10 bit sw format -- requires input to be in Uint16, rgb48
+       // P010, // 10 bit hw format
+    };
+    */
 }

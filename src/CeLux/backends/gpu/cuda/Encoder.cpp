@@ -44,12 +44,12 @@ void Encoder::initHWAccel()
 
     AVHWFramesContext* frames = reinterpret_cast<AVHWFramesContext*>(frames_ctx->data);
     frames->format = AV_PIX_FMT_CUDA;    // Hardware pixel format
-    frames->sw_format = AV_PIX_FMT_YUV420P; // Software pixel format (input format)
-    frames->width = properties.width;
-    frames->height = properties.height;
+    frames->sw_format = getEncoderPixelFormat(format); // Software pixel format (input format)
+    frames->width = width;
+    frames->height = height;
     frames->initial_pool_size = 20;
     CELUX_DEBUG("Frame Context Created");
-    CELUX_DEBUG("Set CUDA hardware frames context properties - Format: {}, SW_Format: "
+    CELUX_DEBUG("Set CUDA hardware frames context - Format: {}, SW_Format: "
                 "{}, Width: {}, Height: {}, Initial Pool Size: {}",
                 av_get_pix_fmt_name(frames->format),
                 av_get_pix_fmt_name(frames->sw_format), frames->width, frames->height,
@@ -68,7 +68,7 @@ void Encoder::initHWAccel()
     CELUX_INFO("CUDA hardware frames context initialized and set");
 }
 
-void Encoder::configureCodecContext(const AVCodec* codec, const VideoProperties& props)
+void Encoder::configureCodecContext(const AVCodec* codec)
 {
     CELUX_INFO("Configuring Codec Context with Hardware Acceleration (CUDA)");
     CELUX_DEBUG("Referencing HW device context");
@@ -93,7 +93,7 @@ void Encoder::configureCodecContext(const AVCodec* codec, const VideoProperties&
 
     // Set pixel format to CUDA
     codecCtx->pix_fmt = AV_PIX_FMT_CUDA;
-    codecCtx->sw_pix_fmt = AV_PIX_FMT_YUV420P;
+    codecCtx->sw_pix_fmt = getEncoderPixelFormat(format);
     CELUX_DEBUG("Set codec pixel format to CUDA (HW) and NV12 (SW)");
 
     // Set encoder options (these can be adjusted as needed)
@@ -125,8 +125,8 @@ void Encoder::configureCodecContext(const AVCodec* codec, const VideoProperties&
         throw CxException("Could not allocate CUDA frame buffer");
     }
     CELUX_DEBUG("Allocated CUDA frame buffer successfully");
-    frame.get()->width = props.width;
-    frame.get()->height = props.height;
+    frame.get()->width = width;
+    frame.get()->height = height;
     CELUX_TRACE("Configured frame dimensions - Width: {}, Height: {}",
                 frame.get()->width, frame.get()->height);
 }

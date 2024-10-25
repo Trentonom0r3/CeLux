@@ -67,21 +67,23 @@ def process_video_with_visualization(video_path, output_path=None):
         start = time.time()
         STREAM = torch.cuda.Stream()
         WRITESTREAM = torch.cuda.Stream()
-        with celux.VideoReader(video_path, device = "cpu")([0,50]) as reader:
+        with celux.VideoReader(video_path, device = "cuda")([0,30]) as reader:
             writer = None
             #print(reader.get_properties()["total_frames"])
             if output_path:
                 writer = celux.VideoWriter(output_path, reader.get_properties()["width"],
                                            reader.get_properties()["height"], reader.get_properties()["fps"],
-                                           device = "cpu")
+                                           device = "cuda", format = celux.pixelFormat.P010LE, 
+                                           codec = celux.codec.H265_CUDA)
+                
 
             for frame in reader:
                 if writer:
                    # process_frame(frame)
                     writer(frame)
-               
+                frame_cpu = frame.cpu().numpy()
                 # Display the frame using OpenCV
-                cv2.imshow("Video Frame", frame.cpu().numpy())
+                cv2.imshow("Video Frame", frame_cpu)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
                     break
@@ -128,7 +130,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--save-output",
-        default=False,
+        default=True,
         action="store_true",
         help="Enable this flag to save the processed video to an output file."
     )

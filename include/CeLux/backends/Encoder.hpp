@@ -9,19 +9,11 @@ namespace celux
 class Encoder
 {
   public:
-    struct VideoProperties
-    {
-        int width;
-        int height;
-        double fps;
-        AVPixelFormat pixelFormat;
-        std::string codecName;
-        int bitDepth;
-    };
-    Encoder(const std::string& outputPath, const VideoProperties& props,
-            std::unique_ptr<celux::conversion::IConverter> converter);
+    Encoder(const std::string& outputPath, int width, int height, double fps,
+            celux::EncodingFormats format, const std::string& codecName,
+            std::optional<torch::Stream> stream);
+
     Encoder() = default;
-    Encoder(std::unique_ptr<celux::conversion::IConverter> converter = nullptr);
 
     virtual ~Encoder();
 
@@ -43,15 +35,14 @@ class Encoder
 
   protected:
     // Initialization method
-    void initialize(const std::string& outputPath, const VideoProperties& props);
+    void initialize();
     // Virtual methods for customization
-    virtual void openFile(const std::string& outputPath, const VideoProperties& props);
+    virtual void openFile();
     virtual void initHWAccel(); // Default does nothing
-    virtual void initCodecContext(const AVCodec* codec, const VideoProperties& props);
+    virtual void initCodecContext(const AVCodec* codec);
     virtual int64_t convertTimestamp(double timestamp) const;
     // Add a new virtual method for configuring codec context
-    virtual void configureCodecContext(const AVCodec* codec,
-                                       const VideoProperties& props);
+    virtual void configureCodecContext(const AVCodec* codec);
 
     // Virtual callback for hardware pixel formats
     virtual enum AVPixelFormat getHWFormat(AVCodecContext* ctx,
@@ -95,10 +86,18 @@ class Encoder
     AVBufferRefPtr hwFramesCtx;
     AVStream* stream = nullptr;
     AVPacket* packet = nullptr;
-    VideoProperties properties;
     std::string hwAccelType;
     int64_t pts = 0;
     Frame frame;
     std::unique_ptr<celux::conversion::IConverter> converter;
+
+    //constructor variables
+    std::string outputPath;
+    int width;
+    int height;
+    double fps;
+    celux::EncodingFormats format;
+    std::string codecName;
+    std::optional<torch::Stream> encoderStream;
 };
 } // namespace celux

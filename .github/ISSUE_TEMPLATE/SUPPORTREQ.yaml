@@ -2,7 +2,6 @@ name: "Support Request"
 description: "Get help with using CeLux"
 title: "[Support] "
 labels: support
-assignees: ''
 
 body:
   - type: textarea

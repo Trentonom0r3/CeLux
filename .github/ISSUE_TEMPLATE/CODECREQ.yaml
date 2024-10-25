@@ -2,7 +2,7 @@ name: "Codec/Color Space Request"
 description: "Request support for a new codec or color space"
 title: "[Codec/Color Space Request] "
 labels: enhancement, codec
-assignees: ''
+
 
 body:
   - type: markdown
