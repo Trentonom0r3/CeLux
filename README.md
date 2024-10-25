@@ -43,6 +43,9 @@ from celux import VideoReader, VideoWriter
 #import celux as cx
 reader = VideoReader("/path/to/video.ext", device = "cuda")
 writer = VideoWriter("/path/to/output.ext", 1920, 1080, 23.97, device = "cpu")
+for frame in reader:
+  writer(frame)
+# writer.write(frame)
 ```
 
 ## 📄 License
