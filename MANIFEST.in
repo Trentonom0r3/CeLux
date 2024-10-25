@@ -7,3 +7,4 @@ include celux_cuda/*.pyd
 include celux_cuda/*.dll
 include celux_cuda/*.pyi
 include celux_cuda/*.py
+
