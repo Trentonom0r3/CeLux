@@ -2,6 +2,35 @@ from typing import List, Optional, Any, Union, Tuple
 import torch
 from enum import Enum
 
+# define FMT and CDC enums
+class pixfmt(Enum):
+    YUV420P = 0
+    YUV420P10LE = 1
+    P010LE = 2
+    
+class codec(Enum):
+    H264 = 0
+    H265 = 1
+    H264_CUDA = 2
+    H265_CUDA = 3
+        
+class LogLevel(Enum):
+    trace = 0
+    debug = 1
+    info = 2
+    warn = 3
+    error = 4
+    critical = 5
+    off = 6
+    
+def set_log_level(level: LogLevel) -> None:
+    """
+    Set the logging level for CeLux.
+
+    Args:
+        level (LogLevel): The logging level to set.
+    """
+    ...
 
 class VideoReader:
     def __init__(self, input_path: str, device: str = "cuda",
@@ -83,7 +112,6 @@ stream : torch.Stream = None) -> None:
             - codec: Codec used for the video.
             - pixel_format: Pixel format of the video.
             - bit_depth: Bit depth of the video.
-            - has_audio: Whether the video has an audio stream.
         """
         ...
 
@@ -149,7 +177,7 @@ stream : torch.Stream = None) -> None:
 
 class VideoWriter:
     def __init__(self, file_path: str, width: int, height: int, fps: float, 
-                 device: str = "cuda", 
+                 device: str = "cuda", format: pixfmt = pixfmt.YUV420P, codec: codec = codec.H264,
                  stream : torch.Stream = None) -> None:
         """
         Initialize the VideoWriter object.
@@ -238,22 +266,5 @@ class VideoWriter:
         This method is called automatically when exiting a context manager, but can be called manually if needed.
         """
         ...
-        
-class LogLevel(Enum):
-    trace = 0
-    debug = 1
-    info = 2
-    warn = 3
-    error = 4
-    critical = 5
-    off = 6
-    
-def set_log_level(level: LogLevel) -> None:
-    """
-    Set the logging level for CeLux.
 
-    Args:
-        level (LogLevel): The logging level to set.
-    """
-    ...
     

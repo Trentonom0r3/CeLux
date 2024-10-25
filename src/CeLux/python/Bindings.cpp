@@ -60,7 +60,7 @@ PYBIND11_MODULE(celux, m)
             },
             py::return_value_policy::reference_internal);
 
-    py::enum_<celux::EncodingFormats>(m, "pixelFormat")
+    py::enum_<celux::EncodingFormats>(m, "pixfmt")
         .value("YUV420P", celux::EncodingFormats::YUV420P)
         .value("YUV420P10LE", celux::EncodingFormats::YUV420P10LE)
         .value("P010LE", celux::EncodingFormats::P010LE)
