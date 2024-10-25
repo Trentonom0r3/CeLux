@@ -41,7 +41,7 @@ pip install celux-cuda  # cuda+cpu
 ```py
 from celux import VideoReader, VideoWriter
 #import celux as cx
-reader = VideoReader("/path/to/video.EXT", device = "cuda")
+reader = VideoReader("/path/to/video.ext", device = "cuda")
 writer = VideoWriter("/path/to/output.ext", 1920, 1080, 23.97, device = "cpu")
 ```
 
