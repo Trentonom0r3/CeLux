@@ -42,29 +42,6 @@ extern "C"
 
 namespace celux
 {
-enum class backend
-{
-    CPU,
-    CUDA
-};
-
-enum class CodecType
-{
-    H264,
-    H265,
-    VP8,
-    VP9,
-    AV1,
-    // Add other codecs as needed
-};
-
-// Helper function to map CodecType to codec names
-static const std::map<CodecType, std::string> codecTypeToString = {
-    {CodecType::H264, "h264"}, {CodecType::H265, "hevc"}, {CodecType::VP8, "vp8"},
-    {CodecType::VP9, "vp9"},   {CodecType::AV1, "av1"},
-    // Add other mappings as needed
-};
-
 /**
  * @brief Utility function to get a suitable hardware configuration for a codec.
  *

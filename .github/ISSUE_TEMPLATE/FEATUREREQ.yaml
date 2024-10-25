@@ -1,0 +1,41 @@
+name: "Feature Request"
+description: "Suggest a new feature or improvement to CeLux"
+title: "[Feature Request] "
+labels: enhancement
+assignees: ''
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+
+        Please provide a detailed description of the feature you would like to see implemented.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: "Feature Summary"
+      description: "Provide a short and clear summary of the feature you are requesting."
+      placeholder: "Describe the feature in one or two sentences"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Detailed Description"
+      description: "Explain how this feature would work, why it would be useful, and what use cases it would support."
+      placeholder: "Describe in detail how the feature should work"
+
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: "Current Behavior"
+      description: "What is the current behavior, and how does the feature differ?"
+      placeholder: "Explain the current behavior and how this feature would change or improve it"
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: "Examples or References"
+      description: "If you have any code, examples, or links to related issues/projects, provide them here."
+      placeholder: "Provide any examples, code snippets, or references here"

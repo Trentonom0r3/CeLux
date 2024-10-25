@@ -1,0 +1,48 @@
+name: "Bug Report"
+description: "Report an issue or unexpected behavior in CeLux"
+title: "[Bug] "
+labels: bug
+assignees: ''
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+
+        Please fill out the details below to report the issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: "CeLux Version"
+      description: "Which version of CeLux are you using?"
+      placeholder: "e.g., 0.4.1"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description of the Bug"
+      description: "Describe the issue, and the steps to reproduce it"
+      placeholder: "Describe the issue you're experiencing and how to reproduce it"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs or Console Output"
+      description: "Paste any logs or console output related to the bug"
+      placeholder: "Include relevant error messages or logs"
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "What was expected to happen instead?"
+      placeholder: "Describe what you expected to happen instead"
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment Details"
+      description: "Provide details about your system (OS, GPU, Python version, etc.)"
+      placeholder: "e.g., Windows 11, Python 3.12, CUDA 11.8, NVIDIA 3060"

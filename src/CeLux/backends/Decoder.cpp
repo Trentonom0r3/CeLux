@@ -7,7 +7,7 @@ namespace celux
 {
 
 Decoder::Decoder(std::optional<torch::Stream> stream)
-    : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(av_packet_alloc()),
+    : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
       videoStreamIndex(-1), decoderStream(std::move(stream))
 {
     CELUX_DEBUG("BASE DECODER: Decoder constructed");
@@ -51,64 +51,38 @@ Decoder& Decoder::operator=(Decoder&& other) noexcept
     }
     return *this;
 }
-
-void Decoder::initialize(const std::string& filePath)
+void Decoder::setProperties()
 {
-    CELUX_DEBUG("BASE DECODER: Initializing decoder with file: {}", filePath);
-    converter = celux::Factory::createConverter(isHwAccel ? torch::kCUDA : torch::kCPU,
-                                                celux::ConversionType::NV12ToRGB,
-                                                decoderStream);
-    CELUX_DEBUG("BASE DECODER: Converter initialized. HW accel is {}",
-               isHwAccel ? "enabled" : "disabled");
-    openFile(filePath);
-    initHWAccel(); // Initialize HW acceleration (overridden in GPU Decoder)
-    findVideoStream();
-
-    const AVCodec* codec =
-        avcodec_find_decoder(formatCtx->streams[videoStreamIndex]->codecpar->codec_id);
-    if (isHwAccel)
-    {
-        codec = avcodec_find_decoder_by_name(std::string(codec->name).append("_cuvid").c_str());
-    }
-    if (!codec)
-    {
-        CELUX_ERROR("Unsupported codec for file: {}", filePath);
-        throw CxException("Unsupported codec!");
-    }
-
-    initCodecContext(codec);
-
-    properties.codec = codec->name;
+    // Set basic video properties
+    properties.codec = codecCtx->codec->name;
     properties.width = codecCtx->width;
     properties.height = codecCtx->height;
     properties.fps = av_q2d(formatCtx->streams[videoStreamIndex]->avg_frame_rate);
 
-    properties.duration =
-        (formatCtx->streams[videoStreamIndex]->duration != AV_NOPTS_VALUE)
-            ? static_cast<double>(formatCtx->streams[videoStreamIndex]->duration) *
-                  av_q2d(formatCtx->streams[videoStreamIndex]->time_base)
-            : 0.0;
+    // Ensure duration is calculated properly
+    if (formatCtx->streams[videoStreamIndex]->duration != AV_NOPTS_VALUE)
+    {
+        properties.duration =
+            static_cast<double>(formatCtx->streams[videoStreamIndex]->duration) *
+            av_q2d(formatCtx->streams[videoStreamIndex]->time_base);
+    }
+    else if (formatCtx->duration != AV_NOPTS_VALUE)
+    {
+        // Fallback to format context duration if stream duration is unavailable
+        properties.duration = static_cast<double>(formatCtx->duration) / AV_TIME_BASE;
+    }
+    else
+    {
+        properties.duration = 0.0; // Unknown duration
+    }
 
-    properties.pixelFormat =
-        isHwAccel ? codecCtx->sw_pix_fmt
-                  : codecCtx->pix_fmt;
+    // Set pixel format, bit depth, and audio properties
+    properties.pixelFormat = isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt;
     properties.hasAudio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
                            AVMEDIA_TYPE_AUDIO);
     properties.bitDepth = getBitDepth();
 
-    CELUX_DEBUG("BASE DECODER: Video properties populated");
-    const AVPixFmtDescriptor* desc =
-        av_pix_fmt_desc_get(isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt);
-    if (!desc)
-    {
-        CELUX_WARN("Unknown pixel format, defaulting to NV12ToRGB");
-    }
-
-    int bitDepth = desc->comp[0].depth;
-    CELUX_INFO("Pixel format: {}, bit depth: {}",
-        av_get_pix_fmt_name(isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt),
-			   bitDepth);
-    // Calculate total frames if possible
+    // Calculate total frames
     if (formatCtx->streams[videoStreamIndex]->nb_frames > 0)
     {
         properties.totalFrames = formatCtx->streams[videoStreamIndex]->nb_frames;
@@ -119,46 +93,60 @@ void Decoder::initialize(const std::string& filePath)
     }
     else
     {
-        properties.totalFrames = 0; // Unknown
+        properties.totalFrames = 0; // Unknown total frames
     }
 
+    // Set time base for codec context
+    codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
+
+    // Log the video properties
     CELUX_INFO(
         "Video properties: width={}, height={}, fps={}, duration={}, totalFrames={}",
         properties.width, properties.height, properties.fps, properties.duration,
         properties.totalFrames);
+}
 
-    pkt.reset(av_packet_alloc());
-    codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
+void Decoder::initialize(const std::string& filePath)
+{
+    CELUX_DEBUG("BASE DECODER: Initializing decoder with file: {}", filePath);
+    openFile(filePath);
+    initHWAccel(); // Initialize HW acceleration (overridden in GPU Decoder)
+    findVideoStream();
+    initCodecContext();
+    set_sw_pix_fmt(codecCtx, getBitDepth()); // Set software pixel format ##VITAL##
+    setProperties();
 
-    frame = Frame(); // Fallback to CPU Frame
+    converter = celux::Factory::createConverter(isHwAccel ? torch::kCUDA : torch::kCPU,
+                                                properties.bitDepth,
+                                                properties.pixelFormat, decoderStream);
+
+    CELUX_DEBUG("BASE DECODER: Converter initialized. HW accel is {}",
+                isHwAccel ? "enabled" : "disabled");
 
     CELUX_DEBUG("BASE DECODER: Decoder initialization completed");
 
     CELUX_INFO("BASE DECODER: Decoder using codec: {}, and pixel format: {}",
-                codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
+               codecCtx->codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
 }
 
 void Decoder::openFile(const std::string& filePath)
 {
     CELUX_DEBUG("BASE DECODER: Opening file: {}", filePath);
     // Open input file
+    frame = Frame(); // Fallback to CPU Frame
+
     AVFormatContext* fmt_ctx = nullptr;
-    int ret = avformat_open_input(&fmt_ctx, filePath.c_str(), nullptr, nullptr);
-    if (ret < 0)
-    {
-        CELUX_ERROR("Failed to open input file: {}", filePath);
-        FF_CHECK_MSG(ret, std::string("Failure Opening Input:"));
-    }
-    formatCtx.reset(fmt_ctx);
+    FF_CHECK_MSG(avformat_open_input(&fmt_ctx, filePath.c_str(), nullptr, nullptr),
+                 std::string("Failure Opening Input:"));
+
+    formatCtx.reset(fmt_ctx); // Wrap in unique_ptr
     CELUX_DEBUG("BASE DECODER: Input file opened successfully");
 
     // Retrieve stream information
-    ret = avformat_find_stream_info(formatCtx.get(), nullptr);
-    if (ret < 0)
-    {
-        CELUX_ERROR("Failed to find stream info for file: {}", filePath);
-        FF_CHECK_MSG(ret, std::string("Failure Finding Stream Info:"));
-    }
+    FF_CHECK_MSG(avformat_find_stream_info(formatCtx.get(), nullptr),
+                 std::string("Failure Finding Stream Info:"));
+
+    pkt.reset(av_packet_alloc()); // Allocate packet
     CELUX_DEBUG("BASE DECODER: Stream information retrieved successfully");
 }
 
@@ -171,20 +159,29 @@ void Decoder::initHWAccel()
 void Decoder::findVideoStream()
 {
     CELUX_DEBUG("BASE DECODER: Finding best video stream");
-    // Find the best video stream
+
     int ret =
         av_find_best_stream(formatCtx.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
     if (ret < 0)
     {
-        CELUX_ERROR("Could not find any video stream in the input file");
-        throw CxException("Could not find any video stream in the input file");
-    }
+		CELUX_ERROR("No video stream found");
+		throw CxException("No video stream found");
+	}
+
     videoStreamIndex = ret;
     CELUX_DEBUG("BASE DECODER: Video stream found at index {}", videoStreamIndex);
 }
 
-void Decoder::initCodecContext(const AVCodec* codec)
+void Decoder::initCodecContext()
 {
+    const AVCodec* codec =
+        avcodec_find_decoder(formatCtx->streams[videoStreamIndex]->codecpar->codec_id);
+    if (isHwAccel)
+    {
+        codec = avcodec_find_decoder_by_name(
+            std::string(codec->name).append("_cuvid").c_str());
+    }
+
     CELUX_DEBUG("BASE DECODER: Initializing codec context");
     if (!codec)
     {
@@ -203,13 +200,10 @@ void Decoder::initCodecContext(const AVCodec* codec)
     CELUX_DEBUG("BASE DECODER: Codec context allocated");
 
     // Copy codec parameters from input stream to codec context
-    int ret = avcodec_parameters_to_context(
-        codecCtx.get(), formatCtx->streams[videoStreamIndex]->codecpar);
-    if (ret < 0)
-    {
-        CELUX_ERROR("Failed to copy codec parameters");
-        FF_CHECK_MSG(ret, std::string("Failed to copy codec parameters:"));
-    }
+    FF_CHECK_MSG(avcodec_parameters_to_context(
+                     codecCtx.get(), formatCtx->streams[videoStreamIndex]->codecpar),
+                 std::string("Failed to copy codec parameters:"));
+
     CELUX_DEBUG("BASE DECODER: Codec parameters copied to codec context");
     unsigned int threadCount = 16u;
     // Set hardware device context if available
@@ -228,16 +222,14 @@ void Decoder::initCodecContext(const AVCodec* codec)
     codecCtx->thread_count = static_cast<int>(std::min(
         static_cast<unsigned int>(std::thread::hardware_concurrency()), threadCount));
     codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
-    CELUX_DEBUG("BASE DECODER: Codec context threading configured: thread_count={}, thread_type={}",
+    CELUX_DEBUG("BASE DECODER: Codec context threading configured: thread_count={}, "
+                "thread_type={}",
                 codecCtx->thread_count, codecCtx->thread_type);
 
     // Open codec
-    ret = avcodec_open2(codecCtx.get(), codec, nullptr);
-    if (ret < 0)
-    {
-        CELUX_ERROR("Failed to open codec");
-        FF_CHECK_MSG(ret, std::string("Failed to open codec:"));
-    }
+    FF_CHECK_MSG(avcodec_open2(codecCtx.get(), codec, nullptr),
+                 std::string("Failed to open codec:"));
+
     CELUX_DEBUG("BASE DECODER: Codec opened successfully");
 }
 
@@ -426,7 +418,44 @@ int64_t Decoder::convertTimestamp(double timestamp) const
 int Decoder::getBitDepth() const
 {
     CELUX_TRACE("Getting bit depth");
-    return av_get_bits_per_pixel(av_pix_fmt_desc_get(isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt));
+    const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(
+        AVPixelFormat(formatCtx->streams[videoStreamIndex]->codecpar->format));
+    if (!desc)
+    {
+        CELUX_WARN("Unknown pixel format, defaulting to NV12ToRGB");
+    }
+
+    int bitDepth = desc->comp[0].depth;
+    CELUX_TRACE("Bit depth: {}", bitDepth);
+    return bitDepth;
+}
+
+void Decoder::set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth)
+{
+    if (isHwAccel)
+    {
+
+        CELUX_TRACE("Setting software pixel format");
+        if (bitDepth == 8)
+        {
+            codecCtx->sw_pix_fmt = AV_PIX_FMT_NV12;
+        }
+        else if (bitDepth == 10)
+        {
+            codecCtx->sw_pix_fmt = AV_PIX_FMT_P010LE;
+        }
+        else
+        {
+            CELUX_WARN("Unsupported bit depth, defaulting to 8-bit");
+            codecCtx->sw_pix_fmt = AV_PIX_FMT_NV12;
+        }
+        CELUX_TRACE("Software pixel format set: {}",
+                    av_get_pix_fmt_name(codecCtx->sw_pix_fmt));
+    }
+    else
+    {
+        CELUX_TRACE("Using CPU. Software pixel format will be set by Decoder");
+    }
 }
 
 } // namespace celux

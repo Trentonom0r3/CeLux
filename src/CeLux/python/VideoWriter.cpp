@@ -22,6 +22,7 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         props.height = height;
         props.fps = fps;
         props.pixelFormat = AV_PIX_FMT_YUV420P;
+        props.bitDepth = 8;
         CELUX_DEBUG(
             "Video properties set - Width: {}, Height: {}, FPS: {}, PixelFormat: {}",
             props.width, props.height, props.fps,
@@ -67,14 +68,15 @@ VideoWriter::VideoWriter(const std::string& filePath, int width, int height, flo
         // Create the converter using the factory
         if (!stream.has_value())
         {
-            convert = celux::Factory::createConverter(
-                deviceType, celux::ConversionType::RGBToNV12, std::nullopt);
+            convert = celux::Factory::createConverter(deviceType, 8,
+                                                      AV_PIX_FMT_RGB24,
+                                                  std::nullopt);
             CELUX_DEBUG("Converter created without custom stream");
         }
         else
         {
-            convert = celux::Factory::createConverter(
-                deviceType, celux::ConversionType::RGBToNV12, stream.value());
+            convert = celux::Factory::createConverter(deviceType, 8,
+                                                      AV_PIX_FMT_RGB24, std::nullopt);
             CELUX_DEBUG("Converter created with provided CUDA stream");
         }
 

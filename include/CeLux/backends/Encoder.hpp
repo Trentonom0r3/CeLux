@@ -16,6 +16,7 @@ class Encoder
         double fps;
         AVPixelFormat pixelFormat;
         std::string codecName;
+        int bitDepth;
     };
     Encoder(const std::string& outputPath, const VideoProperties& props,
             std::unique_ptr<celux::conversion::IConverter> converter);

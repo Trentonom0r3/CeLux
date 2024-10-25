@@ -1,0 +1,41 @@
+name: "Codec/Color Space Request"
+description: "Request support for a new codec or color space"
+title: "[Codec/Color Space Request] "
+labels: enhancement, codec
+assignees: ''
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Codec/Color Space Request
+
+        Please fill out the following information to request support for a new codec or color space.
+
+  - type: input
+    id: codec_name
+    attributes:
+      label: "Codec Name"
+      description: "Enter the name of the codec or color space you are requesting"
+      placeholder: "e.g., ProRes, VP9, H.265, YUV422"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Why is this important?"
+      description: "Explain the use cases and importance of adding this codec/color space"
+      placeholder: "Describe why you need this codec and what use cases it would unlock"
+
+  - type: input
+    id: hardware_support
+    attributes:
+      label: "Hardware Support"
+      description: "Is this codec/color space supported by any specific hardware acceleration (e.g., CUDA, NVDEC)?"
+      placeholder: "e.g., Supported by NVIDIA NVDEC"
+
+  - type: textarea
+    id: ffmpeg_support
+    attributes:
+      label: "FFmpeg Support"
+      description: "Does FFmpeg already support this codec/color space, or would custom implementation be required?"
+      placeholder: "FFmpeg supports this codec with version X.XX or requires custom implementation"

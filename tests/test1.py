@@ -16,7 +16,7 @@ import torch  # For visual confirmation
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import celux_cuda as celux
 
-celux.set_log_level(celux.LogLevel.debug)
+celux.set_log_level(celux.LogLevel.info)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -67,13 +67,13 @@ def process_video_with_visualization(video_path, output_path=None):
         start = time.time()
         STREAM = torch.cuda.Stream()
         WRITESTREAM = torch.cuda.Stream()
-        with celux.VideoReader(video_path, device = "cuda")([0,50]) as reader:
+        with celux.VideoReader(video_path, device = "cpu")([0,50]) as reader:
             writer = None
             #print(reader.get_properties()["total_frames"])
             if output_path:
                 writer = celux.VideoWriter(output_path, reader.get_properties()["width"],
                                            reader.get_properties()["height"], reader.get_properties()["fps"],
-                                           device = "cuda")
+                                           device = "cpu")
 
             for frame in reader:
                 if writer:
@@ -103,7 +103,7 @@ def process_video_with_visualization(video_path, output_path=None):
 def main(args):
     if args.mode == "lite":
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        video_path = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
+        video_path = os.path.join(os.getcwd(), "tests", "data", "HD_HEVC_10BIT.mkv")
     else:
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
         video_path = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--save-output",
-        default=True,
+        default=False,
         action="store_true",
         help="Enable this flag to save the processed video to an output file."
     )

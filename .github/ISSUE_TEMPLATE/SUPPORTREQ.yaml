@@ -1,0 +1,13 @@
+name: "Support Request"
+description: "Get help with using CeLux"
+title: "[Support] "
+labels: support
+assignees: ''
+
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: "Describe Your Issue"
+      description: "Explain what you're trying to do and what you need help with"
+      placeholder: "Provide as much detail as possible so we can assist you"

@@ -2,8 +2,8 @@
 #pragma once
 
 #include "CxException.hpp"
-#include <Frame.hpp> 
 #include <Conversion.hpp>
+#include <Frame.hpp>
 
 namespace celux
 {
@@ -47,20 +47,22 @@ class Decoder
     virtual std::vector<std::string> listSupportedDecoders() const;
     AVCodecContext* getCtx();
 
-    //getter for bit depth
+    // getter for bit depth
     int getBitDepth() const;
+
   protected:
     // Initialization method
     void initialize(const std::string& filePath);
     bool isHardwareAccelerated(const AVCodec* codec);
+    void setProperties();
     // Virtual methods for customization
     virtual void openFile(const std::string& filePath);
     virtual void initHWAccel(); // Default does nothing
     virtual void findVideoStream();
-    virtual void initCodecContext(const AVCodec* codec);
+    virtual void initCodecContext();
     virtual int64_t convertTimestamp(double timestamp) const;
-
-  
+    void populateProperties();
+    void setFormatFromBitDepth();
     // Deleters and smart pointers
     struct AVFormatContextDeleter
     {
@@ -98,7 +100,7 @@ class Decoder
     using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
     using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
     using AVPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
-
+    void set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth);
     // Member variables
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;

@@ -17,7 +17,30 @@ namespace celux
 		YUV420ToRGB,
 		RGBToYUV420,
 	};
-}
+
+	enum class SupportedFormats
+    {
+        YUV420P,
+        NV12,
+        YUV420P10LE,
+        P010,
+		RGB24,
+		RGB48
+    };
+
+	enum SupportedBitDepth
+	{
+		DEPTH8 = 8,
+		DEPTH10 = 10,
+	};
+
+	enum class backend
+    {
+        CPU,
+        CUDA
+    };
+
+    }
 
 
 #endif

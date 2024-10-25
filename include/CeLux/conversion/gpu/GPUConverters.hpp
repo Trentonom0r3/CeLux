@@ -6,6 +6,7 @@
 #include "cuda/BaseConverter.hpp"
 #include "cuda/NV12ToRGB.hpp"
 #include "cuda/RGBToYUV420P.hpp"
+#include "cuda/P010LEToRGB.hpp"
 
 
 #endif

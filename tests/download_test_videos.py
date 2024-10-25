@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-cx.set_log_level(cx.LogLevel.off)
+cx.set_log_level(cx.LogLevel.info)
 
 
 def download_video(url, output_path):

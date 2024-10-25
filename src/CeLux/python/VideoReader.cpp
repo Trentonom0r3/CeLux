@@ -15,6 +15,7 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
 
     try
     {
+
         torch::Device torchDevice = torch::Device(torch::kCPU);
         CELUX_INFO("Creating VideoReader instance");
         if (device == "cuda")
@@ -48,14 +49,12 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
             throw std::invalid_argument("Unsupported device: " + device);
         }
 
+        decoder = celux::Factory::createDecoder(torchDevice, filePath, stream);
+        CELUX_INFO("Decoder created successfully");
+
         torch::Dtype torchDataType;
 
-        torchDataType = torch::kUInt8;
-        CELUX_INFO("DataType mapped to UINT8");
-
-        decoder =
-            celux::Factory::createDecoder(torchDevice, filePath, stream);
-        CELUX_INFO("Decoder created successfully");
+        torchDataType = findTypeFromBitDepth();
 
         // Retrieve video properties
         properties = decoder->getVideoProperties();
@@ -67,12 +66,13 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
 
         // Initialize tensor
         tensor = torch::empty(
-            {properties.height, properties.width, 3},
-            torch::TensorOptions().dtype(torchDataType).device(torchDevice)).contiguous();
+                     {properties.height, properties.width, 3},
+                     torch::TensorOptions().dtype(torchDataType).device(torchDevice))
+                     .contiguous();
 
         CELUX_INFO("Torch tensor initialized with shape: [{}, {}, {}] :, "
-                    "device: {}",
-                    properties.height, properties.width, 3, device);
+                   "device: {}",
+                   properties.height, properties.width, 3, device);
     }
     catch (const std::exception& ex)
     {
@@ -241,7 +241,7 @@ bool VideoReader::seekToFrame(int frame_number)
     // Convert frame number to timestamp in seconds
     double timestamp = static_cast<double>(frame_number) / properties.fps;
     CELUX_INFO("Converted frame number {} to timestamp {} seconds", frame_number,
-                timestamp);
+               timestamp);
 
     bool success = seek(timestamp);
     if (success)
@@ -317,4 +317,34 @@ int VideoReader::length() const
 {
     CELUX_TRACE("length() called: Returning totalFrames = {}", properties.totalFrames);
     return properties.totalFrames;
+}
+
+torch::ScalarType VideoReader::findTypeFromBitDepth()
+{
+    int bit_depth = decoder->getBitDepth();
+    CELUX_INFO("Bit depth of video: {}", bit_depth);
+    torch::ScalarType torchDataType;
+    switch (bit_depth)
+    {
+    case 8:
+        CELUX_DEBUG("Setting tensor data type to torch::kUInt8");
+        torchDataType = torch::kUInt8;
+        break;
+    case 10:
+        CELUX_DEBUG("Setting tensor data type to torch::kUInt16");
+        torchDataType = torch::kUInt16;
+        break;
+    case 16:
+        CELUX_DEBUG("Setting tensor data type to torch::kUInt16");
+        torchDataType = torch::kUInt16;
+        break;
+    case 32:
+        CELUX_DEBUG("Setting tensor data type to torch::kUInt32");
+        torchDataType = torch::kUInt32;
+        break;
+    default:
+        CELUX_WARN("Unsupported bit depth: {}", bit_depth);
+        throw std::runtime_error("Unsupported bit depth: " + std::to_string(bit_depth));
+    }
+    return torchDataType;
 }

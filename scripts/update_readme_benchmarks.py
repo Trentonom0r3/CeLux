@@ -334,4 +334,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-#python scripts\update_readme_benchmarks.py benchmark_results.json README.md
+#python scripts\update_readme_benchmarks.py benchmark_results.json docs/BENCHMARKS.md

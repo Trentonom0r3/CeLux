@@ -7,6 +7,20 @@
 #include <torch/extension.h>
 namespace celux
 {
+#ifdef CUDA_ENABLED
+static cudaStream_t checkStream(std::optional<torch::Stream> stream)
+{
+    if (stream.has_value())
+    {
+        c10::cuda::CUDAStream cuda_stream(stream.value());
+        return cuda_stream.stream();
+    }
+    else
+    {
+        return c10::cuda::getStreamFromPool();
+    }
+}
+#endif
 
 /**
  * @brief Factory class to create Decoders, Encoders, and Converters based on backend
@@ -29,8 +43,8 @@ class Factory
     {
         if (device.is_cpu())
         {
-            return std::make_unique<celux::backends::cpu::Decoder>(
-                filename, std::nullopt);
+            return std::make_unique<celux::backends::cpu::Decoder>(filename,
+                                                                   std::nullopt);
         }
 #ifdef CUDA_ENABLED
         else if (device.is_cuda())
@@ -77,73 +91,102 @@ class Factory
         }
     }
 
-    /**
-     * @brief Creates an IConverter instance based on backend, conversion type, and data
-     * type.
-     *
-     * @param device Backend type (CPU or CUDA).
-     * @param type Conversion type (e.g., RGBToNV12).
-     * @param dtype Data type (UINT8, FLOAT16, FLOAT32).
-     * @return std::unique_ptr<IConverter> Pointer to the created Converter.
-     */
-static std::unique_ptr<celux::conversion::IConverter> createConverter(
-            torch::Device device, celux::ConversionType type,
-            std::optional<torch::Stream> stream){
-            // For CPU backend
-            if (device.is_cpu()){switch (type){
-                case celux::ConversionType::NV12ToRGB :
+// Type alias for the key used in the converter map
+    using ConverterKey = std::tuple<bool, int, AVPixelFormat>;
 
-                    return std::make_unique<celux::conversion::cpu::YUV420PToRGB>();
+    // Hash function for the ConverterKey to be used in unordered_map
+    struct ConverterKeyHash
+    {
+        std::size_t operator()(const ConverterKey& key) const
+        {
+            return std::hash<bool>()(std::get<0>(key)) ^
+                   std::hash<int>()(std::get<1>(key)) ^
+                   std::hash<int>()(static_cast<int>(std::get<2>(key)));
+        }
+    };
 
-    break;
-case celux::ConversionType::RGBToNV12:
+    // Factory function to retrieve the appropriate converter creator
+    static std::unique_ptr<celux::conversion::IConverter>
+    createConverter(const torch::Device& device, int bit_depth, AVPixelFormat pixfmt,
+                    const std::optional<torch::Stream>& stream = std::nullopt)
+    {
+        using namespace celux::conversion; // For IConverter
+        // Define whether the device is CPU (true) or CUDA (false)
+        bool is_cpu = device.is_cpu();
+        bool is_cuda = device.is_cuda();
 
-    return std::make_unique<celux::conversion::cpu::RGBToYUV420P>();
+        // Define the key based on device and pixel format
+        ConverterKey key = std::make_tuple(is_cpu, bit_depth, pixfmt);
 
-    break;
-default:
-    throw std::runtime_error("Unsupported conversion type for CPU backend");
-}
-}
-
+        // Define the factory map
+        static const std::unordered_map<ConverterKey,
+                                        std::function<std::unique_ptr<IConverter>(
+                                            const std::optional<torch::Stream>&)>,
+                                        ConverterKeyHash>
+            converterMap = {
+                // 8-bit CPU converters
+                {std::make_tuple(true, 8, AV_PIX_FMT_YUV420P),
+                 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                 {
+                     CELUX_DEBUG("Creating YUV420PToRGB converter");
+                     return std::make_unique<cpu::YUV420PToRGB>();
+                 }},
+                {std::make_tuple(true, 8, AV_PIX_FMT_RGB24),
+				 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+				 {
+					 CELUX_DEBUG("Creating RGB24ToRGB converter");
+					 return std::make_unique<cpu::RGBToYUV420P>();
+				 }},
+                // 10-bit CPU converters
+                {std::make_tuple(true, 10, AV_PIX_FMT_YUV420P10LE),
+                 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                 {
+                     CELUX_DEBUG("Creating YUV420P10ToRGB48 converter");
+                     return std::make_unique<cpu::YUV420P10ToRGB48>();
+                 }},
 #ifdef CUDA_ENABLED
-// For CUDA backend
-if (device.is_cuda())
-{
-    if (!stream.has_value())
-    {
-        CELUX_DEBUG("Creating CUDA stream for converter\n");
-        stream = c10::cuda::getStreamFromPool(true);
+                // 8-bit CUDA converters
+                {std::make_tuple(false, 8, AV_PIX_FMT_NV12),
+                 [](const std::optional<torch::Stream>& stream)
+                     -> std::unique_ptr<IConverter>
+                 {
+                     CELUX_DEBUG("Creating NV12ToRGB converter");
+                     return std::make_unique<gpu::cuda::NV12ToRGB>(checkStream(stream));
+                 }},
+                {std::make_tuple(false, 8, AV_PIX_FMT_RGB24),
+				 [](const std::optional<torch::Stream>& stream)
+					 -> std::unique_ptr<IConverter>
+				 {
+					 CELUX_DEBUG("Creating RGB24ToRGB converter");
+					 return std::make_unique<gpu::cuda::RGBToYUV420P>(checkStream(stream));
+				 }},
+                // 10-bit CUDA converters
+                {std::make_tuple(false, 10, AV_PIX_FMT_P010LE),
+                 [](const std::optional<torch::Stream>& stream) -> std::unique_ptr<IConverter>
+                 {
+                     CELUX_DEBUG("Creating P010LEToRGB48LE converter");
+                     // Uncomment and implement the converter when ready
+                     return std::make_unique<gpu::cuda::P010LEToRGB>(
+                         checkStream(stream));
+                 }},
+#endif
+            };
+
+        // Search for the converter in the map
+        auto it = converterMap.find(key);
+        if (it != converterMap.end())
+        {
+            return it->second(stream);
+        }
+
+        // If not found, throw an exception with detailed information
+        std::string deviceType = is_cpu ? "CPU" : (is_cuda ? "CUDA" : "Unknown");
+        throw std::invalid_argument(
+            "Unsupported combination - Device: " + deviceType +
+            ", Bit Depth: " + std::to_string(bit_depth) +
+            ", Pixel Format: " + av_get_pix_fmt_name(pixfmt));
     }
-    // make a cuda stream
-    c10::cuda::CUDAStream cStream(stream.value());
-    switch (type)
-    {
-
-    case celux::ConversionType::RGBToNV12:
-
-        return std::make_unique<celux::conversion::gpu::cuda::RGBToYUV420P>(
-            cStream.stream());
-
-        break;
-
-    case celux::ConversionType::NV12ToRGB:
-
-        return std::make_unique<celux::conversion::gpu::cuda::NV12ToRGB>(
-            cStream.stream());
-
-        break;
-
-    default:
-        throw std::runtime_error("Unsupported conversion type for CUDA backend");
-    }
-}
-#endif // CUDA_ENABLED
-
-throw std::runtime_error("Unsupported backend or data type");
-}
-}
-;
+    }; // class Factory
 
 } // namespace celux
 

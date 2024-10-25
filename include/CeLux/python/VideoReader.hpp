@@ -4,7 +4,7 @@
 #define VIDEOREADER_HPP
 
 #include "Factory.hpp"
-
+#include <python/VideoWriter.hpp>
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
 
@@ -19,7 +19,8 @@ class VideoReader
      * @brief Destructor for VideoReader.
      */
     ~VideoReader();
-
+    VideoWriter* writerFromReader(const std::string& filePath,
+								  std::optional<torch::Stream> stream = std::nullopt);
     /**
      * @brief Read a frame from the video.
      *
@@ -91,7 +92,7 @@ class VideoReader
 
   private:
     bool seekToFrame(int frame_number);
-
+    torch::ScalarType findTypeFromBitDepth();
     /**
      * @brief Close the video reader and release resources.
      */
