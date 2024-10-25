@@ -30,6 +30,21 @@ The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (li
 - **🖥️ Hardware Acceleration Support:** Utilize CUDA for GPU-accelerated decoding, significantly improving performance.
 - **🔄 Easy Integration:** Seamlessly integrates with existing Python workflows, making it easy to incorporate into your projects.
 
+## ⚡ Quick Start
+
+```sh
+pip install celux  # cpu only version
+```
+```sh
+pip install celux-cuda  # cuda+cpu
+```
+```py
+from celux import VideoReader, VideoWriter
+#import celux as cx
+reader = VideoReader("/path/to/video.EXT", device = "cuda")
+writer = VideoWriter("/path/to/output.ext", 1920, 1080, 23.97, device = "cpu")
+```
+
 ## 📄 License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for details.
