@@ -1,12 +1,50 @@
-
 ## 📈 Changelog
 
-### Version 0.4.1 (2024-10-24)
-  - Refactor slightly, move `tests/python` into `tests`.
-  - Added new test to download videos of various bitdepth and codec types.
-  - Added new dictionary options to `VideoReader.get_properties()`;
+### Version 0.4.2 (2024-10-28)
+- **Focus on `VideoReader`**:
+  - Removed `VideoWriter` to streamline the library and enhance focus on reading capabilities.
+  - Fixed call method of `VideoReader`, now properly seeks frames.
+  
+- **New Features**:
+  - Added `__getitem__` method to `VideoReader` for easier access to properties, allowing users to retrieve metadata using dictionary-like syntax (e.g., `reader['width']`).
+  - Expanded `VideoReader.get_properties()` to include new metadata properties:
     - `codec`: **The name of the codec being used.**
     - `bit_depth`: **The bit-depth of the video.**
+    - `has_audio`: **Indicates whether the video contains an audio track.**
+    - `audio_bitrate`: **Bitrate of the audio stream.**
+    - `audio_channels`: **Number of audio channels.**
+    - `audio_sample_rate`: **Sample rate of the audio stream.**
+    - `audio_codec`: **Codec used for audio.**
+    - `min_fps`: **Minimum frames per second of the video.**
+    - `max_fps`: **Maximum frames per second of the video.**
+    - `aspect_ratio`: **Aspect ratio of the video.**
+    
+- **New Converter Formats**:
+  - Completed the implementation of the following converters to support new video formats:
+    - YUV420P to RGB
+    - YUV420P10LE to RGB48
+    - BGR to RGB
+    - RGB to RGB
+    - P010LE to RGB48
+
+- **Supported Codecs**:
+  - The following codecs can be worked with using the `VideoReader`, based on supported pixel formats:
+    - **H.264 (AVC)**: YUV420P, YUV420P10LE
+    - **H.265 (HEVC)**: YUV420P, YUV420P10LE
+    - **VP8/VP9**: YUV420P, YUV420P10LE
+    - **AV1**: YUV420P, YUV420P10LE
+    - **MPEG-2**: YUV420P
+    - **ProRes**: YUV420P, YUV422, YUV444
+    - **DNxHD/DNxHR**: YUV422, YUV444
+    - **DV (Digital Video)**: YUV420P
+    - **Uncompressed RGB**: RGB, BGR
+    - **P010LE**: P010LE
+
+- **Testing Improvements**:
+  - Updated tests to ensure compatibility with various bit-depths and codec types.
+  - Added tests to verify the correct functionality of the new features and converters.
+
+
 ### Version 0.4.0 (2024-10-23)
   - Moved to `FFmpeg` static libraries!
     - Startup times are improved. All libs that can be static, are static. 

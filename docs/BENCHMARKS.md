@@ -20,9 +20,8 @@
 
 | Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|---------------|------------|--------|
-| Test Video Reader Cpu Benchmark | 7.70          | 0.05       | 1859.41 |
-| Test Video Reader Cuda Benchmark | 7.91          | 0.02       | 1809.11 |
-| Test Video Writer Benchmark | 33.15          | 0.61       | 431.88 |
+| Test Video Reader Cpu Benchmark | 7.82          | 0.11       | 1830.20 |
+| Test Video Reader Cuda Benchmark | 8.31          | 0.86       | 1722.14 |
 
 
 ### 📊 **Benchmark Visualizations**

@@ -1,5 +1,4 @@
 {
-    "test_video_reader_cpu_benchmark": 14315.0,
-    "test_video_reader_cuda_benchmark": 14315.0,
-    "test_video_writer_benchmark": 14315.0
+    "test_video_reader_cpu_benchmark": 14315,
+    "test_video_reader_cuda_benchmark": 14315
 }

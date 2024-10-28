@@ -3,7 +3,6 @@
 #define FACTORY_HPP
 
 #include <Decoders.hpp>
-#include <Encoders.hpp> // Assuming you have header files that declare Encoder classes
 #include <torch/extension.h>
 
 using ConverterKey = std::tuple<bool, AVPixelFormat>;
@@ -73,42 +72,6 @@ class Factory
     }
 
     /**
-     * @brief Creates an Encoder instance based on the specified backend.
-     *
-     * @param device Device type (CPU or CUDA).
-     * @param filename Path to the output video file.
-     * @param width Width of the video frame.
-     * @param height Height of the video frame.
-     * @param fps Frames per second.
-     * @param format Encoding format.
-     * @param codecName Name of the codec.
-     * @param stream Optional stream for CUDA operations.
-     * @return std::unique_ptr<Encoder> Pointer to the created Encoder.
-     */
-    static std::unique_ptr<Encoder>
-    createEncoder(torch::Device device, const std::string& filename, int width,
-                  int height, double fps, celux::EncodingFormats format,
-                  const std::string& codecName, std::optional<torch::Stream> stream)
-    {
-        if (device.is_cpu())
-        {
-            return std::make_unique<celux::backends::cpu::Encoder>(
-                filename, width, height, fps, format, codecName, stream);
-        }
-#ifdef CUDA_ENABLED
-        else if (device.is_cuda())
-        {
-            return std::make_unique<celux::backends::gpu::cuda::Encoder>(
-                filename, width, height, fps, format, codecName, stream);
-        }
-#endif // CUDA_ENABLED
-        else
-        {
-            throw std::invalid_argument("Unsupported backend: " + device.str());
-        }
-    }
-
-    /**
      * @brief Creates a Converter instance based on the specified backend and pixel
      * format.
      *
@@ -147,25 +110,29 @@ class Factory
                      CELUX_DEBUG("Creating YUV420PToRGB converter");
                      return std::make_unique<cpu::YUV420PToRGB>();
                  }},
-                {std::make_tuple(true, AV_PIX_FMT_RGB24),
-                 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
-                 {
-                     CELUX_DEBUG("Creating RGB24ToYUV420P converter");
-                     return std::make_unique<cpu::RGBToYUV420P>();
-                 }},
+
                 {std::make_tuple(true, AV_PIX_FMT_YUV420P10LE),
                  [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
                  {
                      CELUX_DEBUG("Creating YUV420P10LEToRGB48 converter");
                      return std::make_unique<cpu::YUV420P10ToRGB48>();
                  }},
-                // rgb48LE
-                {std::make_tuple(true, AV_PIX_FMT_RGB48LE),
+
+                // bgr24
+                {std::make_tuple(true, AV_PIX_FMT_BGR24),
                  [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
                  {
-                     CELUX_DEBUG("Creating RGB48ToYUV420P10LE converter");
-                     return std::make_unique<cpu::RGB48ToYUV420P10>();
+                     CELUX_DEBUG("Creating BGR24ToRGB converter");
+                     return std::make_unique<cpu::BGRToRGB>();
                  }},
+                //rgb24
+                {std::make_tuple(true, AV_PIX_FMT_RGB24),
+                         [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                         {
+					 CELUX_DEBUG("Creating RGB24ToRGB converter");
+					 return std::make_unique<cpu::RGBToRGB>();
+				 }},
+
 #ifdef CUDA_ENABLED
                 // CUDA converters
                 {std::make_tuple(false, AV_PIX_FMT_NV12),
@@ -175,14 +142,7 @@ class Factory
                      CELUX_DEBUG("Creating NV12ToRGB converter");
                      return std::make_unique<gpu::cuda::NV12ToRGB>(checkStream(stream));
                  }},
-                {std::make_tuple(false, AV_PIX_FMT_RGB24),
-                 [](const std::optional<torch::Stream>& stream)
-                     -> std::unique_ptr<IConverter>
-                 {
-                     CELUX_DEBUG("Creating RGB24ToYUV420P converter");
-                     return std::make_unique<gpu::cuda::RGBToYUV420P>(
-                         checkStream(stream));
-                 }},
+
                 {std::make_tuple(false, AV_PIX_FMT_P010LE),
                  [](const std::optional<torch::Stream>& stream)
                      -> std::unique_ptr<IConverter>
@@ -192,15 +152,7 @@ class Factory
                      return std::make_unique<gpu::cuda::P010LEToRGB>(
                          checkStream(stream));
                  }},
-                {std::make_tuple(false, AV_PIX_FMT_RGB48LE),
-                 [](const std::optional<torch::Stream>& stream)
-                     -> std::unique_ptr<IConverter>
-                 {
-                     CELUX_DEBUG("Creating RGB48LEToP010LE converter");
-                     // Uncomment and implement the converter when ready
-                     return std::make_unique<gpu::cuda::RGBToP010LE>(
-                         checkStream(stream));
-                 }},
+
 #endif
             };
 
@@ -227,6 +179,7 @@ class Factory
         case AV_PIX_FMT_YUV420P:
         case AV_PIX_FMT_RGB24:
         case AV_PIX_FMT_NV12:
+        case AV_PIX_FMT_BGR24:
             return 8;
         case AV_PIX_FMT_YUV420P10LE:
         case AV_PIX_FMT_P010LE:

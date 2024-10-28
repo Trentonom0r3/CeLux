@@ -59,6 +59,7 @@ def extract_system_specs(machine_info):
     cpu_info = machine_info.get('cpu', {})
     specs_md += f"| **CPU Brand**         | {cpu_info.get('brand_raw', 'N/A')} |\n"
     specs_md += f"| **CPU Frequency**     | {cpu_info.get('hz_actual_friendly', 'N/A')} |\n"
+    
     # Handle cases where cache sizes might not be integers
     l2_cache = cpu_info.get('l2_cache_size', None)
     l3_cache = cpu_info.get('l3_cache_size', None)

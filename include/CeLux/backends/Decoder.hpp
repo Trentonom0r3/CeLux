@@ -13,20 +13,28 @@ class Decoder
   public:
     struct VideoProperties
     {
+        std::string codec;
         int width;
         int height;
         double fps;
         double duration;
-        double totalFrames;
+        int totalFrames;
         AVPixelFormat pixelFormat;
         bool hasAudio;
         int bitDepth;
-        std::string codec;
+        double aspectRatio;     // New property
+        int audioBitrate;       // New property
+        int audioChannels;      // New property
+        int audioSampleRate;    // New property
+        std::string audioCodec; // New property
+        double min_fps;         // New property for minimum fps
+        double max_fps;         // New property for maximum fps
     };
+
     Decoder() = default;
     // Constructor
     Decoder(std::optional<torch::Stream> stream);
-
+    bool seekToNearestKeyframe(double timestamp);
     // Destructor
     virtual ~Decoder();
 

@@ -1,5 +1,4 @@
 #include "Python/VideoReader.hpp"
-#include "Python/VideoWriter.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -20,6 +19,7 @@ PYBIND11_MODULE(celux, m)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)
         .def("get_properties", &VideoReader::getProperties)
+        .def("__getitem__", &VideoReader::operator[])
         .def("__len__", &VideoReader::length)
         .def(
             "__iter__", [](VideoReader& self) -> VideoReader& { return self.iter(); },
@@ -60,44 +60,7 @@ PYBIND11_MODULE(celux, m)
             },
             py::return_value_policy::reference_internal);
 
-    py::enum_<celux::EncodingFormats>(m, "pixfmt")
-        .value("YUV420P", celux::EncodingFormats::YUV420P)
-        .value("YUV420P10LE", celux::EncodingFormats::YUV420P10LE)
-        .value("P010LE", celux::EncodingFormats::P010LE)
-        .export_values();
 
-    py::enum_<celux::SupportedCodecs>(m, "codec")
-        .value("H264", celux::SupportedCodecs::H264)
-        .value("H265", celux::SupportedCodecs::H265)
-        .value("H264_CUDA", celux::SupportedCodecs::H264_CUDA)
-        .value("H265_CUDA", celux::SupportedCodecs::H265_CUDA)
-        .export_values();
-    // VideoWriter bindings
-    py::class_<VideoWriter>(m, "VideoWriter")
-        .def(py::init<const std::string&, int, int, float, const std::string&,
-                      celux::EncodingFormats, celux::SupportedCodecs,
-                      std::optional<torch::Stream>>(),
-             py::arg("file_path"), py::arg("width"), py::arg("height"), py::arg("fps"),
-             py::arg("device") = "cuda",
-             py::arg("format") =
-                 celux::EncodingFormats::YUV420P, // 8 bit sw format -- requires input
-                                                  // to be in Uint8, rgb24
-             py::arg("codec") = celux::SupportedCodecs::H264,
-
-             py::arg("stream") = std::nullopt)
-        .def("write_frame", &VideoWriter::writeFrame, py::arg("frame"))
-        .def("supported_codecs", &VideoWriter::supportedCodecs)
-        .def("__call__", &VideoWriter::writeFrame, py::arg("frame"))
-        .def(
-            "__enter__", [](VideoWriter& self) -> VideoWriter& { return self; },
-            py::return_value_policy::reference_internal)
-        .def("__exit__",
-             [](VideoWriter& self, py::object exc_type, py::object exc_value,
-                py::object traceback)
-             {
-                 self.close();
-                 return false;
-             });
     py::enum_<spdlog::level::level_enum>(m, "LogLevel")
         .value("trace", spdlog::level::trace)
         .value("debug", spdlog::level::debug)

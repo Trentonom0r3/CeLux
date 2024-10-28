@@ -6,6 +6,7 @@ It provides real-time visual confirmation of frames using OpenCV and can write o
 import time
 import argparse
 import logging
+import numpy as np
 import requests
 import sys
 import os
@@ -16,7 +17,7 @@ import torch  # For visual confirmation
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import celux_cuda as celux
 
-celux.set_log_level(celux.LogLevel.info)
+celux.set_log_level(celux.LogLevel.debug)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -54,7 +55,7 @@ def process_frame(frame):
     frame.mul_(1)
     return frame
 
-def process_video_with_visualization(video_path, output_path=None):
+def process_video_with_visualization(video_path):
     """
     Processes the video, showing frames in real-time and optionally writing to output.
 
@@ -66,23 +67,17 @@ def process_video_with_visualization(video_path, output_path=None):
         frame_count = 0
         start = time.time()
         STREAM = torch.cuda.Stream()
-        WRITESTREAM = torch.cuda.Stream()
-        with celux.VideoReader(video_path, device = "cuda")([0,30]) as reader:
-            writer = None
-            #print(reader.get_properties()["total_frames"])
-            if output_path:
-                writer = celux.VideoWriter(output_path, reader.get_properties()["width"],
-                                           reader.get_properties()["height"], reader.get_properties()["fps"],
-                                           device = "cuda", format = celux.pixelFormat.P010LE, 
-                                           codec = celux.codec.H265_CUDA)
-                
-
-            for frame in reader:
-                if writer:
-                   # process_frame(frame)
-                    writer(frame)
+    
+        with celux.VideoReader(video_path, device = "cuda")as reader:
+            for i, frame in enumerate(reader):
+                if frame_count == 0:
+                    logging.info(
+                        f"Frame data: {frame.shape, frame.dtype, frame.device}"
+                    )
+                    
+             
                 frame_cpu = frame.cpu().numpy()
-                # Display the frame using OpenCV
+
                 cv2.imshow("Video Frame", frame_cpu)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     logging.info("Stopping early - 'q' pressed.")
@@ -105,7 +100,7 @@ def process_video_with_visualization(video_path, output_path=None):
 def main(args):
     if args.mode == "lite":
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        video_path = os.path.join(os.getcwd(), "tests", "data", "HD_HEVC_10BIT.mkv")
+        video_path = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
     else:
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
         video_path = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
@@ -115,9 +110,9 @@ def main(args):
     else:
         logging.info(f"Video already exists at {video_path}")
 
-    output_path = "./output.mp4" if args.save_output else None
+
     logging.info("Processing video with visualization")
-    process_video_with_visualization(video_path, output_path)
+    process_video_with_visualization(video_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Video processing script with visualization and optional output saving.")
@@ -127,12 +122,6 @@ if __name__ == "__main__":
         default="lite",
         choices=["lite", "full"],
         help="Choose 'lite' for GitHub Actions testing or 'full' for local testing."
-    )
-    parser.add_argument(
-        "--save-output",
-        default=True,
-        action="store_true",
-        help="Enable this flag to save the processed video to an output file."
     )
     args = parser.parse_args()
 

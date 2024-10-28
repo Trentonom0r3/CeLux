@@ -98,27 +98,36 @@ def getMetadataCeLux(videoPath):
     """
     Get metadata from the video file using CeLux.
     """
-
+    logging.info("Opening video with CeLux...")
+    
+    # Create a VideoReader instance
     video = celux.VideoReader(videoPath)
 
-    metadata = video.get_properties()
-
+    # Access metadata using get_properties method
+    metadata = video.get_properties()  # Make sure your method is correctly named
+    logging.info("CeLux Metadata:")
+    logging.info(metadata)
     logging.info("CeLux Metadata:")
     logging.info(f"Total Frames: {metadata['total_frames']}")
     logging.info(f"Width: {metadata['width']}")
     logging.info(f"Height: {metadata['height']}")
-    # logging.info(f"Channels: {metadata['channels']}")
     logging.info(f"FPS: {metadata['fps']}")
     logging.info(f"Duration: {metadata['duration']}")
     logging.info(f"Pixel Format: {metadata['pixel_format']}")
     
-
-    return metadata
+    # Access metadata using the __getitem__ operator
+    logging.info("Accessing metadata using __getitem__:")
+    logging.info(f"Total Frames (getitem): {video['total_frames']}")
+    logging.info(f"Width (getitem): {video['width']}")
+    logging.info(f"Height (getitem): {video['height']}")
+    logging.info(f"FPS (getitem): {video['fps']}")
+    logging.info(f"Duration (getitem): {video['duration']}")
+    logging.info(f"Pixel Format (getitem): {video['pixel_format']}")
 
 
 if __name__ == "__main__":
     videoUrl = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-    videoPath = r"C:\Users\tjerf\source\repos\CeLux\h264_8bit.mp4"
+    videoPath = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
 
     if not os.path.exists(videoPath):
         downloadVideo(videoUrl, videoPath)

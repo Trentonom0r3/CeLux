@@ -51,13 +51,18 @@ Decoder& Decoder::operator=(Decoder&& other) noexcept
     }
     return *this;
 }
+
 void Decoder::setProperties()
 {
     // Set basic video properties
     properties.codec = codecCtx->codec->name;
     properties.width = codecCtx->width;
     properties.height = codecCtx->height;
+
+    // Frame rate calculation
     properties.fps = av_q2d(formatCtx->streams[videoStreamIndex]->avg_frame_rate);
+    properties.min_fps = properties.fps; // Initialize min fps
+    properties.max_fps = properties.fps; // Initialize max fps
 
     // Ensure duration is calculated properly
     if (formatCtx->streams[videoStreamIndex]->duration != AV_NOPTS_VALUE)
@@ -68,7 +73,6 @@ void Decoder::setProperties()
     }
     else if (formatCtx->duration != AV_NOPTS_VALUE)
     {
-        // Fallback to format context duration if stream duration is unavailable
         properties.duration = static_cast<double>(formatCtx->duration) / AV_TIME_BASE;
     }
     else
@@ -76,11 +80,26 @@ void Decoder::setProperties()
         properties.duration = 0.0; // Unknown duration
     }
 
-    // Set pixel format, bit depth, and audio properties
+    // Set pixel format and bit depth
     properties.pixelFormat = isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt;
-    properties.hasAudio = (formatCtx->streams[videoStreamIndex]->codecpar->codec_type ==
-                           AVMEDIA_TYPE_AUDIO);
     properties.bitDepth = getBitDepth();
+
+    // Check for audio stream
+    properties.hasAudio = false; // Initialize as false
+    for (int i = 0; i < formatCtx->nb_streams; ++i)
+    {
+        if (formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+        {
+            properties.hasAudio = true; // Set to true if an audio stream is found
+            properties.audioBitrate = formatCtx->streams[i]->codecpar->bit_rate;
+            properties.audioChannels = 
+                formatCtx->streams[i]->codecpar->ch_layout.nb_channels;
+            properties.audioSampleRate = formatCtx->streams[i]->codecpar->sample_rate;
+            properties.audioCodec =
+                avcodec_get_name(formatCtx->streams[i]->codecpar->codec_id);
+            break; // Stop after finding the first audio stream
+        }
+    }
 
     // Calculate total frames
     if (formatCtx->streams[videoStreamIndex]->nb_frames > 0)
@@ -96,15 +115,28 @@ void Decoder::setProperties()
         properties.totalFrames = 0; // Unknown total frames
     }
 
-    // Set time base for codec context
-    codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
+    // Calculate aspect ratio
+    if (properties.width > 0 && properties.height > 0)
+    {
+        properties.aspectRatio =
+            static_cast<double>(properties.width) / properties.height;
+    }
+    else
+    {
+        properties.aspectRatio = 0.0; // Unknown aspect ratio
+    }
 
     // Log the video properties
     CELUX_INFO(
-        "Video properties: width={}, height={}, fps={}, duration={}, totalFrames={}",
+        "Video properties: width={}, height={}, fps={}, duration={}, totalFrames={}, "
+        "audioBitrate={}, audioChannels={}, audioSampleRate={}, audioCodec={}, "
+        "aspectRatio={}",
         properties.width, properties.height, properties.fps, properties.duration,
-        properties.totalFrames);
+        properties.totalFrames, properties.audioBitrate, properties.audioChannels,
+        properties.audioSampleRate, properties.audioCodec, properties.aspectRatio);
 }
+
+
 
 void Decoder::initialize(const std::string& filePath)
 {
@@ -224,7 +256,7 @@ void Decoder::initCodecContext()
     CELUX_DEBUG("BASE DECODER: Codec context threading configured: thread_count={}, "
                 "thread_type={}",
                 codecCtx->thread_count, codecCtx->thread_type);
-
+    codecCtx->time_base = formatCtx->streams[videoStreamIndex]->time_base;
     // Open codec
     FF_CHECK_MSG(avcodec_open2(codecCtx.get(), codec, nullptr),
                  std::string("Failed to open codec:"));
@@ -316,8 +348,9 @@ bool Decoder::seek(double timestamp)
     }
 
     int64_t ts = convertTimestamp(timestamp);
-    int ret =
-        av_seek_frame(formatCtx.get(), videoStreamIndex, ts, AVSEEK_FLAG_BACKWARD);
+    CELUX_DEBUG("Converted timestamp for seeking: {}", ts);
+    int ret = av_seek_frame(formatCtx.get(), videoStreamIndex, ts,
+                            AVSEEK_FLAG_BACKWARD);
     if (ret < 0)
     {
         CELUX_ERROR("Seek failed to timestamp: {}", timestamp);
@@ -330,6 +363,7 @@ bool Decoder::seek(double timestamp)
 
     return true;
 }
+
 
 Decoder::VideoProperties Decoder::getVideoProperties() const
 {
@@ -456,5 +490,34 @@ void Decoder::set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth)
         CELUX_TRACE("Using CPU. Software pixel format will be set by Decoder");
     }
 }
+
+bool Decoder::seekToNearestKeyframe(double timestamp)
+{
+    CELUX_TRACE("Seeking to the nearest keyframe for timestamp: {}", timestamp);
+    if (timestamp < 0 || timestamp > properties.duration)
+    {
+        CELUX_WARN("Timestamp out of bounds: {}", timestamp);
+        return false;
+    }
+
+    int64_t ts = convertTimestamp(timestamp);
+    CELUX_DEBUG("Converted timestamp for keyframe seeking: {}", ts);
+
+    // Perform seek operation to the nearest keyframe before the timestamp
+    int ret =
+        av_seek_frame(formatCtx.get(), videoStreamIndex, ts, AVSEEK_FLAG_BACKWARD);
+    if (ret < 0)
+    {
+        CELUX_ERROR("Keyframe seek failed for timestamp: {}", timestamp);
+        return false;
+    }
+
+    // Flush codec buffers to reset decoding from the keyframe
+    avcodec_flush_buffers(codecCtx.get());
+    CELUX_TRACE("Keyframe seek successful, codec buffers flushed");
+
+    return true;
+}
+
 
 } // namespace celux

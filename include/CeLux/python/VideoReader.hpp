@@ -4,7 +4,6 @@
 #define VIDEOREADER_HPP
 
 #include "Factory.hpp"
-#include <python/VideoWriter.hpp>
 #include <pybind11/pybind11.h>
 namespace py = pybind11;
 
@@ -14,7 +13,7 @@ class VideoReader
     VideoReader(const std::string& filePath, const std::string& device = "cuda",
             
                 std::optional<torch::Stream> stream = std::nullopt);
-
+    py::object operator[](const std::string& key) const; // overload operator []
     /**
      * @brief Destructor for VideoReader.
      */
