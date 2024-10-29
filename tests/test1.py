@@ -12,12 +12,11 @@ import sys
 import os
 import cv2
 import torch  # For visual confirmation
-
 # Adjust the path to include celux
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import celux_cuda as celux
 
-celux.set_log_level(celux.LogLevel.debug)
+celux.set_log_level(celux.LogLevel.off)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -68,7 +67,7 @@ def process_video_with_visualization(video_path):
         start = time.time()
         STREAM = torch.cuda.Stream()
     
-        with celux.VideoReader(video_path, device = "cuda")as reader:
+        with celux.VideoReader(video_path, device = "cpu", num_threads = 20)as reader:
             for i, frame in enumerate(reader):
                 if frame_count == 0:
                     logging.info(
@@ -78,10 +77,9 @@ def process_video_with_visualization(video_path):
              
                 frame_cpu = frame.cpu().numpy()
 
-                cv2.imshow("Video Frame", frame_cpu)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    logging.info("Stopping early - 'q' pressed.")
-                    break
+                #cv2.imshow("Video Frame", frame_cpu)
+               #if cv2.waitKey(1) & 0xFF == ord('q'):
+                    ## break
             
                 frame_count += 1
 
@@ -119,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode",
         type=str,
-        default="lite",
+        default="full",
         choices=["lite", "full"],
         help="Choose 'lite' for GitHub Actions testing or 'full' for local testing."
     )

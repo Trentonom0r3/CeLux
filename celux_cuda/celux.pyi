@@ -1,7 +1,9 @@
+from concurrent.futures import thread
 from typing import List, Optional, Any, Union, Tuple
 import torch
 from enum import Enum
-        
+import os
+
 class LogLevel(Enum):
     trace = 0
     debug = 1
@@ -21,7 +23,7 @@ def set_log_level(level: LogLevel) -> None:
     ...
 
 class VideoReader:
-    def __init__(self, input_path: str, device: str = "cuda",
+    def __init__(self, input_path: str, num_threads: int = os.cpu_count() / 2, device: str = "cuda",
 stream : torch.Stream = None) -> None:
         """
         Initialize the VideoReader object.
@@ -95,14 +97,21 @@ stream : torch.Stream = None) -> None:
             - width: Width of the video.
             - height: Height of the video.
             - fps: Frames per second of the video.
+            - min_fps: Minimum frames per second of the video.
+            - max_fps: Maximum frames per second of the video.
             - duration: Duration of the video in seconds.
             - total_frames: Total number of frames in the video.
-            - codec: Codec used for the video.
             - pixel_format: Pixel format of the video.
+            - has_audio: Whether the video has audio.
+            - audio_bitrate: Audio bitrate of the video.
+            - audio_channels: Number of audio channels.
+            - audio_sample_rate: Audio sample rate.
+            - audio_codec: Audio codec.
             - bit_depth: Bit depth of the video.
+            - aspect_ratio: Aspect ratio of the video.
+            - codec: Video codec.
         """
         ...
-
     def __len__(self) -> int:
         """
         Get the total number of frames in the video.

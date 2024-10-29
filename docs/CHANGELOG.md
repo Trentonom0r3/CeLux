@@ -1,10 +1,16 @@
 ## 📈 Changelog
 
+### Version 0.4.3 (2024-10-29)
+- **New Features**:
+  - Added `num_threads` arg to control decoder threads internally used. 
+  - Fixed `VideoReader()` calls, now properly sets frame range.
+  - *Potentially* fixed issue with cuda synchronizations. 
+
 ### Version 0.4.2 (2024-10-28)
 - **Focus on `VideoReader`**:
   - Removed `VideoWriter` to streamline the library and enhance focus on reading capabilities.
   - Fixed call method of `VideoReader`, now properly seeks frames.
-  
+
 - **New Features**:
   - Added `__getitem__` method to `VideoReader` for easier access to properties, allowing users to retrieve metadata using dictionary-like syntax (e.g., `reader['width']`).
   - Expanded `VideoReader.get_properties()` to include new metadata properties:

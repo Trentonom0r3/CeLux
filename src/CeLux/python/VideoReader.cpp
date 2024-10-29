@@ -6,12 +6,17 @@
 
 namespace py = pybind11;
 
-VideoReader::VideoReader(const std::string& filePath, const std::string& device,
+VideoReader::VideoReader(const std::string& filePath, int numThreads,
+                         const std::string& device, 
                          std::optional<torch::Stream> stream)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1)
 {
     CELUX_INFO("VideoReader constructor called with filePath: {}", filePath);
     CELUX_INFO("Device: {}", device);
+    if (numThreads > std::thread::hardware_concurrency())
+    {
+        throw std::invalid_argument("Number of threads cannot exceed hardware concurrency");
+	}
 
     try
     {
@@ -49,7 +54,8 @@ VideoReader::VideoReader(const std::string& filePath, const std::string& device,
             throw std::invalid_argument("Unsupported device: " + device);
         }
 
-        decoder = celux::Factory::createDecoder(torchDevice, filePath, stream);
+        decoder =
+            celux::Factory::createDecoder(torchDevice, filePath, numThreads, stream);
         CELUX_INFO("Decoder created successfully");
 
         torch::Dtype torchDataType;

@@ -3,7 +3,7 @@ import subprocess
 import shutil
 
 # Hardcoded version for both CPU and CUDA builds
-VERSION = "0.4.2"
+VERSION = "0.4.3"
 
 def build_package(is_cuda=False):
     """
@@ -32,7 +32,13 @@ def build_package(is_cuda=False):
     # Copy setup file and other necessary files
     shutil.copy(setup_file, temp_build_dir)
     shutil.copy("README.md", temp_build_dir)
-
+    shutil.copy("./docs/BENCHMARKS.md", temp_build_dir)
+    shutil.copy("./docs/CHANGELOG.md", temp_build_dir)
+    shutil.copy("./docs/CONTRIBUTING.md", temp_build_dir)
+    shutil.copy("./docs/FAQ.md", temp_build_dir)
+    shutil.copy("./docs/GETTINGSTARTED.md", temp_build_dir)
+    shutil.copy("./docs/INSTALLATION.md", temp_build_dir)
+    
     # Change to temporary build directory
     os.chdir(temp_build_dir)
 

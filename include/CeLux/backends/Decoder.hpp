@@ -33,7 +33,7 @@ class Decoder
 
     Decoder() = default;
     // Constructor
-    Decoder(std::optional<torch::Stream> stream);
+    Decoder(std::optional<torch::Stream> stream, int numThreads);
     bool seekToNearestKeyframe(double timestamp);
     // Destructor
     virtual ~Decoder();
@@ -121,5 +121,6 @@ class Decoder
     AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
     AVBufferRefPtr hwFramesCtx; // For hardware acceleration
     std::optional<torch::Stream> decoderStream;
+    int numThreads;
 };
 } // namespace celux

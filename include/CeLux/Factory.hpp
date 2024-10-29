@@ -50,19 +50,17 @@ class Factory
      * @return std::unique_ptr<Decoder> Pointer to the created Decoder.
      */
     static std::unique_ptr<Decoder> createDecoder(torch::Device device,
-                                                  const std::string& filename,
+                                                  const std::string& filename, int numThreads,
                                                   std::optional<torch::Stream> stream)
     {
         if (device.is_cpu())
         {
-            return std::make_unique<celux::backends::cpu::Decoder>(filename,
-                                                                   std::nullopt);
+            return std::make_unique<celux::backends::cpu::Decoder>(filename, std::nullopt, numThreads);
         }
 #ifdef CUDA_ENABLED
         else if (device.is_cuda())
         {
-            return std::make_unique<celux::backends::gpu::cuda::Decoder>(filename,
-                                                                         stream);
+            return std::make_unique<celux::backends::gpu::cuda::Decoder>(filename, stream, numThreads);
         }
 #endif // CUDA_ENABLED
         else

@@ -10,9 +10,12 @@ namespace py = pybind11;
 class VideoReader
 {
   public:
-    VideoReader(const std::string& filePath, const std::string& device = "cuda",
-            
+    VideoReader(const std::string& filePath,
+                int numThreads = static_cast<int>(std::thread::hardware_concurrency() / 2),
+                const std::string& device = "cuda",
+                
                 std::optional<torch::Stream> stream = std::nullopt);
+
     py::object operator[](const std::string& key) const; // overload operator []
     /**
      * @brief Destructor for VideoReader.

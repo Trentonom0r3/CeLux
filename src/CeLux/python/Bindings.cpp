@@ -10,10 +10,12 @@ PYBIND11_MODULE(celux, m)
     // VideoReader bindings
 
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, const std::string&,
+        .def(py::init<const std::string&, int, const std::string&,
                       std::optional<torch::Stream>>(),
-             py::arg("input_path"), py::arg("device") = "cuda",
-             py::arg("stream") = std::nullopt,
+             py::arg("input_path"),
+             py::arg("num_threads") =
+                 static_cast<int>(std::thread::hardware_concurrency() / 2),
+             py::arg("device") = "cuda", py::arg("stream") = std::nullopt,
              "Initialize a VideoReader with optional CUDA stream")
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
@@ -59,7 +61,6 @@ PYBIND11_MODULE(celux, m)
                 return self;
             },
             py::return_value_policy::reference_internal);
-
 
     py::enum_<spdlog::level::level_enum>(m, "LogLevel")
         .value("trace", spdlog::level::trace)

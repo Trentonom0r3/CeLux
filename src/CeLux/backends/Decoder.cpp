@@ -6,9 +6,9 @@ using namespace celux::error;
 namespace celux
 {
 
-Decoder::Decoder(std::optional<torch::Stream> stream)
+Decoder::Decoder(std::optional<torch::Stream> stream, int numThreads)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
-      videoStreamIndex(-1), decoderStream(std::move(stream))
+      videoStreamIndex(-1), decoderStream(std::move(stream)), numThreads(numThreads)
 {
     CELUX_DEBUG("BASE DECODER: Decoder constructed");
 }
@@ -236,11 +236,9 @@ void Decoder::initCodecContext()
                  std::string("Failed to copy codec parameters:"));
 
     CELUX_DEBUG("BASE DECODER: Codec parameters copied to codec context");
-    unsigned int threadCount = 16u;
     // Set hardware device context if available
     if (hwDeviceCtx)
     {
-        threadCount = 8u;
         codecCtx->hw_device_ctx = av_buffer_ref(hwDeviceCtx.get());
         if (!codecCtx->hw_device_ctx)
         {
@@ -250,8 +248,7 @@ void Decoder::initCodecContext()
         CELUX_DEBUG("BASE DECODER: Hardware device context set");
     }
 
-    codecCtx->thread_count = static_cast<int>(std::min(
-        static_cast<unsigned int>(std::thread::hardware_concurrency()), threadCount));
+    codecCtx->thread_count = numThreads;
     codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
     CELUX_DEBUG("BASE DECODER: Codec context threading configured: thread_count={}, "
                 "thread_type={}",
