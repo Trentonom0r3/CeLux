@@ -19,7 +19,7 @@ Frame::Frame() : frame(av_frame_alloc())
         CELUX_ERROR("Failed to allocate AVFrame in default constructor");
         throw CxException("Failed to allocate AVFrame");
     }
-    CELUX_DEBUG("Frame Class: AVFrame allocated successfully in default constructor");
+    CELUX_INFO("Frame Class: CPU AVFrame allocated successfully in default constructor");
 }
 
 /**
@@ -36,7 +36,7 @@ Frame::Frame(AVFrame* frame) : frame(frame)
         CELUX_ERROR("Null AVFrame provided to constructor");
         throw CxException("Null AVFrame provided");
     }
-    CELUX_DEBUG("Frame Class: Frame initialized with existing AVFrame pointer");
+    CELUX_INFO("Frame Class: Frame initialized with existing AVFrame pointer");
 }
 
 Frame::Frame(AVBufferRef* hw_frames_ref) : frame(av_frame_alloc())
@@ -59,22 +59,17 @@ Frame::Frame(AVBufferRef* hw_frames_ref) : frame(av_frame_alloc())
         throw CxException("Failed to set hardware frames context");
     }
 
-    // Optionally, set the format and other properties based on hw_frames_ctx
-    AVHWFramesContext* hw_frames_ctx_ptr = (AVHWFramesContext*)hw_frames_ref->data;
-    frame->format = hw_frames_ctx_ptr->sw_format;
-    frame->width = hw_frames_ctx_ptr->width;
-    frame->height = hw_frames_ctx_ptr->height;
-
-    // Allocate buffer with appropriate alignment
-    if (av_frame_get_buffer(frame, 32) < 0)
+    // Allocate the frame buffers in hardware memory
+    if (av_hwframe_get_buffer(frame->hw_frames_ctx, frame, 0) < 0)
     {
-        CELUX_ERROR("Failed to allocate buffer for hardware AVFrame");
+        CELUX_ERROR("Failed to allocate hardware frame buffer");
         av_frame_free(&frame);
-        throw CxException("Failed to allocate buffer for hardware AVFrame");
+        throw CxException("Failed to allocate hardware frame buffer");
     }
 
-    CELUX_DEBUG("Frame Class: Hardware AVFrame allocated and initialized successfully");
+    CELUX_INFO("Frame Class: Hardware AVFrame allocated and initialized successfully");
 }
+
 
 /**
  * @brief Destructor that frees the AVFrame.

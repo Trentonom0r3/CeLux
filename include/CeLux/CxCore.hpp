@@ -30,6 +30,7 @@ extern "C"
 #include <libavutil/samplefmt.h>      // For handling sample format information
 #include <libswresample/swresample.h> // Include for SwrContext and resampling functions
                                       // hwaccel
+
 #include <libavutil/hwcontext.h>
     // audio headers
 #include <libavfilter/avfilter.h>

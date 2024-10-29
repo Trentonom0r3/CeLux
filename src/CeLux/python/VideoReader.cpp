@@ -11,6 +11,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
                          std::optional<torch::Stream> stream)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1)
 {
+    //set ffmpeg log level
     CELUX_INFO("VideoReader constructor called with filePath: {}", filePath);
     CELUX_INFO("Device: {}", device);
     if (numThreads > std::thread::hardware_concurrency())

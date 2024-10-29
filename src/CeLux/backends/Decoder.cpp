@@ -145,7 +145,6 @@ void Decoder::initialize(const std::string& filePath)
     initHWAccel(); // Initialize HW acceleration (overridden in GPU Decoder)
     findVideoStream();
     initCodecContext();
-    set_sw_pix_fmt(codecCtx, getBitDepth()); // Set software pixel format ##VITAL##
     setProperties();
 
     converter = celux::Factory::createConverter(isHwAccel ? torch::kCUDA : torch::kCPU,
@@ -207,11 +206,7 @@ void Decoder::initCodecContext()
 {
     const AVCodec* codec =
         avcodec_find_decoder(formatCtx->streams[videoStreamIndex]->codecpar->codec_id);
-    if (isHwAccel)
-    {
-        codec = avcodec_find_decoder_by_name(
-            std::string(codec->name).append("_cuvid").c_str());
-    }
+    
 
     CELUX_DEBUG("BASE DECODER: Initializing codec context");
     if (!codec)
@@ -229,6 +224,7 @@ void Decoder::initCodecContext()
     }
     codecCtx.reset(codec_ctx);
     CELUX_DEBUG("BASE DECODER: Codec context allocated");
+
 
     // Copy codec parameters from input stream to codec context
     FF_CHECK_MSG(avcodec_parameters_to_context(
@@ -259,6 +255,45 @@ void Decoder::initCodecContext()
                  std::string("Failed to open codec:"));
 
     CELUX_DEBUG("BASE DECODER: Codec opened successfully");
+    if (isHwAccel)
+    {
+        // Initialize hardware frames context
+        AVBufferRef* hw_frames_ref = av_hwframe_ctx_alloc(hwDeviceCtx.get());
+        if (!hw_frames_ref)
+        {
+            CELUX_ERROR("Failed to allocate hardware frames context");
+            throw CxException("Failed to allocate hardware frames context");
+        }
+        codecCtx->pix_fmt = AV_PIX_FMT_CUDA;
+        set_sw_pix_fmt(codecCtx, getBitDepth());
+        AVHWFramesContext* frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
+        frames_ctx->format = codecCtx->pix_fmt;    // AV_PIX_FMT_CUDA
+        frames_ctx->sw_format = codecCtx->sw_pix_fmt; // e.g., AV_PIX_FMT_NV12
+        frames_ctx->width = codecCtx->width;
+        frames_ctx->height = codecCtx->height;
+        frames_ctx->initial_pool_size = 32; // Adjust as needed
+
+        int ret = av_hwframe_ctx_init(hw_frames_ref);
+        if (ret < 0)
+        {
+            CELUX_ERROR("Failed to initialize hardware frames context");
+            av_buffer_unref(&hw_frames_ref);
+            throw CxException("Failed to initialize hardware frames context");
+        }
+
+        // Assign the hardware frames context to the codec context
+        codecCtx->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
+        if (!codecCtx->hw_frames_ctx)
+        {
+            CELUX_ERROR("Failed to set hardware frames context in codec context");
+            av_buffer_unref(&hw_frames_ref);
+            throw CxException("Failed to set hardware frames context in codec context");
+        }
+
+        hwFramesCtx.reset(hw_frames_ref);
+        frame = Frame(hwFramesCtx.get());
+        CELUX_DEBUG("Hardware frames context initialized and set in codec context");
+    }
 }
 
 bool Decoder::decodeNextFrame(void* buffer)
@@ -299,7 +334,7 @@ bool Decoder::decodeNextFrame(void* buffer)
             CELUX_DEBUG("Frame decoded successfully");
             converter->convert(frame, buffer);
             CELUX_DEBUG("Frame converted");
-            av_frame_unref(frame.get());
+          //  av_frame_unref(frame.get());
             return true;
         }
 

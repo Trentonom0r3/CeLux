@@ -16,7 +16,7 @@ import torch  # For visual confirmation
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import celux_cuda as celux
 
-celux.set_log_level(celux.LogLevel.off)
+celux.set_log_level(celux.LogLevel.info)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -67,7 +67,7 @@ def process_video_with_visualization(video_path):
         start = time.time()
         STREAM = torch.cuda.Stream()
     
-        with celux.VideoReader(video_path, device = "cpu", num_threads = 20)as reader:
+        with celux.VideoReader(video_path, device = "cuda", num_threads = 16)as reader:
             for i, frame in enumerate(reader):
                 if frame_count == 0:
                     logging.info(
@@ -77,9 +77,9 @@ def process_video_with_visualization(video_path):
              
                 frame_cpu = frame.cpu().numpy()
 
-                #cv2.imshow("Video Frame", frame_cpu)
-               #if cv2.waitKey(1) & 0xFF == ord('q'):
-                    ## break
+                cv2.imshow("Video Frame", frame_cpu)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
             
                 frame_count += 1
 
@@ -101,7 +101,7 @@ def main(args):
         video_path = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
     else:
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        video_path = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
+        video_path = r"C:\Users\tjerf\source\repos\CeLux\tests\data\HD_HEVC_8BIT.mkv"
 
     if not os.path.exists(video_path):
         download_video(video_url, video_path)

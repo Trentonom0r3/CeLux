@@ -1,5 +1,10 @@
 ## 📈 Changelog
 
+### Version 0.4.3.5 (2024-10-29)
+  - Testing some changes, partial release, may end up reverting.
+  - Use `nvdec` diretly instead of `_cuvid`.
+  - Some small refactoring and testing, nothing major.
+  
 ### Version 0.4.3 (2024-10-29)
 - **New Features**:
   - Added `num_threads` arg to control decoder threads internally used. 

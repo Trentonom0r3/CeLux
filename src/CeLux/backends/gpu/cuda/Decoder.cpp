@@ -34,6 +34,8 @@ void Decoder::initHWAccel()
     }
     hwDeviceCtx.reset(hw_ctx);
     CELUX_DEBUG("GPU DECODER: HW device context for 'cuda' initialized successfully");
+    
+
 }
 
 } // namespace celux::backends::gpu::cuda
