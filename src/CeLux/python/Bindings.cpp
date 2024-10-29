@@ -10,13 +10,12 @@ PYBIND11_MODULE(celux, m)
     // VideoReader bindings
 
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, int, const std::string&,
-                      std::optional<torch::Stream>>(),
+        .def(py::init<const std::string&, int, const std::string&
+                     >(),
              py::arg("input_path"),
              py::arg("num_threads") =
                  static_cast<int>(std::thread::hardware_concurrency() / 2),
-             py::arg("device") = "cuda", py::arg("stream") = std::nullopt,
-             "Initialize a VideoReader with optional CUDA stream")
+             py::arg("device") = "cuda")
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)

@@ -8,8 +8,8 @@ namespace celux::backends::gpu::cuda
 class Decoder : public celux::Decoder
 {
   public:
-    Decoder(const std::string& filePath, std::optional<torch::Stream> stream, int numThreads)
-        : celux::Decoder(stream, numThreads)
+    Decoder(const std::string& filePath, int numThreads)
+        : celux::Decoder(numThreads)
     {
         isHwAccel = true;
         initialize(filePath);

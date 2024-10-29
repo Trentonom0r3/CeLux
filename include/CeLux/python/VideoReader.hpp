@@ -11,10 +11,9 @@ class VideoReader
 {
   public:
     VideoReader(const std::string& filePath,
-                int numThreads = static_cast<int>(std::thread::hardware_concurrency() / 2),
-                const std::string& device = "cuda",
-                
-                std::optional<torch::Stream> stream = std::nullopt);
+                int numThreads = static_cast<int>(std::thread::hardware_concurrency() /
+                                                  2),
+                const std::string& device = "cuda");
 
     py::object operator[](const std::string& key) const; // overload operator []
     /**

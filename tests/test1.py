@@ -101,7 +101,7 @@ def main(args):
         video_path = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
     else:
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        video_path = r"C:\Users\tjerf\source\repos\CeLux\tests\data\HD_HEVC_8BIT.mkv"
+        video_path = r"C:\Users\tjerf\Downloads\input-Int2-790.mp4"
 
     if not os.path.exists(video_path):
         download_video(video_url, video_path)

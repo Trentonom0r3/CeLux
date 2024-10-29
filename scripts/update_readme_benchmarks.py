@@ -85,11 +85,11 @@ def extract_system_specs(machine_info):
 
 def generate_markdown_table(data, total_frames_mapping):
     """
-    Generates a Markdown table including FPS.
+    Generates a Markdown table including FPS, video size, and number of threads.
     
     Args:
         data (dict): Benchmark results from pytest-benchmark.
-        total_frames_mapping (dict): Mapping of benchmark names to total frames.
+        total_frames_mapping (dict): Mapping of benchmark names to total frames, video size, and threads.
     
     Returns:
         str: Markdown-formatted table.
@@ -106,25 +106,28 @@ def generate_markdown_table(data, total_frames_mapping):
     # Dynamically determine benchmark order based on data
     benchmark_order = [bench['name'] for bench in data['benchmarks']]
 
-    # Generate Markdown table with FPS
-    table_md = "| Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |\n"
-    table_md += "|--------------------------------|---------------|------------|--------|\n"
+    # Generate Markdown table with additional columns for num_threads and video_size
+    table_md = "| Benchmark                      | Video Size  | Threads | Mean Time (s) | Std Dev (s) | FPS    |\n"
+    table_md += "|--------------------------------|-------------|---------|---------------|-------------|--------|\n"
     for bench_name in benchmark_order:
         if bench_name in benchmarks and bench_name in total_frames_mapping:
             mean_time = benchmarks[bench_name]['mean']      # Already in seconds
             stddev = benchmarks[bench_name]['stddev']        # Already in seconds
-            total_frames = total_frames_mapping[bench_name]
+            total_frames = total_frames_mapping[bench_name]["total_frames"]
+            video_size = total_frames_mapping[bench_name].get("video_size", "N/A")
+            num_threads = total_frames_mapping[bench_name].get("num_threads", "N/A")
             fps = total_frames / mean_time if mean_time > 0 else 0
-            table_md += f"| {bench_name.replace('_', ' ').title()} | {mean_time:.2f}          | {stddev:.2f}       | {fps:.2f} |\n"
-            logger.info(f"Benchmark '{bench_name}': Mean Time = {mean_time:.2f}s, Std Dev = {stddev:.2f}s, FPS = {fps:.2f}")
+            table_md += f"| {bench_name.replace('_', ' ').title()} | {video_size} | {num_threads}     | {mean_time:.2f}          | {stddev:.2f}       | {fps:.2f} |\n"
+            logger.info(f"Benchmark '{bench_name}': Mean Time = {mean_time:.2f}s, Std Dev = {stddev:.2f}s, FPS = {fps:.2f}, Threads = {num_threads}, Video Size = {video_size}")
         else:
             if bench_name not in benchmarks:
                 logger.warning(f"Benchmark '{bench_name}' not found in benchmark data.")
             if bench_name not in total_frames_mapping:
                 logger.warning(f"Total frames for benchmark '{bench_name}' not found.")
-            table_md += f"| {bench_name.replace('_', ' ').title()} | N/A           | N/A        | N/A    |\n"
+            table_md += f"| {bench_name.replace('_', ' ').title()} | N/A         | N/A     | N/A           | N/A         | N/A    |\n"
 
     return table_md
+
 
 def generate_fps_plot(data, total_frames_mapping, output_path):
     """
@@ -132,7 +135,7 @@ def generate_fps_plot(data, total_frames_mapping, output_path):
     
     Args:
         data (dict): Benchmark results from pytest-benchmark.
-        total_frames_mapping (dict): Mapping of benchmark names to total frames.
+        total_frames_mapping (dict): Mapping of benchmark names to total frames, video size, and threads.
         output_path (str): Path to save the generated plot.
     """
     benchmarks = {}
@@ -150,7 +153,8 @@ def generate_fps_plot(data, total_frames_mapping, output_path):
     for bench_name, stats in benchmarks.items():
         if bench_name in total_frames_mapping:
             mean_time = stats['mean']
-            fps = total_frames_mapping[bench_name] / mean_time if mean_time > 0 else 0
+            total_frames = total_frames_mapping[bench_name]["total_frames"]  # Access the total frames correctly
+            fps = total_frames / mean_time if mean_time > 0 else 0
             bench_names.append(bench_name.replace('_', ' ').title())
             fps_values.append(fps)
             logger.info(f"Plotting Benchmark '{bench_name}': FPS = {fps:.2f}")

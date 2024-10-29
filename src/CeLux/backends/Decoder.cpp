@@ -6,9 +6,9 @@ using namespace celux::error;
 namespace celux
 {
 
-Decoder::Decoder(std::optional<torch::Stream> stream, int numThreads)
+Decoder::Decoder(int numThreads)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
-      videoStreamIndex(-1), decoderStream(std::move(stream)), numThreads(numThreads)
+      videoStreamIndex(-1), numThreads(numThreads)
 {
     CELUX_DEBUG("BASE DECODER: Decoder constructed");
 }
@@ -148,7 +148,7 @@ void Decoder::initialize(const std::string& filePath)
     setProperties();
 
     converter = celux::Factory::createConverter(isHwAccel ? torch::kCUDA : torch::kCPU,
-                                                properties.pixelFormat, decoderStream);
+                                                properties.pixelFormat);
 
     CELUX_DEBUG("BASE DECODER: Converter initialized. HW accel is {}",
                 isHwAccel ? "enabled" : "disabled");

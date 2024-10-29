@@ -36,7 +36,6 @@ class P010LEToRGB : public ConverterBase
 {
   public:
     P010LEToRGB();
-    P010LEToRGB(cudaStream_t stream);
     ~P010LEToRGB();
 
     void convert(celux::Frame& frame, void* buffer) override;
@@ -49,9 +48,6 @@ inline P010LEToRGB::P010LEToRGB() : ConverterBase()
     CELUX_INFO("Creating P010LE to RGB converter (CUDA)");
 }
 
-inline P010LEToRGB::P010LEToRGB(cudaStream_t stream) : ConverterBase(stream)
-{
-}
 
 inline P010LEToRGB::~P010LEToRGB()
 {
@@ -83,13 +79,11 @@ inline void P010LEToRGB::convert(celux::Frame& frame, void* buffer)
     int width = frame.getWidth();
     int height = frame.getHeight();
 
-    // Set CUDA stream (default stream = 0). Replace with a specific stream if
-    // necessary.
-    cudaStream_t stream = 0;
-
     // Call the CUDA launcher
     P010LEToRGB48_Launcher(pSrcY, rSrcStepY, pSrcUV, rSrcStepUV, pDst, nDstStep, width,
-                           height, stream);
+                           height, conversionStream);
+
+    this->synchronize();
 }
 
 } // namespace cuda

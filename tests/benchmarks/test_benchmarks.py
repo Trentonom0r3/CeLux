@@ -25,15 +25,28 @@ def video_properties():
     Fixture to obtain video properties once for reuse in benchmarks.
     Also generates total_frames.json for benchmark reporting.
     """
-    with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu") as reader:
+    num_threads = min(16, os.cpu_count())
+    with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu", num_threads=num_threads) as reader:
         props_cpu = reader.get_properties()
+        props_cpu["num_threads"] = num_threads
+        props_cpu["video_size"] = (props_cpu['width'], props_cpu['height'])
     
-    with celux.VideoReader(SAMPLE_VIDEO_CUDA, device="cuda") as reader:
+    with celux.VideoReader(SAMPLE_VIDEO_CUDA, device="cuda", num_threads=num_threads) as reader:
         props_cuda = reader.get_properties()
-    
+        props_cuda["num_threads"] = num_threads
+        props_cuda["video_size"] = (props_cuda['width'], props_cuda['height'])
+
     total_frames = {
-        "test_video_reader_cpu_benchmark": props_cpu['total_frames'],
-        "test_video_reader_cuda_benchmark": props_cuda['total_frames']
+        "test_video_reader_cpu_benchmark": {
+            "total_frames": props_cpu['total_frames'],
+            "num_threads": num_threads,
+            "video_size": props_cpu["video_size"]
+        },
+        "test_video_reader_cuda_benchmark": {
+            "total_frames": props_cuda['total_frames'],
+            "num_threads": num_threads,
+            "video_size": props_cuda["video_size"]
+        }
     }
 
     # Write to total_frames.json
@@ -45,6 +58,7 @@ def video_properties():
         "cpu": props_cpu,
         "cuda": props_cuda
     }
+
 
 def test_video_reader_cpu_benchmark(benchmark, video_properties):
     """

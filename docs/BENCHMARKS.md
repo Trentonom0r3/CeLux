@@ -15,14 +15,13 @@
 | **L2 Cache Size**     | 11776 KB |
 | **L3 Cache Size**     | 24576 KB |
 | **Number of Cores**   | 20 |
-| **Threads Used**      | 10 |
 | **GPU #1**           | NVIDIA GeForce RTX 3060 Laptop GPU (6.00 GB) |
 
 
-| Benchmark                      | Mean Time (s) | Std Dev (s) | FPS    |
-|--------------------------------|---------------|------------|--------|
-| Test Video Reader Cpu Benchmark | 8.82          | 0.13       | 1622.36 |
-| Test Video Reader Cuda Benchmark | 7.89          | 0.04       | 1813.48 |
+| Benchmark                      | Video Size  | Threads | Mean Time (s) | Std Dev (s) | FPS    |
+|--------------------------------|-------------|---------|---------------|-------------|--------|
+| Test Video Reader Cpu Benchmark | [1280, 720] | 16     | 10.67          | 2.72       | 1341.77 |
+| Test Video Reader Cuda Benchmark | [1280, 720] | 16     | 7.95          | 0.03       | 1799.69 |
 
 
 ### 📊 **Benchmark Visualizations**

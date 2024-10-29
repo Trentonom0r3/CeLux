@@ -7,8 +7,7 @@
 namespace py = pybind11;
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads,
-                         const std::string& device, 
-                         std::optional<torch::Stream> stream)
+                         const std::string& device)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1)
 {
     //set ffmpeg log level
@@ -56,7 +55,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
         }
 
         decoder =
-            celux::Factory::createDecoder(torchDevice, filePath, numThreads, stream);
+            celux::Factory::createDecoder(torchDevice, filePath, numThreads);
         CELUX_INFO("Decoder created successfully");
 
         torch::Dtype torchDataType;

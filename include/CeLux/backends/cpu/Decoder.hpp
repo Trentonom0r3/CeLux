@@ -8,9 +8,9 @@ namespace celux::backends::cpu
 class Decoder : public celux::Decoder
 {
   public:
-    Decoder(const std::string& filePath, std::optional<torch::Stream> stream,
+    Decoder(const std::string& filePath,
             int numThreads)
-        : celux::Decoder(stream, numThreads)
+        : celux::Decoder( numThreads)
     {
         isHwAccel = false;
         initialize(filePath);

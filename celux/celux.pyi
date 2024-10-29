@@ -23,16 +23,13 @@ def set_log_level(level: LogLevel) -> None:
     ...
 
 class VideoReader:
-    def __init__(self, input_path: str, num_threads: int = os.cpu_count() / 2, device: str = "cuda",
-stream : torch.Stream = None) -> None:
+    def __init__(self, input_path: str, num_threads: int = os.cpu_count() / 2, device: str = "cuda") -> None:
         """
         Initialize the VideoReader object.
 
         Args:
             input_path (str): Path to the video file.
-            num_threads (int): Number of threads to use for reading frames. Default is half the number of CPU cores.
             device (str): Device to be used. Default is "cuda".
-            stream (torch.Stream): CUDA stream to use for reading frames. Default is None.
         """
         ...
 

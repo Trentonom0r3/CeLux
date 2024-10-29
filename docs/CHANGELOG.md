@@ -1,10 +1,16 @@
 ## 📈 Changelog
 
+### Version 0.4.4 (2024-10-29)
+  - Removed Stream Parameter in `VideoReader`: The `VideoReader` no longer accepts an external CUDA stream. 
+  - Introduced event-based synchronization between frame reading operations to ensure proper and consistent output.
+  - Use of `nvdec` directly.
+
 ### Version 0.4.3.5 (2024-10-29)
   - Testing some changes, partial release, may end up reverting.
-  - Use `nvdec` diretly instead of `_cuvid`.
+  - Use `nvdec` directly instead of `_cuvid`.
   - Some small refactoring and testing, nothing major.
-  
+
+
 ### Version 0.4.3 (2024-10-29)
 - **New Features**:
   - Added `num_threads` arg to control decoder threads internally used. 

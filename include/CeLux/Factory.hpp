@@ -19,20 +19,6 @@ struct ConverterKeyHash
 
 namespace celux
 {
-#ifdef CUDA_ENABLED
-static cudaStream_t checkStream(std::optional<torch::Stream> stream)
-{
-    if (stream.has_value())
-    {
-        c10::cuda::CUDAStream cuda_stream(stream.value());
-        return cuda_stream.stream();
-    }
-    else
-    {
-        return c10::cuda::getStreamFromPool();
-    }
-}
-#endif
 
 /**
  * @brief Factory class to create Decoders, Encoders, and Converters based on backend
@@ -50,17 +36,16 @@ class Factory
      * @return std::unique_ptr<Decoder> Pointer to the created Decoder.
      */
     static std::unique_ptr<Decoder> createDecoder(torch::Device device,
-                                                  const std::string& filename, int numThreads,
-                                                  std::optional<torch::Stream> stream)
+                                                  const std::string& filename, int numThreads)
     {
         if (device.is_cpu())
         {
-            return std::make_unique<celux::backends::cpu::Decoder>(filename, std::nullopt, numThreads);
+            return std::make_unique<celux::backends::cpu::Decoder>(filename, numThreads);
         }
 #ifdef CUDA_ENABLED
         else if (device.is_cuda())
         {
-            return std::make_unique<celux::backends::gpu::cuda::Decoder>(filename, stream, numThreads);
+            return std::make_unique<celux::backends::gpu::cuda::Decoder>(filename, numThreads);
         }
 #endif // CUDA_ENABLED
         else
@@ -75,13 +60,12 @@ class Factory
      *
      * @param device Device type (CPU or CUDA).
      * @param pixfmt Pixel format.
-     * @param stream Optional stream for CUDA operations.
+     * @param  Optional  for CUDA operations.
      * @return std::unique_ptr<celux::conversion::IConverter> Pointer to the created
      * Converter.
      */
     static std::unique_ptr<celux::conversion::IConverter>
-    createConverter(const torch::Device& device, AVPixelFormat pixfmt,
-                    const std::optional<torch::Stream>& stream = std::nullopt)
+    createConverter(const torch::Device& device, AVPixelFormat pixfmt)
     {
         using namespace celux::conversion; // For IConverter
 
@@ -98,19 +82,19 @@ class Factory
         // Define the factory map
         static const std::unordered_map<ConverterKey,
                                         std::function<std::unique_ptr<IConverter>(
-                                            const std::optional<torch::Stream>&)>,
+                                            )>,
                                         ConverterKeyHash>
             converterMap = {
                 // CPU converters
                 {std::make_tuple(true, AV_PIX_FMT_YUV420P),
-                 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                 []() -> std::unique_ptr<IConverter>
                  {
                      CELUX_DEBUG("Creating YUV420PToRGB converter");
                      return std::make_unique<cpu::YUV420PToRGB>();
                  }},
 
                 {std::make_tuple(true, AV_PIX_FMT_YUV420P10LE),
-                 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                 []() -> std::unique_ptr<IConverter>
                  {
                      CELUX_DEBUG("Creating YUV420P10LEToRGB48 converter");
                      return std::make_unique<cpu::YUV420P10ToRGB48>();
@@ -118,14 +102,14 @@ class Factory
 
                 // bgr24
                 {std::make_tuple(true, AV_PIX_FMT_BGR24),
-                 [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                 []() -> std::unique_ptr<IConverter>
                  {
                      CELUX_DEBUG("Creating BGR24ToRGB converter");
                      return std::make_unique<cpu::BGRToRGB>();
                  }},
                 //rgb24
                 {std::make_tuple(true, AV_PIX_FMT_RGB24),
-                         [](const std::optional<torch::Stream>&) -> std::unique_ptr<IConverter>
+                         []() -> std::unique_ptr<IConverter>
                          {
 					 CELUX_DEBUG("Creating RGB24ToRGB converter");
 					 return std::make_unique<cpu::RGBToRGB>();
@@ -134,21 +118,21 @@ class Factory
 #ifdef CUDA_ENABLED
                 // CUDA converters
                 {std::make_tuple(false, AV_PIX_FMT_NV12),
-                 [](const std::optional<torch::Stream>& stream)
+                 []( )
                      -> std::unique_ptr<IConverter>
                  {
                      CELUX_DEBUG("Creating NV12ToRGB converter");
-                     return std::make_unique<gpu::cuda::NV12ToRGB>(checkStream(stream));
+                     return std::make_unique<gpu::cuda::NV12ToRGB>();
                  }},
 
                 {std::make_tuple(false, AV_PIX_FMT_P010LE),
-                 [](const std::optional<torch::Stream>& stream)
+                 []( )
                      -> std::unique_ptr<IConverter>
                  {
                      CELUX_DEBUG("Creating P010LEToRGB48LE converter");
                      // Uncomment and implement the converter when ready
                      return std::make_unique<gpu::cuda::P010LEToRGB>(
-                         checkStream(stream));
+                         );
                  }},
 
 #endif
@@ -158,7 +142,7 @@ class Factory
         auto it = converterMap.find(key);
         if (it != converterMap.end())
         {
-            return it->second(stream);
+            return it->second();
         }
 
         // If not found, throw an exception with detailed information

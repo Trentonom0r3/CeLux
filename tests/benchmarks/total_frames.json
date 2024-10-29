@@ -1,4 +1,18 @@
 {
-    "test_video_reader_cpu_benchmark": 14315,
-    "test_video_reader_cuda_benchmark": 14315
+    "test_video_reader_cpu_benchmark": {
+        "total_frames": 14315,
+        "num_threads": 16,
+        "video_size": [
+            1280,
+            720
+        ]
+    },
+    "test_video_reader_cuda_benchmark": {
+        "total_frames": 14315,
+        "num_threads": 16,
+        "video_size": [
+            1280,
+            720
+        ]
+    }
 }

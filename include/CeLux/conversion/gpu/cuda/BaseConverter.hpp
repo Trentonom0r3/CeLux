@@ -3,10 +3,10 @@
 #pragma once
 
 #include "IConverter.hpp"
-#include <cuda_runtime.h>
 #include <cuda_fp16.h>
-#include <type_traits>
+#include <cuda_runtime.h>
 #include <nppi_color_conversion.h>
+#include <type_traits>
 
 namespace celux
 {
@@ -21,7 +21,6 @@ class ConverterBase : public IConverter
 {
   public:
     ConverterBase();
-    ConverterBase(cudaStream_t stream);
     virtual ~ConverterBase();
 
     virtual void synchronize() override;
@@ -29,10 +28,9 @@ class ConverterBase : public IConverter
 
   protected:
     cudaStream_t conversionStream;
+    cudaEvent_t conversionEvent; // CUDA event for synchronization
     NppStreamContext nppStreamContext;
-    bool passedInStream = false;
 };
-
 
 inline ConverterBase::ConverterBase()
 {
@@ -41,51 +39,53 @@ inline ConverterBase::ConverterBase()
     {
         throw std::runtime_error("Failed to create CUDA stream");
     }
-    nppStreamContext.hStream = this->conversionStream;
-}
 
-
-inline ConverterBase::ConverterBase(cudaStream_t stream) : conversionStream(stream)
-{
-    if (stream == nullptr)
+    // Create a CUDA event with default flags
+    err = cudaEventCreate(&conversionEvent);
+    if (err != cudaSuccess)
     {
-        CELUX_DEBUG("Stream was nullptr, creating new Stream");
-        cudaError_t err = cudaStreamCreate(&conversionStream);
-        if (err != cudaSuccess)
-        {
-            CELUX_CRITICAL("Failed to create CUDA stream in ConverterBase");
-            throw std::runtime_error("Failed to create CUDA stream");
-        }
+        throw std::runtime_error("Failed to create CUDA event");
     }
-    else
-    {
-		passedInStream = true;
-	}
+
     nppStreamContext.hStream = this->conversionStream;
 }
 
 inline ConverterBase::~ConverterBase()
 {
     CELUX_DEBUG("Destroying ConverterBase");
+
+    // Ensure synchronization before cleanup
+    synchronize();
+
+    // Destroy the event
+    cudaEventDestroy(conversionEvent);
+
     if (conversionStream)
     {
-        synchronize();
-        if (!passedInStream)
-        {
-            CELUX_DEBUG("Destroying CUDA Stream");
-            cudaStreamDestroy(conversionStream);
-        }
+
+        CELUX_DEBUG("Destroying CUDA Stream");
+        cudaStreamDestroy(conversionStream);
     }
 }
 
 inline void ConverterBase::synchronize()
 {
-    CELUX_DEBUG("Synchronizing CUDA Stream");
-    cudaError_t err = cudaStreamSynchronize(conversionStream);
+    CELUX_DEBUG("Synchronizing CUDA Stream with Event");
+
+    // Record the event on the current stream
+    cudaError_t err = cudaEventRecord(conversionEvent, conversionStream);
     if (err != cudaSuccess)
     {
-        CELUX_DEBUG("Failed to synchronize CUDA stream");
-        throw std::runtime_error("Failed to synchronize CUDA stream");
+        CELUX_DEBUG("Failed to record CUDA event");
+        throw std::runtime_error("Failed to record CUDA event");
+    }
+
+    // Wait for the event to complete
+    err = cudaEventSynchronize(conversionEvent);
+    if (err != cudaSuccess)
+    {
+        CELUX_DEBUG("Failed to synchronize on CUDA event");
+        throw std::runtime_error("Failed to synchronize on CUDA event");
     }
 }
 

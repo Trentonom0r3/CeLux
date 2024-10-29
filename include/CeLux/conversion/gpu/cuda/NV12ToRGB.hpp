@@ -25,7 +25,6 @@ class NV12ToRGB : public ConverterBase
 {
   public:
     NV12ToRGB();
-    NV12ToRGB(cudaStream_t stream);
     ~NV12ToRGB();
 
     void convert(celux::Frame& frame, void* buffer) override;
@@ -36,10 +35,6 @@ class NV12ToRGB : public ConverterBase
 inline NV12ToRGB::NV12ToRGB() : ConverterBase()
 {
     CELUX_INFO("Creating NV12 to RGB converter (CUDA)");
-}
-
-inline NV12ToRGB::NV12ToRGB(cudaStream_t stream) : ConverterBase(stream)
-{
 }
 
 inline NV12ToRGB::~NV12ToRGB()
@@ -64,6 +59,14 @@ inline void NV12ToRGB::convert(celux::Frame& frame, void* buffer)
 
     NppStatus status = nppiNV12ToRGB_8u_P2C3R_Ctx(pSrc, rSrcStep, pDst, nDstStep,
                                                   oSizeROI, nppStreamContext);
+
+    if (status != NPP_SUCCESS)
+    {
+		CELUX_ERROR("Failed to convert NV12 to RGB");
+		throw std::runtime_error("Failed to convert NV12 to RGB");
+	}
+
+    this->synchronize();
 }
 
 } // namespace cuda
