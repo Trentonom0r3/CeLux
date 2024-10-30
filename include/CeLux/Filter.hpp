@@ -3,6 +3,7 @@
 #ifndef FILTER_HPP
 #define FILTER_HPP
 
+#include <libavfilter/avfilter.h>
 #include <string>
 
 class Filter
@@ -16,8 +17,9 @@ class Filter
      * arguments.
      */
     Filter(const std::string& name, const std::string& options = "")
-        : name_(name), options_(options)
+        : name_(name), options_(options), is_valid_(false)
     {
+        is_valid_ = isFilterAvailable(name_);
     }
 
     /**
@@ -58,9 +60,33 @@ class Filter
         }
     }
 
+    /**
+     * @brief Checks if the filter is available in the current FFmpeg build.
+     *
+     * @return true If the filter exists.
+     * @return false If the filter does not exist.
+     */
+    bool isValid() const
+    {
+        return is_valid_;
+    }
+
+    /**
+     * @brief Static method to check if a filter with the given name exists.
+     *
+     * @param name Name of the filter to check.
+     * @return true If the filter exists.
+     * @return false If the filter does not exist.
+     */
+    static bool isFilterAvailable(const std::string& name)
+    {
+        return avfilter_get_by_name(name.c_str()) != nullptr;
+    }
+
   private:
     std::string name_;    // Filter name
     std::string options_; // Filter options
+    bool is_valid_;       // Validity flag
 };
 
 #endif // FILTER_HPP

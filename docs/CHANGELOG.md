@@ -1,5 +1,9 @@
 ## 📈 Changelog
 
+### Version 0.4.5.5 (2024-10-30)
+  - Added some safety checks for filters.
+    - Fixed issue that occurs when using `scale`.
+
 ### Version 0.4.5 (2024-10-29)
   - Implemented filters for `cpu` usage. 
     - usage should be familiar to those who've used `ffmpeg`:

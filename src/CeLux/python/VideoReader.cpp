@@ -54,11 +54,32 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
 
     try
     {
-        for (const auto& filter : filters)
+        // Iterate through each user-specified filter
+        for (const auto& filter_tuple : filters)
         {
-			CELUX_INFO("Filter: {}={}", std::get<0>(filter), std::get<1>(filter));
-            filters_.push_back(std::make_shared<Filter>(std::get<0>(filter), std::get<1>(filter)));
-		}
+            const std::string& filter_name = std::get<0>(filter_tuple);
+            const std::string& filter_options = std::get<1>(filter_tuple);
+
+            CELUX_INFO("Processing Filter: %s=%s", filter_name.c_str(),
+                       filter_options.c_str());
+
+            // Create a Filter object
+            std::shared_ptr<Filter> filter =
+                std::make_shared<Filter>(filter_name, filter_options);
+
+            // Check if the filter is valid
+            if (filter->isValid())
+            {
+                filters_.push_back(filter);
+                CELUX_INFO("Added valid filter: {}",
+                           filter->getFilterDescription().c_str());
+            }
+            else
+            {
+                CELUX_WARN("Filter {} is not available and will be skipped.",
+                           filter_name.c_str());
+            }
+        }
 
         torch::Device torchDevice = torch::Device(torch::kCPU);
         CELUX_INFO("Creating VideoReader instance");
@@ -103,6 +124,32 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
 
         // Retrieve video properties
         properties = decoder->getVideoProperties();
+
+
+        //if scaling is in filter list, update width and height
+        for (const auto& filter : filters_)
+        {
+            if (filter->getName() == "scale")
+            {
+				std::string scale_option = filter->getOptions();
+				std::vector<std::string> scale_values;
+				std::istringstream scale_stream(scale_option);
+				std::string scale_value;
+                while (std::getline(scale_stream, scale_value, ':'))
+                {
+					scale_values.push_back(scale_value);
+				}
+                if (scale_values.size() == 2)
+                {
+					properties.width = std::stoi(scale_values[0]);
+					properties.height = std::stoi(scale_values[1]);
+					CELUX_INFO("Updated video properties after scaling: width={}, height={}",
+                        							   properties.width, properties.height);
+				}
+			}
+		}
+
+
         CELUX_INFO("Video properties retrieved: width={}, height={}, fps={}, "
                    "duration={}, totalFrames={}, pixelFormat={}, hasAudio={}",
                    properties.width, properties.height, properties.fps,

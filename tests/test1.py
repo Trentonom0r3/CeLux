@@ -65,8 +65,8 @@ def process_video_with_visualization(video_path):
     try:
         frame_count = 0
         start = time.time()
-        filters = [("scale", "1280:720"), ("hue", "0.5")]
-        with celux.VideoReader(video_path, device = "cuda", num_threads = 16, filters = filters)as reader:
+        filters = [("scale", "1920:1080"), ("hue", "0.5")]
+        with celux.VideoReader(video_path, device = "cpu", num_threads = 16, filters = filters)as reader:
             input("Press Enter to start processing video...")
             for i, frame in enumerate(reader):
                 if frame_count == 0:

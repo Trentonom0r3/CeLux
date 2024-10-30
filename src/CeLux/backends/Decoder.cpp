@@ -192,8 +192,7 @@ bool Decoder::initFilterGraph()
                                        nullptr, filter_graph_);
     if (ret < 0)
     {
-        std::cerr << "Cannot create buffer source: " << celux::errorToString(ret)
-                  << "\n";
+        CELUX_CRITICAL("Cannot create buffer source: {} ", celux::errorToString(ret));
         return false;
     }
     buffersrc_ctx_ = buffersrc_ctx_local;
@@ -206,7 +205,7 @@ bool Decoder::initFilterGraph()
                                        nullptr, nullptr, filter_graph_);
     if (ret < 0)
     {
-        std::cerr << "Cannot create buffer sink: " << celux::errorToString(ret) << "\n";
+        CELUX_CRITICAL("Cannot create buffer sink: {}", celux::errorToString(ret));
         return false;
     }
     buffersink_ctx_ = buffersink_ctx_local;
@@ -226,8 +225,6 @@ bool Decoder::initFilterGraph()
         filter_desc = "null";
     }
 
-    // Print the filter description for debugging
-    std::cout << "Filter Description: " << filter_desc << "\n";
 
     // Parse and create the filter graph
     AVFilterInOut* inputs = avfilter_inout_alloc();
@@ -458,31 +455,21 @@ bool Decoder::decodeNextFrame(void* buffer)
                 return false;
             }
 
-            // Allocate a new frame for the filtered output
-            AVFrame* filt_frame = av_frame_alloc();
-            if (!filt_frame)
-            {
-                CELUX_ERROR("Could not allocate filtered frame");
-                return false;
-            }
-
+          
             // Retrieve the filtered frame from the buffer sink
-            ret = av_buffersink_get_frame(buffersink_ctx_, filt_frame);
+            ret = av_buffersink_get_frame(buffersink_ctx_, frame.get());
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             {
-                // No filtered frame available yet
-                av_frame_free(&filt_frame);
                 break;
             }
             else if (ret < 0)
             {
                 CELUX_ERROR("Error during filtering: {}", celux::errorToString(ret));
-                av_frame_free(&filt_frame);
                 return false;
             }
 
             // Pass the filtered frame to the converter
-            converter->convert(Frame(filt_frame), buffer);
+            converter->convert(frame, buffer);
             CELUX_DEBUG("Filtered frame converted");
 
             return true;

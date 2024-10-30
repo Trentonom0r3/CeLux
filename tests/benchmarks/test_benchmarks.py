@@ -25,7 +25,7 @@ def video_properties():
     Fixture to obtain video properties once for reuse in benchmarks.
     Also generates total_frames.json for benchmark reporting.
     """
-    num_threads = min(16, os.cpu_count())
+    num_threads = 16
     with celux.VideoReader(SAMPLE_VIDEO_CPU, device="cpu", num_threads=num_threads) as reader:
         props_cpu = reader.get_properties()
         props_cpu["num_threads"] = num_threads

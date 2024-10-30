@@ -41,9 +41,11 @@ pip install celux-cuda  # cuda+cpu
 ```py
 from celux import VideoReader
 #import celux as cx
+filters = [("scale", "1920:1080"), ("hue", "0.5")]
 reader = VideoReader("/path/to/video.ext",
                     #num_threads: int = os.cpu_count(),
-                    device = "cuda"
+                    device = "cuda",
+                    filters = filters
                     )
 for frame in reader:
 # do something
