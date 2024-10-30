@@ -5,9 +5,43 @@
 #include <torch/torch.h> // Ensure you have included the necessary Torch headers
 
 namespace py = pybind11;
+// Function to list all available FFmpeg filters
+/*/**
+ * Iterate over all registered filters.
+ *
+ * @param opaque a pointer where libavfilter will store the iteration state. Must
+ *               point to NULL to start the iteration.
+ *
+ * @return the next registered filter or NULL when the iteration is
+ *         finished
+ 
+const AVFilter* av_filter_iterate(void** opaque);
+*/ 
+
+void list_ffmpeg_filters()
+{
+    // create void** opaque
+    void* opaque = nullptr;
+    const AVFilter* filter = nullptr;
+
+    std::cout << "Available FFmpeg Filters:\n";
+    std::cout << "--------------------------\n";
+
+    while ((filter = av_filter_iterate(&opaque)))
+    {
+		const char* filter_name = filter->name;
+		const char* filter_desc = filter->description;
+		std::cout << "Filter Name: " << filter_name << "\n";
+		std::cout << "Description: "
+				  << (filter_desc ? filter_desc : "No description available") << "\n";
+		std::cout << "---------------------------------------\n";
+	}
+}
+
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads,
-                         const std::string& device)
+                         const std::string& device, 
+                         std::vector<std::tuple<std::string, std::string>> filters)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1)
 {
     //set ffmpeg log level
@@ -20,6 +54,11 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
 
     try
     {
+        for (const auto& filter : filters)
+        {
+			CELUX_INFO("Filter: {}={}", std::get<0>(filter), std::get<1>(filter));
+            filters_.push_back(std::make_shared<Filter>(std::get<0>(filter), std::get<1>(filter)));
+		}
 
         torch::Device torchDevice = torch::Device(torch::kCPU);
         CELUX_INFO("Creating VideoReader instance");
@@ -55,7 +94,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
         }
 
         decoder =
-            celux::Factory::createDecoder(torchDevice, filePath, numThreads);
+            celux::Factory::createDecoder(torchDevice, filePath, numThreads, filters_);
         CELUX_INFO("Decoder created successfully");
 
         torch::Dtype torchDataType;
@@ -79,6 +118,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
         CELUX_INFO("Torch tensor initialized with shape: [{}, {}, {}] :, "
                    "device: {}",
                    properties.height, properties.width, 3, device);
+      //  list_ffmpeg_filters();
     }
     catch (const std::exception& ex)
     {

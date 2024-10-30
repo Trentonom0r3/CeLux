@@ -3,8 +3,8 @@
 
 #include "CxException.hpp"
 #include <Conversion.hpp>
+#include <Filter.hpp>
 #include <Frame.hpp>
-
 namespace celux
 {
 
@@ -33,7 +33,7 @@ class Decoder
 
     Decoder() = default;
     // Constructor
-    Decoder(int numThreads);
+    Decoder(int numThreads, std::vector<std::shared_ptr<Filter>> filters);
     bool seekToNearestKeyframe(double timestamp);
     // Destructor
     virtual ~Decoder();
@@ -41,7 +41,12 @@ class Decoder
     // Deleted copy constructor and assignment operator
     Decoder(const Decoder&) = delete;
     Decoder& operator=(const Decoder&) = delete;
-
+    /**
+     * @brief Adds a filter to the decoder's filter pipeline.
+     *
+     * @param filter Shared pointer to a Filter instance.
+     */
+    void addFilter(const std::shared_ptr<Filter>& filter);
     // Move constructor and assignment operator
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
@@ -103,12 +108,27 @@ class Decoder
             av_packet_free(&pkt);
         }
     };
+    AVFilterGraph* filter_graph_;
+    AVFilterContext* buffersrc_ctx_;
+    AVFilterContext* buffersink_ctx_;
 
+    std::vector<std::shared_ptr<Filter>> filters_;
+
+    /**
+     * @brief Initializes the filter graph based on the added filters.
+     *
+     * @return true if successful.
+     * @return false otherwise.
+     */
+    bool initFilterGraph();
     using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
     using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
     using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
     using AVPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
     void set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth);
+    std::string buildFilterArgs(const AVCodecContext* codecCtx,
+                                const AVFormatContext* formatCtx, int videoStreamIndex) const;
+    std::string ptrToHexString(void* ptr) const;
     // Member variables
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;

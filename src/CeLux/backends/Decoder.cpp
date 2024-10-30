@@ -6,9 +6,9 @@ using namespace celux::error;
 namespace celux
 {
 
-Decoder::Decoder(int numThreads)
+Decoder::Decoder(int numThreads, std::vector<std::shared_ptr<Filter>> filters)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
-      videoStreamIndex(-1), numThreads(numThreads)
+      videoStreamIndex(-1), numThreads(numThreads), filters_(filters)
 {
     CELUX_DEBUG("BASE DECODER: Decoder constructed");
 }
@@ -157,7 +157,121 @@ void Decoder::initialize(const std::string& filePath)
 
     CELUX_INFO("BASE DECODER: Decoder using codec: {}, and pixel format: {}",
                codecCtx->codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
+    // Initialize filter graph
+    if (!initFilterGraph())
+    {
+        std::cerr << "Failed to initialize filter graph\n";
+    }
 }
+
+bool Decoder::initFilterGraph()
+{
+    char args[512];
+    int ret = 0;
+
+    // Create the filter graph
+    filter_graph_ = avfilter_graph_alloc();
+    if (!filter_graph_)
+    {
+        std::cerr << "Unable to create filter graph.\n";
+        return false;
+    }
+
+    // Create buffer source
+    const AVFilter* buffersrc = avfilter_get_by_name("buffer");
+    AVFilterContext* buffersrc_ctx_local = nullptr;
+
+    // Prepare buffer source arguments
+    snprintf(args, sizeof(args),
+             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=1/1",
+             codecCtx->width, codecCtx->height, codecCtx->pix_fmt,
+             formatCtx->streams[videoStreamIndex]->time_base.num,
+             formatCtx->streams[videoStreamIndex]->time_base.den);
+
+    ret = avfilter_graph_create_filter(&buffersrc_ctx_local, buffersrc, "in", args,
+                                       nullptr, filter_graph_);
+    if (ret < 0)
+    {
+        std::cerr << "Cannot create buffer source: " << celux::errorToString(ret)
+                  << "\n";
+        return false;
+    }
+    buffersrc_ctx_ = buffersrc_ctx_local;
+
+    // Create buffer sink
+    const AVFilter* buffersink = avfilter_get_by_name("buffersink");
+    AVFilterContext* buffersink_ctx_local = nullptr;
+
+    ret = avfilter_graph_create_filter(&buffersink_ctx_local, buffersink, "out",
+                                       nullptr, nullptr, filter_graph_);
+    if (ret < 0)
+    {
+        std::cerr << "Cannot create buffer sink: " << celux::errorToString(ret) << "\n";
+        return false;
+    }
+    buffersink_ctx_ = buffersink_ctx_local;
+
+    // Create the filter description string by concatenating all filters
+    std::string filter_desc = "";
+    for (size_t i = 0; i < filters_.size(); ++i)
+    {
+        filter_desc += filters_[i]->getFilterDescription();
+        if (i != filters_.size() - 1)
+            filter_desc += ",";
+    }
+
+    // If no filters are added, set up a pass-through (null) filter
+    if (filters_.empty())
+    {
+        filter_desc = "null";
+    }
+
+    // Print the filter description for debugging
+    std::cout << "Filter Description: " << filter_desc << "\n";
+
+    // Parse and create the filter graph
+    AVFilterInOut* inputs = avfilter_inout_alloc();
+    AVFilterInOut* outputs = avfilter_inout_alloc();
+    if (!inputs || !outputs)
+    {
+        std::cerr << "Cannot allocate filter in/out.\n";
+        return false;
+    }
+
+    outputs->name = av_strdup("in");
+    outputs->filter_ctx = buffersrc_ctx_;
+    outputs->pad_idx = 0;
+    outputs->next = nullptr;
+
+    inputs->name = av_strdup("out");
+    inputs->filter_ctx = buffersink_ctx_;
+    inputs->pad_idx = 0;
+    inputs->next = nullptr;
+
+    ret = avfilter_graph_parse_ptr(filter_graph_, filter_desc.c_str(), &inputs,
+                                   &outputs, nullptr);
+    if (ret < 0)
+    {
+        std::cerr << "Error parsing filter graph: " << celux::errorToString(ret)
+                  << "\n";
+        return false;
+    }
+
+    ret = avfilter_graph_config(filter_graph_, nullptr);
+    if (ret < 0)
+    {
+        std::cerr << "Error configuring filter graph: " << celux::errorToString(ret)
+                  << "\n";
+        return false;
+    }
+
+    // Free the in/out structures
+    avfilter_inout_free(&inputs);
+    avfilter_inout_free(&outputs);
+
+    return true;
+}
+
 
 void Decoder::openFile(const std::string& filePath)
 {
@@ -296,6 +410,8 @@ void Decoder::initCodecContext()
     }
 }
 
+// Decoder.cpp
+
 bool Decoder::decodeNextFrame(void* buffer)
 {
     CELUX_TRACE("Decoding next frame");
@@ -332,9 +448,43 @@ bool Decoder::decodeNextFrame(void* buffer)
         {
             // Successfully received a frame
             CELUX_DEBUG("Frame decoded successfully");
-            converter->convert(frame, buffer);
-            CELUX_DEBUG("Frame converted");
-          //  av_frame_unref(frame.get());
+
+            // Push the decoded frame into the filter graph's buffer source
+            ret = av_buffersrc_add_frame(buffersrc_ctx_, frame.get());
+            if (ret < 0)
+            {
+                CELUX_ERROR("Error while feeding the filter graph: {}",
+                            celux::errorToString(ret));
+                return false;
+            }
+
+            // Allocate a new frame for the filtered output
+            AVFrame* filt_frame = av_frame_alloc();
+            if (!filt_frame)
+            {
+                CELUX_ERROR("Could not allocate filtered frame");
+                return false;
+            }
+
+            // Retrieve the filtered frame from the buffer sink
+            ret = av_buffersink_get_frame(buffersink_ctx_, filt_frame);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            {
+                // No filtered frame available yet
+                av_frame_free(&filt_frame);
+                break;
+            }
+            else if (ret < 0)
+            {
+                CELUX_ERROR("Error during filtering: {}", celux::errorToString(ret));
+                av_frame_free(&filt_frame);
+                return false;
+            }
+
+            // Pass the filtered frame to the converter
+            converter->convert(Frame(filt_frame), buffer);
+            CELUX_DEBUG("Filtered frame converted");
+
             return true;
         }
 
@@ -369,6 +519,7 @@ bool Decoder::decodeNextFrame(void* buffer)
         }
     }
 }
+
 
 bool Decoder::seek(double timestamp)
 {

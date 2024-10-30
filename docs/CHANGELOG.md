@@ -1,5 +1,13 @@
 ## 📈 Changelog
 
+### Version 0.4.5 (2024-10-29)
+  - Implemented filters for `cpu` usage. 
+    - usage should be familiar to those who've used `ffmpeg`:
+  ```py  
+  filters = [("scale", "1280:720"), ("hue", "0.5")]
+  reader = cx.VideoReader("/path/to/input", device = "cpu", filters = filters)
+  ```
+
 ### Version 0.4.4 (2024-10-29)
   - Removed Stream Parameter in `VideoReader`: The `VideoReader` no longer accepts an external CUDA stream. 
   - Introduced event-based synchronization between frame reading operations to ensure proper and consistent output.

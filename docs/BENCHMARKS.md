@@ -20,8 +20,8 @@
 
 | Benchmark                      | Video Size  | Threads | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|-------------|---------|---------------|-------------|--------|
-| Test Video Reader Cpu Benchmark | [1280, 720] | 16     | 10.67          | 2.72       | 1341.77 |
-| Test Video Reader Cuda Benchmark | [1280, 720] | 16     | 7.95          | 0.03       | 1799.69 |
+| Test Video Reader Cpu Benchmark | [1280, 720] | 16     | 8.89          | 0.14       | 1610.74 |
+| Test Video Reader Cuda Benchmark | [1280, 720] | 16     | 8.05          | 0.08       | 1779.17 |
 
 
 ### 📊 **Benchmark Visualizations**
