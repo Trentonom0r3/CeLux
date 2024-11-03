@@ -88,6 +88,12 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "xutility": "cpp",
-        "__nullptr": "cpp"
+        "__nullptr": "cpp",
+        "xstddef": "cpp",
+        "any": "cpp",
+        "cinttypes": "cpp",
+        "expected": "cpp",
+        "memory_resource": "cpp",
+        "source_location": "cpp"
     }
 }

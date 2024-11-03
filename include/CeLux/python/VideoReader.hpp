@@ -5,11 +5,11 @@
 
 #include "Decoder.hpp" // Ensure this includes the Filter class
 #include "Factory.hpp"
-#include "Filter.hpp" // Include the Filter class
 #include <memory>     // For std::unique_ptr
 #include <pybind11/pybind11.h>
 #include <string> // For std::string
 #include <vector> // For std::vector
+
 
 namespace py = pybind11;
 
@@ -26,7 +26,8 @@ class VideoReader
     VideoReader(const std::string& filePath,
                 int numThreads = static_cast<int>(std::thread::hardware_concurrency() /
                                                   2),
-                const std::string& device = "cuda", std::vector<std::tuple<std::string, std::string>> filters = {});
+                const std::string& device = "cuda",
+                std::vector<std::shared_ptr<FilterBase>> filter = {});
 
     /**
      * @brief Destructor for VideoReader.
@@ -164,7 +165,7 @@ class VideoReader
     int currentIndex;
 
     // List of filters to be added before initialization
-    std::vector<std::shared_ptr<Filter>> filters_;
+    std::vector<std::shared_ptr<FilterBase>> filters_;
 };
 
 #endif // VIDEOREADER_HPP

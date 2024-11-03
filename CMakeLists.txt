@@ -175,6 +175,7 @@ file(GLOB_RECURSE SOURCES_COMMON
     "src/CeLux/conversion/*.cpp"
     "src/CeLux/backends/*.cpp"
     "src/CeLux/conversion/cpu/*.cpp"
+    "src/CeLux/filters/*.cpp"
 )
 
 if(ENABLE_CUDA)
@@ -204,6 +205,8 @@ target_include_directories(CeLuxLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu/cuda
     ${CMAKE_SOURCE_DIR}/include/CeLux/error
     ${CMAKE_SOURCE_DIR}/include/CeLux/backends
+    ${CMAKE_SOURCE_DIR}/include/CeLux/filters
+    ${CMAKE_SOURCE_DIR}/magic_enum/include
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
@@ -272,6 +275,8 @@ target_include_directories(celux PUBLIC
     ${CMAKE_SOURCE_DIR}/include/CeLux/error
     ${CMAKE_SOURCE_DIR}/include/CeLux/backends
     ${CMAKE_SOURCE_DIR}/include/CeLux/python
+    ${CMAKE_SOURCE_DIR}/include/CeLux/filters
+        ${CMAKE_SOURCE_DIR}/magic_enum/include
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}

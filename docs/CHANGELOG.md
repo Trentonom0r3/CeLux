@@ -1,5 +1,29 @@
 ## 📈 Changelog
 
+### Version 0.5.0 (2024-11-03)
+  - Some Major Refactoring and changes made.
+    - Parsed and created `Filter` classes for every (video) Ffmpeg filter.
+      - Filters defined within `Celux.pyi`
+        - Not all are tested. For Full documentation of arguments and usage, see: [ffmpeg-filter-docs](https://ffmpeg.org/ffmpeg-filters.html)
+        - Please create a new issue if any problems occur!
+    - Fixed an issue with Filter initialization and unwanted output messages. 
+    ```py
+    from celux import VideoReader, Scale #, CreateFilter, FilterType
+
+
+    scale_filter = Scale(width = "1920", height = "1080")
+
+    # scale_filter = CreateFilter(FilterType.Scale)
+    # scale_filter.setWidth("1920")
+    # scale_filter.setHeight"1080")
+    # scale_filter.setFlags("bicubic")
+
+    with VideoReader("input.mp4", device = "cpu", filters = [scale_filter]) as reader:
+      for frame in reader:
+        # will be a scaled frame
+    ```
+
+
 ### Version 0.4.5.5 (2024-10-30)
   - Added some safety checks for filters.
     - Fixed issue that occurs when using `scale`.

@@ -1,21 +1,26 @@
 #include "Python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <filter_bindings.hpp>
 
 namespace py = pybind11;
+#define PYBIND11_DETAILED_ERROR_MESSAGES
 
 PYBIND11_MODULE(celux, m)
 {
 
+    // Register the filters into the 'filters' submodule
+    register_filters(m);
     // VideoReader bindings
 
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, int, const std::string&, std::vector<std::tuple<std::string, std::string>>
+        .def(py::init<const std::string&, int, const std::string&,
+                      std::vector<std::shared_ptr<FilterBase>>
                      >(),
              py::arg("input_path"),
              py::arg("num_threads") =
                  static_cast<int>(std::thread::hardware_concurrency() / 2),
-             py::arg("device") = "cuda", py::arg("filters") = std::vector<std::tuple<std::string, std::string>>())
+             py::arg("device") = "cuda", py::arg("filters") = std::vector<std::shared_ptr<FilterBase>>())
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)

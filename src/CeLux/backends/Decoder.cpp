@@ -1,12 +1,13 @@
 // Decoder.cpp
 #include "Decoder.hpp"
 #include <Factory.hpp>
+
 using namespace celux::error;
 
 namespace celux
 {
 
-Decoder::Decoder(int numThreads, std::vector<std::shared_ptr<Filter>> filters)
+Decoder::Decoder(int numThreads, std::vector<std::shared_ptr<FilterBase>> filters)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
       videoStreamIndex(-1), numThreads(numThreads), filters_(filters)
 {
@@ -157,10 +158,9 @@ void Decoder::initialize(const std::string& filePath)
 
     CELUX_INFO("BASE DECODER: Decoder using codec: {}, and pixel format: {}",
                codecCtx->codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
-    // Initialize filter graph
-    if (!initFilterGraph())
-    {
-        std::cerr << "Failed to initialize filter graph\n";
+
+    if (filters_.size() > 0) {
+        initFilterGraph();
     }
 }
 
@@ -173,7 +173,7 @@ bool Decoder::initFilterGraph()
     filter_graph_ = avfilter_graph_alloc();
     if (!filter_graph_)
     {
-        std::cerr << "Unable to create filter graph.\n";
+       CELUX_DEBUG("Cannot create filter graph");
         return false;
     }
 
@@ -210,21 +210,12 @@ bool Decoder::initFilterGraph()
     }
     buffersink_ctx_ = buffersink_ctx_local;
 
-    // Create the filter description string by concatenating all filters
-    std::string filter_desc = "";
-    for (size_t i = 0; i < filters_.size(); ++i)
-    {
-        filter_desc += filters_[i]->getFilterDescription();
-        if (i != filters_.size() - 1)
-            filter_desc += ",";
-    }
 
-    // If no filters are added, set up a pass-through (null) filter
-    if (filters_.empty())
+    std::string filter_desc;
+    for (const auto& filter : filters_)
     {
-        filter_desc = "null";
-    }
-
+		filter_desc += filter->getFilterDescription() + ",";
+	}
 
     // Parse and create the filter graph
     AVFilterInOut* inputs = avfilter_inout_alloc();
@@ -249,16 +240,14 @@ bool Decoder::initFilterGraph()
                                    &outputs, nullptr);
     if (ret < 0)
     {
-        std::cerr << "Error parsing filter graph: " << celux::errorToString(ret)
-                  << "\n";
+        CELUX_ERROR("Error parsing filter graph: {}", celux::errorToString(ret));
         return false;
     }
 
     ret = avfilter_graph_config(filter_graph_, nullptr);
     if (ret < 0)
     {
-        std::cerr << "Error configuring filter graph: " << celux::errorToString(ret)
-                  << "\n";
+        CELUX_ERROR("Error configuring filter graph: {}", celux::errorToString(ret));
         return false;
     }
 

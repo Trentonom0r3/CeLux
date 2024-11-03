@@ -3,8 +3,10 @@
 
 #include "CxException.hpp"
 #include <Conversion.hpp>
-#include <Filter.hpp>
 #include <Frame.hpp>
+#include <FilterFactory.hpp>
+
+
 namespace celux
 {
 
@@ -33,7 +35,7 @@ class Decoder
 
     Decoder() = default;
     // Constructor
-    Decoder(int numThreads, std::vector<std::shared_ptr<Filter>> filters);
+    Decoder(int numThreads, std::vector<std::shared_ptr<FilterBase>> filters);
     bool seekToNearestKeyframe(double timestamp);
     // Destructor
     virtual ~Decoder();
@@ -46,7 +48,7 @@ class Decoder
      *
      * @param filter Shared pointer to a Filter instance.
      */
-    void addFilter(const std::shared_ptr<Filter>& filter);
+    void addFilter(const std::unique_ptr<FilterBase>& filter);
     // Move constructor and assignment operator
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
@@ -112,7 +114,7 @@ class Decoder
     AVFilterContext* buffersrc_ctx_;
     AVFilterContext* buffersink_ctx_;
 
-    std::vector<std::shared_ptr<Filter>> filters_;
+    std::vector<std::shared_ptr<FilterBase>> filters_;
 
     /**
      * @brief Initializes the filter graph based on the added filters.

@@ -9,7 +9,7 @@ class Decoder : public celux::Decoder
 {
   public:
     Decoder(const std::string& filePath, int numThreads,
-            std::vector<std::shared_ptr<Filter>> filters)
+            std::vector<std::shared_ptr<FilterBase>> filters)
         : celux::Decoder(numThreads, filters)
     {
         isHwAccel = true;

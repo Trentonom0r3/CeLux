@@ -35,8 +35,8 @@ class Factory
      * @param converter Unique pointer to the IConverter instance.
      * @return std::unique_ptr<Decoder> Pointer to the created Decoder.
      */
-    static std::unique_ptr<Decoder> createDecoder(torch::Device device,
-                                                  const std::string& filename, int numThreads, std::vector<std::shared_ptr<Filter>> filters)
+    static std::unique_ptr<Decoder> createDecoder(torch::Device device, const std::string& filename, int numThreads,
+                  std::vector<std::shared_ptr<FilterBase>> filters)
     {
         if (device.is_cpu())
         {

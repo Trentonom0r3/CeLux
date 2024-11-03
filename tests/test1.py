@@ -15,7 +15,6 @@ import torch  # For visual confirmation
 # Adjust the path to include celux
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import celux_cuda as celux
-
 celux.set_log_level(celux.LogLevel.info)
 
 logging.basicConfig(
@@ -65,7 +64,8 @@ def process_video_with_visualization(video_path):
     try:
         frame_count = 0
         start = time.time()
-        filters = [("scale", "1920:1080"), ("hue", "0.5")]
+        filter = celux.Scale(width = "1920", height = "1080")
+        filters = [filter]
         with celux.VideoReader(video_path, device = "cpu", num_threads = 16, filters = filters)as reader:
             input("Press Enter to start processing video...")
             for i, frame in enumerate(reader):
@@ -101,7 +101,7 @@ def main(args):
         video_path = os.path.join(os.getcwd(), "ForBiggerBlazes.mp4")
     else:
         video_url = r"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        video_path = r"C:\Users\tjerf\Downloads\input-Int2-790.mp4"
+        video_path = os.path.join(os.getcwd(), "BigBuckBunny.mp4")
 
     if not os.path.exists(video_path):
         download_video(video_url, video_path)
@@ -109,8 +109,11 @@ def main(args):
         logging.info(f"Video already exists at {video_path}")
 
 
-    logging.info("Processing video with visualization")
+   # logging.info("Processing video with visualization")
     process_video_with_visualization(video_path)
+    logging.info("listing all filters")
+        
+     
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Video processing script with visualization and optional output saving.")
