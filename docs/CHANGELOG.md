@@ -1,4 +1,6 @@
 ## 📈 Changelog
+### Version 0.5.1 (2024-11-04)
+  - Fixed an issue where if no filters were added, decoder would not run properly.
 
 ### Version 0.5.0 (2024-11-03)
   - Some Major Refactoring and changes made.

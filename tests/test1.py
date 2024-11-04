@@ -15,7 +15,8 @@ import torch  # For visual confirmation
 # Adjust the path to include celux
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import celux_cuda as celux
-celux.set_log_level(celux.LogLevel.info)
+
+celux.set_log_level(celux.LogLevel.debug)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -66,7 +67,8 @@ def process_video_with_visualization(video_path):
         start = time.time()
         filter = celux.Scale(width = "1920", height = "1080")
         filters = [filter]
-        with celux.VideoReader(video_path, device = "cpu", num_threads = 16, filters = filters)as reader:
+        with celux.VideoReader(video_path, device = "cpu", num_threads = 16)as reader:
+            
             input("Press Enter to start processing video...")
             for i, frame in enumerate(reader):
                 if frame_count == 0:

@@ -435,28 +435,30 @@ bool Decoder::decodeNextFrame(void* buffer)
             // Successfully received a frame
             CELUX_DEBUG("Frame decoded successfully");
 
-            // Push the decoded frame into the filter graph's buffer source
-            ret = av_buffersrc_add_frame(buffersrc_ctx_, frame.get());
-            if (ret < 0)
+            if (filters_.size() > 0)
             {
-                CELUX_ERROR("Error while feeding the filter graph: {}",
-                            celux::errorToString(ret));
-                return false;
-            }
+                // Push the decoded frame into the filter graph's buffer source
+                ret = av_buffersrc_add_frame(buffersrc_ctx_, frame.get());
+                if (ret < 0)
+                {
+                    CELUX_ERROR("Error while feeding the filter graph: {}",
+                                celux::errorToString(ret));
+                    return false;
+                }
 
-          
-            // Retrieve the filtered frame from the buffer sink
-            ret = av_buffersink_get_frame(buffersink_ctx_, frame.get());
-            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-            {
-                break;
+                // Retrieve the filtered frame from the buffer sink
+                ret = av_buffersink_get_frame(buffersink_ctx_, frame.get());
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                {
+                    break;
+                }
+                else if (ret < 0)
+                {
+                    CELUX_ERROR("Error during filtering: {}",
+                                celux::errorToString(ret));
+                    return false;
+                }
             }
-            else if (ret < 0)
-            {
-                CELUX_ERROR("Error during filtering: {}", celux::errorToString(ret));
-                return false;
-            }
-
             // Pass the filtered frame to the converter
             converter->convert(frame, buffer);
             CELUX_DEBUG("Filtered frame converted");

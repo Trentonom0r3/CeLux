@@ -500,7 +500,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
 
         // Retrieve video properties
         properties = decoder->getVideoProperties();
-        CELUX_INFO("NUM FILTERS: {}", filters_.size());
+        
         for (auto& filter : filters_)
         { // Iterate through filters_
             // Use dynamic_cast to check if the filter is of type Scale
