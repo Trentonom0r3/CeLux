@@ -68,14 +68,15 @@ class YUV420PToRGB : public ConverterBase
                     "Failed to initialize swsContext for YUV420P to RGB conversion");
             }
 
-            // Set color space and range explicitly (optional)
-            int srcRange = 0; // MPEG (16-235)
-            int dstRange = 1; // JPEG (0-255)
-            const int* srcMatrix = sws_getCoefficients(SWS_CS_ITU709);
-            const int* dstMatrix = sws_getCoefficients(SWS_CS_ITU709);
+
+            int srcRange = 0; // Full range (0-255)
+            int dstRange = 1; // Full range (0-255)
+            const int* srcMatrix = sws_getCoefficients(SWS_CS_DEFAULT);
+            const int* dstMatrix = sws_getCoefficients(SWS_CS_DEFAULT);
 
             sws_setColorspaceDetails(swsContext, srcMatrix, srcRange, dstMatrix,
                                      dstRange, 0, 1 << 16, 1 << 16);
+
         }
 
         // Source data and line sizes
