@@ -399,7 +399,7 @@ void Decoder::initCodecContext()
 
 // Decoder.cpp
 
-bool Decoder::decodeNextFrame(void* buffer)
+bool Decoder::decodeNextFrame(void* buffer, double* frame_timestamp)
 {
     CELUX_TRACE("Decoding next frame");
     int ret;
@@ -460,9 +460,17 @@ bool Decoder::decodeNextFrame(void* buffer)
                     return false;
                 }
             }
-            // Pass the filtered frame to the converter
+
+            // **Retrieve the frame timestamp**
+            if (frame_timestamp)
+            {
+                *frame_timestamp = getFrameTimestamp(frame.get());
+                CELUX_DEBUG("Frame timestamp retrieved: {}", *frame_timestamp);
+            }
+
+            // Pass the (possibly filtered) frame to the converter
             converter->convert(frame, buffer);
-            CELUX_DEBUG("Filtered frame converted");
+            CELUX_DEBUG("Frame converted");
 
             return true;
         }
@@ -498,7 +506,6 @@ bool Decoder::decodeNextFrame(void* buffer)
         }
     }
 }
-
 
 bool Decoder::seek(double timestamp)
 {
@@ -679,6 +686,22 @@ bool Decoder::seekToNearestKeyframe(double timestamp)
     CELUX_TRACE("Keyframe seek successful, codec buffers flushed");
 
     return true;
+}
+// In Decoder.cpp
+
+double Decoder::getFrameTimestamp(AVFrame* frame)
+{
+    if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
+    {
+        AVRational time_base = formatCtx->streams[videoStreamIndex]->time_base;
+        double timestamp = frame->best_effort_timestamp * av_q2d(time_base);
+        return timestamp;
+    }
+    else
+    {
+        CELUX_WARN("Frame has no valid timestamp");
+        return -1.0; // You can choose how to handle frames without a valid timestamp
+    }
 }
 
 

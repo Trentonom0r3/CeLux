@@ -53,8 +53,17 @@ class Decoder
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
 
-    // Core methods
-    virtual bool decodeNextFrame(void* buffer);
+
+    /**
+     * @brief Decode the next frame and store it in the provided buffer.
+     *
+     * @param buffer Pointer to the buffer where the frame data will be stored.
+     * @param frame_timestamp Optional pointer to a double where the frame's timestamp
+     * will be stored.
+     * @return true if a frame was successfully decoded, false otherwise.
+     */
+    virtual bool decodeNextFrame(void* buffer, double* frame_timestamp = nullptr);
+
     virtual bool seek(double timestamp);
     virtual VideoProperties getVideoProperties() const;
     virtual bool isOpen() const;
@@ -143,5 +152,12 @@ class Decoder
     AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
     AVBufferRefPtr hwFramesCtx; // For hardware acceleration
     int numThreads;
+    /**
+     * @brief Get the timestamp of the frame in seconds.
+     *
+     * @param frame Pointer to the AVFrame.
+     * @return double Timestamp in seconds.
+     */
+    double getFrameTimestamp(AVFrame* frame);
 };
 } // namespace celux

@@ -1,4 +1,8 @@
 ## 📈 Changelog
+
+### Version 0.5.1 (2024-11-05)
+  - Testing out use of timestamps for setting range.
+  
 ### Version 0.5.1 (2024-11-04)
   - Fixed an issue where if no filters were added, decoder would not run properly.
 

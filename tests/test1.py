@@ -67,7 +67,7 @@ def process_video_with_visualization(video_path):
         start = time.time()
         filter = celux.Scale(width = "1920", height = "1080", flags = "lanczos")
         filters = [filter]
-        with celux.VideoReader(video_path, device = "cpu", num_threads = 16, filters = filters)as reader:
+        with celux.VideoReader(video_path, device = "cpu", num_threads = 16, filters = filters)((1.45,5.6)) as reader:
             
             input("Press Enter to start processing video...")
             for i, frame in enumerate(reader):

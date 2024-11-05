@@ -1,15 +1,12 @@
-// VideoReader.hpp
-
 #ifndef VIDEOREADER_HPP
 #define VIDEOREADER_HPP
 
 #include "Decoder.hpp" // Ensure this includes the Filter class
 #include "Factory.hpp"
-#include <memory>     // For std::unique_ptr
+#include <memory> // For std::unique_ptr
 #include <pybind11/pybind11.h>
 #include <string> // For std::string
 #include <vector> // For std::vector
-
 
 namespace py = pybind11;
 
@@ -117,12 +114,16 @@ class VideoReader
     int length() const;
 
     /**
-     * @brief Set the range of frames to read.
+     * @brief Set the range of frames or timestamps to read.
      *
-     * @param start Starting frame index.
-     * @param end Ending frame index (-1 for no limit).
+     * If the start and end values are integers, they are interpreted as frame numbers.
+     * If they are floating-point numbers, they are interpreted as timestamps in
+     * seconds.
+     *
+     * @param start Starting frame number or timestamp.
+     * @param end Ending frame number or timestamp.
      */
-    void setRange(int start, int end);
+    void setRange(double start, double end);
 
     /**
      * @brief Add a filter to the decoder's filter pipeline.
@@ -152,18 +153,39 @@ class VideoReader
      */
     void close();
 
+    /**
+     * @brief Set the range of frames to read (helper function).
+     *
+     * @param startFrame Starting frame index.
+     * @param endFrame Ending frame index (-1 for no limit).
+     */
+    void setRangeByFrames(int startFrame, int endFrame);
+
+    /**
+     * @brief Set the range of timestamps to read (helper function).
+     *
+     * @param startTime Starting timestamp.
+     * @param endTime Ending timestamp (-1 for no limit).
+     */
+    void setRangeByTimestamps(double startTime, double endTime);
+
     // Member variables
     std::unique_ptr<celux::Decoder> decoder;
     celux::Decoder::VideoProperties properties;
 
     torch::Tensor tensor;
 
+    // Variables for frame range
     int start_frame = 0;
     int end_frame = -1; // -1 indicates no limit
 
+    // Variables for timestamp range
+    double start_time = 0.0;
+    double end_time = -1.0; // -1 indicates no limit
+
     // Iterator state
     int currentIndex;
-
+    double current_timestamp; // Add this line
     // List of filters to be added before initialization
     std::vector<std::shared_ptr<FilterBase>> filters_;
 };

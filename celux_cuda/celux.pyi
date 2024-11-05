@@ -26,7 +26,7 @@ def set_log_level(level: LogLevel) -> None:
 
 class VideoReader:
     def __init__(self, input_path: str, num_threads: int = os.cpu_count() / 2,
-                 device: str = "cuda", filters = Optional[list[str]] ) -> None:
+                 device: str = "cuda", filters = list[FilterBase] ) -> None:
         """
         Initialize the VideoReader object.
 

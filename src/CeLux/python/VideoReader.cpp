@@ -442,9 +442,10 @@ void list_ffmpeg_filters(const std::string& output_filename)
 
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads,
-                         const std::string& device, 
+                         const std::string& device,
                          std::vector<std::shared_ptr<FilterBase>> filters)
-    : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1), filters_(filters)
+    : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
+      start_time(-1.0), end_time(-1.0), filters_(filters)
 {
     //set ffmpeg log level
     CELUX_INFO("VideoReader constructor called with filePath: {}", filePath);
@@ -541,60 +542,109 @@ VideoReader::~VideoReader()
     close();
 }
 
-void VideoReader::setRange(int start, int end)
+void VideoReader::setRange(double start, double end)
 {
-    CELUX_INFO("Setting frame range: start={}, end={}", start, end);
-    // Handle negative indices by converting them to positive frame numbers
-    if (start < 0)
+    CELUX_INFO("Setting range: start={}, end={}", start, end);
+
+    // Check if both start and end are integers (frame numbers)
+    if (std::floor(start) == start && std::floor(end) == end)
     {
-        start = properties.totalFrames + start;
-        CELUX_INFO("Adjusted start_frame to {}", start);
+        // Both are integers, treat as frame numbers
+        setRangeByFrames(static_cast<int>(start), static_cast<int>(end));
     }
-    if (end < 0)
+    else
     {
-        end = properties.totalFrames + end;
-        CELUX_INFO("Adjusted end_frame to {}", end);
+        // Treat as timestamps
+        setRangeByTimestamps(start, end);
+    }
+}
+
+void VideoReader::setRangeByFrames(int startFrame, int endFrame)
+{
+    CELUX_INFO("Setting frame range: start={}, end={}", startFrame, endFrame);
+
+    // Handle negative indices by converting them to positive frame numbers
+    if (startFrame < 0)
+    {
+        startFrame = properties.totalFrames + startFrame;
+        CELUX_INFO("Adjusted start_frame to {}", startFrame);
+    }
+    if (endFrame < 0)
+    {
+        endFrame = properties.totalFrames + endFrame;
+        CELUX_INFO("Adjusted end_frame to {}", endFrame);
     }
 
     // Validate the adjusted frame range
-    if (start < 0 || end < 0)
+    if (startFrame < 0 || endFrame < 0)
     {
         CELUX_ERROR("Frame indices out of range after adjustment: start={}, end={}",
-                    start, end);
+                    startFrame, endFrame);
         throw std::runtime_error("Frame indices out of range after adjustment.");
     }
-    if (end <= start)
+    if (endFrame <= startFrame)
     {
         CELUX_ERROR("Invalid frame range: end_frame ({}) must be greater than "
                     "start_frame ({}) after adjustment.",
-                    end, start);
+                    endFrame, startFrame);
         throw std::runtime_error(
             "end_frame must be greater than start_frame after adjustment.");
     }
 
     // Make end_frame exclusive by subtracting one
-    end = end - 1;
-    CELUX_INFO("Adjusted end_frame to be exclusive: {}", end);
+    endFrame = endFrame - 1;
+    CELUX_INFO("Adjusted end_frame to be exclusive: {}", endFrame);
 
-    start_frame = start;
-    end_frame = end;
+    start_frame = startFrame;
+    end_frame = endFrame;
     CELUX_INFO("Frame range set: start_frame={}, end_frame={}", start_frame, end_frame);
 }
+
+void VideoReader::setRangeByTimestamps(double startTime, double endTime)
+{
+    CELUX_INFO("Setting timestamp range: start={}, end={}", startTime, endTime);
+
+    // Validate the timestamp range
+    if (startTime < 0 || endTime < 0)
+    {
+        CELUX_ERROR("Timestamps cannot be negative: start={}, end={}", startTime,
+                    endTime);
+        throw std::invalid_argument("Timestamps cannot be negative.");
+    }
+    if (endTime <= startTime)
+    {
+        CELUX_ERROR("Invalid timestamp range: end ({}) must be greater than start ({})",
+                    endTime, startTime);
+        throw std::invalid_argument("end must be greater than start.");
+    }
+
+    // Set the timestamp range
+    start_time = startTime;
+    end_time = endTime;
+    CELUX_INFO("Timestamp range set: start_time={}, end_time={}", start_time, end_time);
+}
+
 
 torch::Tensor VideoReader::readFrame()
 {
     CELUX_TRACE("readFrame() called");
     py::gil_scoped_release release; // Release GIL before calling decoder
-    bool success = decoder->decodeNextFrame(tensor.data_ptr());
+
+    double frame_timestamp = 0.0;
+    bool success = decoder->decodeNextFrame(tensor.data_ptr(), &frame_timestamp);
     if (!success)
     {
         CELUX_WARN("Decoding failed or no more frames available");
         return torch::Tensor(); // Return an empty tensor if decoding failed
     }
 
-    CELUX_TRACE("Frame decoded successfully");
+    // Update current timestamp
+    current_timestamp = frame_timestamp;
+
+    CELUX_TRACE("Frame decoded successfully at timestamp: {}", current_timestamp);
     return tensor;
 }
+
 
 void VideoReader::close()
 {
@@ -769,48 +819,95 @@ bool VideoReader::seekToFrame(int frame_number)
 VideoReader& VideoReader::iter()
 {
     CELUX_TRACE("iter() called: Preparing VideoReader for iteration");
-    currentIndex = start_frame;
-    bool success = seekToFrame(start_frame);
-    for (int i = 0; i < start_frame; i++)
+
+    // Reset iterator state
+    currentIndex = 0;
+    current_timestamp = 0.0;
+
+    if (start_time >= 0.0 && end_time > 0.0)
     {
-		readFrame(); // Skip frames until start_frame
-	}
-    if (success)
+        // Using timestamp range
+        CELUX_INFO("Using timestamp range for iteration: start_time={}, end_time={}",
+                   start_time, end_time);
+        bool success = seek(start_time);
+        if (!success)
+        {
+            CELUX_ERROR("Failed to seek to start_time: {}", start_time);
+            throw std::runtime_error("Failed to seek to start_time.");
+        }
+        current_timestamp = start_time;
+    }
+    else if (start_frame >= 0 && end_frame >= 0)
     {
-        CELUX_TRACE("VideoReader successfully seeked to start_frame: {}", start_frame);
+        // Using frame range
+        CELUX_INFO("Using frame range for iteration: start_frame={}, end_frame={}",
+                   start_frame, end_frame);
+        bool success = seekToFrame(start_frame);
+        if (!success)
+        {
+            CELUX_ERROR("Failed to seek to start_frame: {}", start_frame);
+            throw std::runtime_error("Failed to seek to start_frame.");
+        }
+        currentIndex = start_frame;
+        current_timestamp = static_cast<double>(currentIndex) / properties.fps;
     }
     else
     {
-        CELUX_TRACE("Failed to seek to start_frame: {}", start_frame);
+        // No range set; start from the beginning
+        CELUX_INFO("No range set; starting from the beginning");
+        bool success = seek(0.0);
+        if (!success)
+        {
+            CELUX_ERROR("Failed to seek to the beginning of the video");
+            throw std::runtime_error("Failed to seek to the beginning of the video.");
+        }
+        current_timestamp = 0.0;
     }
+
     return *this;
 }
+
 
 torch::Tensor VideoReader::next()
 {
     CELUX_TRACE("next() called: Retrieving next frame");
-    if (end_frame >= 0 && currentIndex > end_frame)
+
+    // Check if we have reached the end of the range
+    if (start_time >= 0.0 && end_time > 0.0)
     {
-        CELUX_TRACE("Frame range exhausted: currentIndex={}, end_frame={}",
-                    currentIndex, end_frame);
-        throw py::stop_iteration(); // Stop iteration if range is exhausted
+        if (current_timestamp >= end_time)
+        {
+            CELUX_INFO("Timestamp range exhausted: current_timestamp={}, end_time={}",
+                       current_timestamp, end_time);
+            throw py::stop_iteration();
+        }
+    }
+    else if (start_frame >= 0 && end_frame >= 0)
+    {
+        if (currentIndex > end_frame)
+        {
+            CELUX_INFO("Frame range exhausted: currentIndex={}, end_frame={}",
+                       currentIndex, end_frame);
+            throw py::stop_iteration();
+        }
     }
 
-    // py::gil_scoped_release release; // Uncomment if GIL management is needed
-    CELUX_TRACE("Reading next frame in iteration");
     torch::Tensor frame = readFrame();
     if (!frame.defined() || frame.numel() == 0)
     {
-        CELUX_TRACE("No more frames available for iteration");
+        CELUX_INFO("No more frames available for iteration");
         throw py::stop_iteration(); // Stop iteration if no more frames are available
     }
-    CELUX_TRACE("Frame retrieved successfully, currentIndex before increment: {}",
-                currentIndex);
+
+    // Update iterator state
     currentIndex++;
-    CELUX_TRACE("currentIndex incremented to {}", currentIndex);
-    CELUX_TRACE("Returning frame number {}", currentIndex - 1);
+    // current_timestamp is already updated in readFrame()
+
+    CELUX_TRACE("Returning frame number {}, timestamp {}", currentIndex - 1,
+                current_timestamp);
     return frame;
 }
+
 
 void VideoReader::enter()
 {

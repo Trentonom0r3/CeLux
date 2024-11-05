@@ -12,15 +12,14 @@ PYBIND11_MODULE(celux, m)
     // Register the filters into the 'filters' submodule
     register_filters(m);
     // VideoReader bindings
-
     py::class_<VideoReader>(m, "VideoReader")
         .def(py::init<const std::string&, int, const std::string&,
-                      std::vector<std::shared_ptr<FilterBase>>
-                     >(),
+                      std::vector<std::shared_ptr<FilterBase>>>(),
              py::arg("input_path"),
              py::arg("num_threads") =
                  static_cast<int>(std::thread::hardware_concurrency() / 2),
-             py::arg("device") = "cuda", py::arg("filters") = std::vector<std::shared_ptr<FilterBase>>())
+             py::arg("device") = "cuda",
+             py::arg("filters") = std::vector<std::shared_ptr<FilterBase>>())
         .def("read_frame", &VideoReader::readFrame)
         .def("seek", &VideoReader::seek)
         .def("supported_codecs", &VideoReader::supportedCodecs)
@@ -41,30 +40,54 @@ PYBIND11_MODULE(celux, m)
             py::return_value_policy::reference_internal)
         .def("__exit__", &VideoReader::exit)
         .def("reset", &VideoReader::reset)
+        .def("set_range", &VideoReader::setRange, py::arg("start"), py::arg("end"),
+             "Set the range using either frame numbers (int) or timestamps (float).")
         .def(
             "__call__",
             [](VideoReader& self, py::object arg) -> VideoReader&
             {
                 if (py::isinstance<py::list>(arg) || py::isinstance<py::tuple>(arg))
                 {
-                    auto range = arg.cast<std::vector<int>>();
-                    if (range.size() != 2)
+                    auto range_list = arg.cast<std::vector<py::object>>();
+                    if (range_list.size() != 2)
                     {
                         throw std::runtime_error(
-                            "Range must be a list or tuple of two integers");
+                            "Range must be a list or tuple of two elements");
                     }
-                    self.setRange(range[0],
-                                  range[1]); // setRange now handles exclusivity and
-                                             // negative indices
+
+                    py::object start_obj = range_list[0];
+                    py::object end_obj = range_list[1];
+
+                    if (py::isinstance<py::int_>(start_obj) &&
+                        py::isinstance<py::int_>(end_obj))
+                    {
+                        int start = start_obj.cast<int>();
+                        int end = end_obj.cast<int>();
+                        self.setRange(static_cast<double>(start),
+                                      static_cast<double>(end));
+                    }
+                    else if (py::isinstance<py::float_>(start_obj) &&
+                             py::isinstance<py::float_>(end_obj))
+                    {
+                        double start = start_obj.cast<double>();
+                        double end = end_obj.cast<double>();
+                        self.setRange(start, end);
+                    }
+                    else
+                    {
+                        throw std::runtime_error(
+                            "Start and end must both be int or both be float");
+                    }
                 }
                 else
                 {
                     throw std::runtime_error(
-                        "Argument must be a list or tuple of two integers");
+                        "Argument must be a list or tuple of two elements");
                 }
                 return self;
             },
             py::return_value_policy::reference_internal);
+
 
     py::enum_<spdlog::level::level_enum>(m, "LogLevel")
         .value("trace", spdlog::level::trace)
