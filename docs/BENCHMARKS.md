@@ -20,8 +20,10 @@
 
 | Benchmark                      | Video Size  | Threads | Mean Time (s) | Std Dev (s) | FPS    |
 |--------------------------------|-------------|---------|---------------|-------------|--------|
-| Test Video Reader Cpu Benchmark | [1280, 720] | 16     | 9.63          | 1.52       | 1486.31 |
-| Test Video Reader Cuda Benchmark | [1280, 720] | 16     | 7.92          | 0.03       | 1807.82 |
+| Test Celux Cpu Benchmark | [1280, 720] | 16 | 9.41 | 0.16 | 1520.75 |
+| Test Celux Cuda Benchmark | [1280, 720] | 16 | 8.36 | 0.28 | 1710.85 |
+| Test Pyav Cpu Benchmark | [1280, 720] | 1 | 40.83| 8.14 | 350.58|
+| Test Opencv Cpu Benchmark | [1280, 720] | 1 | 31.49 | 2.49 | 454.44 |
 
 
 ### 📊 **Benchmark Visualizations**

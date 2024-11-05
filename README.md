@@ -52,6 +52,22 @@ for frame in reader:
 # do something
 ```
 
+<!-- BENCHMARK_SUMMARY_START -->
+
+## 📊 Benchmark Summary
+
+| Library  | Device       | Frames per Second (FPS) |
+|----------|--------------|-------------------------|
+| Celux | CPU      | 1520.75                 |
+| Celux | CUDA      | 1710.85                |
+| PyAV | CPU      | 350.58                |
+| OpenCV | CPU      | 454.44                 |
+
+
+For more details, see [Benchmarks](docs/BENCHMARKS.md).
+
+<!-- BENCHMARK_SUMMARY_END -->
+
 ## 📄 License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for details.

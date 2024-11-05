@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import logging
 import matplotlib.pyplot as plt
-import torch  # Ensure torch is imported
+import torch
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -60,7 +60,7 @@ def extract_system_specs(machine_info):
     specs_md += f"| **CPU Brand**         | {cpu_info.get('brand_raw', 'N/A')} |\n"
     specs_md += f"| **CPU Frequency**     | {cpu_info.get('hz_actual_friendly', 'N/A')} |\n"
     
-    # Handle cases where cache sizes might not be integers
+    # Cache sizes and number of cores
     l2_cache = cpu_info.get('l2_cache_size', None)
     l3_cache = cpu_info.get('l3_cache_size', None)
     l2_cache_str = f"{l2_cache // 1024} KB" if isinstance(l2_cache, int) else "N/A"
@@ -84,60 +84,68 @@ def extract_system_specs(machine_info):
     return specs_md
 
 def generate_markdown_table(data, total_frames_mapping):
-    """
-    Generates a Markdown table including FPS, video size, and number of threads.
-    
-    Args:
-        data (dict): Benchmark results from pytest-benchmark.
-        total_frames_mapping (dict): Mapping of benchmark names to total frames, video size, and threads.
-    
-    Returns:
-        str: Markdown-formatted table.
-    """
+    """Generates a Markdown table with detailed benchmarks for BENCHMARKS.md."""
     benchmarks = {}
     for bench in data['benchmarks']:
-        name = bench['name']
-        stats = bench['stats']
+        name = bench.get('name', 'N/A')
+        stats = bench.get('stats', {})
         benchmarks[name] = {
-            'mean': stats['mean'],      # Mean time in seconds
-            'stddev': stats['stddev']   # Std dev in seconds
+            'mean': stats.get('mean', 'N/A'),      # Mean time in seconds
+            'stddev': stats.get('stddev', 'N/A')   # Std dev in seconds
         }
 
-    # Dynamically determine benchmark order based on data
-    benchmark_order = [bench['name'] for bench in data['benchmarks']]
-
-    # Generate Markdown table with additional columns for num_threads and video_size
     table_md = "| Benchmark                      | Video Size  | Threads | Mean Time (s) | Std Dev (s) | FPS    |\n"
     table_md += "|--------------------------------|-------------|---------|---------------|-------------|--------|\n"
-    for bench_name in benchmark_order:
-        if bench_name in benchmarks and bench_name in total_frames_mapping:
-            mean_time = benchmarks[bench_name]['mean']      # Already in seconds
-            stddev = benchmarks[bench_name]['stddev']        # Already in seconds
-            total_frames = total_frames_mapping[bench_name]["total_frames"]
-            video_size = total_frames_mapping[bench_name].get("video_size", "N/A")
-            num_threads = total_frames_mapping[bench_name].get("num_threads", "N/A")
+    for bench_name, stats in benchmarks.items():
+        mean_time = stats['mean']
+        stddev = stats['stddev']
+        total_frames_info = total_frames_mapping.get(bench_name, {})
+        total_frames = total_frames_info.get("total_frames", None)
+        video_size = total_frames_info.get("video_size", "N/A")
+        num_threads = total_frames_info.get("num_threads", "N/A")
+        
+        if mean_time != 'N/A' and total_frames:
             fps = total_frames / mean_time if mean_time > 0 else 0
-            table_md += f"| {bench_name.replace('_', ' ').title()} | {video_size} | {num_threads}     | {mean_time:.2f}          | {stddev:.2f}       | {fps:.2f} |\n"
-            logger.info(f"Benchmark '{bench_name}': Mean Time = {mean_time:.2f}s, Std Dev = {stddev:.2f}s, FPS = {fps:.2f}, Threads = {num_threads}, Video Size = {video_size}")
         else:
-            if bench_name not in benchmarks:
-                logger.warning(f"Benchmark '{bench_name}' not found in benchmark data.")
-            if bench_name not in total_frames_mapping:
-                logger.warning(f"Total frames for benchmark '{bench_name}' not found.")
-            table_md += f"| {bench_name.replace('_', ' ').title()} | N/A         | N/A     | N/A           | N/A         | N/A    |\n"
+            fps = 'N/A'
 
+        table_md += f"| {bench_name.replace('_', ' ').title()} | {video_size} | {num_threads} | {mean_time if mean_time != 'N/A' else 'N/A'} | {stddev if stddev != 'N/A' else 'N/A'} | {fps} |\n"
+    
     return table_md
 
+def generate_markdown_summary_table(data, total_frames_mapping):
+    """Generates a brief Markdown summary table for the README."""
+    benchmarks = {}
+    for bench in data['benchmarks']:
+        name = bench.get('name', 'N/A')
+        stats = bench.get('stats', {})
+        benchmarks[name] = {
+            'mean': stats.get('mean', 'N/A'),      # Mean time in seconds
+            'stddev': stats.get('stddev', 'N/A')   # Std dev in seconds
+        }
+
+    summary_md = "| Library  | Device       | Frames per Second (FPS) |\n"
+    summary_md += "|----------|--------------|-------------------------|\n"
+    
+    for bench_name, stats in benchmarks.items():
+        mean_time = stats['mean']
+        total_frames_info = total_frames_mapping.get(bench_name, {})
+        total_frames = total_frames_info.get("total_frames", None)
+        
+        if mean_time != 'N/A' and total_frames:
+            fps = total_frames / mean_time if mean_time > 0 else 0
+        else:
+            fps = 'N/A'
+        
+        device = "CUDA" if "cuda" in bench_name.lower() else "CPU"
+        library = "CeLux" if "celux" in bench_name.lower() else "PyAV" if "pyav" in bench_name.lower() else "OpenCV"
+        
+        summary_md += f"| {library} | {device}      | {fps}                  |\n"
+
+    return summary_md
 
 def generate_fps_plot(data, total_frames_mapping, output_path):
-    """
-    Generates a bar chart for FPS of each benchmark.
-    
-    Args:
-        data (dict): Benchmark results from pytest-benchmark.
-        total_frames_mapping (dict): Mapping of benchmark names to total frames, video size, and threads.
-        output_path (str): Path to save the generated plot.
-    """
+    """Generates a bar chart for FPS of each benchmark."""
     benchmarks = {}
     for bench in data['benchmarks']:
         name = bench['name']
@@ -153,53 +161,26 @@ def generate_fps_plot(data, total_frames_mapping, output_path):
     for bench_name, stats in benchmarks.items():
         if bench_name in total_frames_mapping:
             mean_time = stats['mean']
-            total_frames = total_frames_mapping[bench_name]["total_frames"]  # Access the total frames correctly
+            total_frames = total_frames_mapping[bench_name]["total_frames"]
             fps = total_frames / mean_time if mean_time > 0 else 0
             bench_names.append(bench_name.replace('_', ' ').title())
             fps_values.append(fps)
-            logger.info(f"Plotting Benchmark '{bench_name}': FPS = {fps:.2f}")
-        else:
-            logger.warning(f"Total frames for benchmark '{bench_name}' not found. Skipping plot for this benchmark.")
 
     if not fps_values:
         logger.warning("No FPS data available to plot.")
         return
 
-    # Create bar chart
     plt.figure(figsize=(10, 6))
     bars = plt.bar(bench_names, fps_values, color='skyblue')
     plt.xlabel('Benchmark')
     plt.ylabel('Frames Per Second (FPS)')
     plt.title('FPS Comparison Across Benchmarks')
-    plt.ylim(0, max(fps_values) * 1.2 if fps_values else 1)
-
-    # Annotate bars with FPS values
-    for bar in bars:
-        height = bar.get_height()
-        plt.annotate(f'{height:.2f}',
-                     xy=(bar.get_x() + bar.get_width() / 2, height),
-                     xytext=(0, 3),  # 3 points vertical offset
-                     textcoords="offset points",
-                     ha='center', va='bottom')
-
     plt.tight_layout()
-    try:
-        plt.savefig(output_path)
-        logger.info(f"Generated FPS comparison plot at {output_path}")
-    except Exception as e:
-        logger.error(f"Failed to save FPS plot: {e}")
-        sys.exit(1)
+    plt.savefig(output_path)
     plt.close()
 
 def generate_mean_time_plot(data, total_frames_mapping, output_path):
-    """
-    Generates a bar chart for Mean Time of each benchmark.
-    
-    Args:
-        data (dict): Benchmark results from pytest-benchmark.
-        total_frames_mapping (dict): Mapping of benchmark names to total frames.
-        output_path (str): Path to save the generated plot.
-    """
+    """Generates a bar chart for Mean Time of each benchmark."""
     benchmarks = {}
     for bench in data['benchmarks']:
         name = bench['name']
@@ -217,92 +198,90 @@ def generate_mean_time_plot(data, total_frames_mapping, output_path):
             mean_time = stats['mean']
             bench_names.append(bench_name.replace('_', ' ').title())
             mean_times.append(mean_time)
-            logger.info(f"Plotting Benchmark '{bench_name}': Mean Time = {mean_time:.2f}s")
-        else:
-            logger.warning(f"Total frames for benchmark '{bench_name}' not found. Skipping plot for this benchmark.")
 
     if not mean_times:
         logger.warning("No Mean Time data available to plot.")
         return
 
-    # Create bar chart
     plt.figure(figsize=(10, 6))
     bars = plt.bar(bench_names, mean_times, color='salmon')
     plt.xlabel('Benchmark')
     plt.ylabel('Mean Time (s)')
     plt.title('Mean Time Comparison Across Benchmarks')
-    plt.ylim(0, max(mean_times) * 1.2 if mean_times else 1)
-
-    # Annotate bars with Mean Time values
-    for bar in bars:
-        height = bar.get_height()
-        plt.annotate(f'{height:.2f}s',
-                     xy=(bar.get_x() + bar.get_width() / 2, height),
-                     xytext=(0, 3),  # 3 points vertical offset
-                     textcoords="offset points",
-                     ha='center', va='bottom')
-
     plt.tight_layout()
-    try:
-        plt.savefig(output_path)
-        logger.info(f"Generated Mean Time comparison plot at {output_path}")
-    except Exception as e:
-        logger.error(f"Failed to save Mean Time plot: {e}")
-        sys.exit(1)
+    plt.savefig(output_path)
     plt.close()
 
-def update_readme(system_specs_md, table_md, plots_md, readme_path):
-    """
-    Updates the README.md with system specs, benchmark table, and plots.
-    
-    Args:
-        system_specs_md (str): Markdown-formatted system specifications.
-        table_md (str): Markdown-formatted benchmark table.
-        plots_md (str): Markdown-formatted plots section.
-        readme_path (str): Path to README.md.
-    """
+def update_readme(summary_md, readme_path):
+    """Updates the README.md with a brief summary table."""
     try:
         readme = Path(readme_path).read_text(encoding='utf-8')
         logger.info(f"Read README.md from {readme_path}")
     except Exception as e:
         logger.error(f"Failed to read README.md: {e}")
         sys.exit(1)
-    
+
+    # Markers
+    summary_marker = "<!-- BENCHMARK_SUMMARY_START -->"
+    summary_end_marker = "<!-- BENCHMARK_SUMMARY_END -->"
+
+    summary_start_idx = readme.find(summary_marker)
+    summary_end_idx = readme.find(summary_end_marker)
+
+    if summary_start_idx != -1 and summary_end_idx != -1:
+        before_summary = readme[:summary_start_idx + len(summary_marker)]
+        after_summary = readme[summary_end_idx:]
+        summary_section = f"\n\n## 📊 Benchmark Summary\n\n{summary_md}\n\nFor more details, see [Benchmarks](docs/BENCHMARKS.md).\n\n"
+        new_readme = f"{before_summary}{summary_section}{after_summary}"
+
+        try:
+            Path(readme_path).write_text(new_readme, encoding='utf-8')
+            logger.info("README.md updated with benchmark summary.")
+        except Exception as e:
+            logger.error(f"Failed to write README.md: {e}")
+            sys.exit(1)
+
+def update_benchmarks_doc(system_specs_md, table_md, plots_md, benchmarks_path):
+    """Updates the BENCHMARKS.md with full details, including tables and plots."""
+    try:
+        benchmarks_doc = Path(benchmarks_path).read_text(encoding='utf-8')
+        logger.info(f"Read BENCHMARKS.md from {benchmarks_path}")
+    except Exception as e:
+        logger.error(f"Failed to read BENCHMARKS.md: {e}")
+        sys.exit(1)
+
+    # Markers for full benchmarks section
     start_marker = "<!-- BENCHMARKS_START -->"
     end_marker = "<!-- BENCHMARKS_END -->"
 
-    start_idx = readme.find(start_marker)
-    end_idx = readme.find(end_marker)
+    start_idx = benchmarks_doc.find(start_marker)
+    end_idx = benchmarks_doc.find(end_marker)
 
     if start_idx == -1 or end_idx == -1:
-        logger.error("Benchmark markers not found in README.md")
+        logger.error("Benchmark markers not found in BENCHMARKS.md")
         sys.exit(1)
 
-    # Extract the content before and after the markers
-    before = readme[:start_idx + len(start_marker)]
-    after = readme[end_idx:]
-
-    # Combine all sections
+    # Insert main benchmarks section
+    before = benchmarks_doc[:start_idx + len(start_marker)]
+    after = benchmarks_doc[end_idx:]
     new_section = f"\n\n{system_specs_md}\n\n{table_md}\n\n{plots_md}\n\n"
-
-    # Insert the new section between the markers
-    new_readme = f"{before}{new_section}{after}"
+    new_benchmarks_doc = f"{before}{new_section}{after}"
 
     try:
-        # Write back to README.md with UTF-8 encoding
-        Path(readme_path).write_text(new_readme, encoding='utf-8')
-        logger.info("README.md updated with system specs, benchmark table, and plots.")
+        Path(benchmarks_path).write_text(new_benchmarks_doc, encoding='utf-8')
+        logger.info("BENCHMARKS.md updated with detailed benchmarks.")
     except Exception as e:
-        logger.error(f"Failed to write README.md: {e}")
+        logger.error(f"Failed to write BENCHMARKS.md: {e}")
         sys.exit(1)
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python update_readme_benchmarks.py <benchmark_json_path> <readme_path>")
+    if len(sys.argv) != 4:
+        print("Usage: python update_readme_benchmarks.py <benchmark_json_path> <readme_path> <benchmarks_md_path>")
         sys.exit(1)
 
     benchmark_json_path = sys.argv[1]
     readme_path = sys.argv[2]
+    benchmarks_md_path = sys.argv[3]
     total_frames_json_path = "tests/benchmarks/total_frames.json"
 
     # Check if total_frames.json exists
@@ -318,8 +297,9 @@ def main():
     machine_info = benchmark_data.get('machine_info', {})
     system_specs_md = extract_system_specs(machine_info)
 
-    # Generate benchmark table
+    # Generate tables and summary
     table_md = generate_markdown_table(benchmark_data, total_frames_mapping)
+    summary_md = generate_markdown_summary_table(benchmark_data, total_frames_mapping)
 
     # Generate plots
     plots_dir = Path("scripts/benchmarks/")
@@ -334,9 +314,12 @@ def main():
     plots_md += f"![FPS Comparison]({fps_plot_path.as_posix()})\n\n"
     plots_md += f"![Mean Time Comparison]({mean_time_plot_path.as_posix()})\n\n"
 
-    # Update README.md
-    update_readme(system_specs_md, table_md, plots_md, readme_path)
+    # Update README.md with summary
+    update_readme(summary_md, readme_path)
+
+    # Update BENCHMARKS.md with full details
+    update_benchmarks_doc(system_specs_md, table_md, plots_md, benchmarks_md_path)
 
 if __name__ == "__main__":
     main()
-#python scripts\update_readme_benchmarks.py benchmark_results.json docs/BENCHMARKS.md
+#python scripts\update_readme_benchmarks.py benchmark_results.json README.md docs/BENCHMARKS.md

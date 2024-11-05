@@ -14,5 +14,21 @@
             1280,
             720
         ]
+    },
+    "test_pyav_cpu_benchmark": {
+        "total_frames": 14315,
+        "num_threads": 1,
+        "video_size": [
+            1280,
+            720
+        ]
+    },
+    "test_opencv_cpu_benchmark": {
+        "total_frames": 14315,
+        "num_threads": 1,
+        "video_size": [
+            1280,
+            720
+        ]
     }
 }

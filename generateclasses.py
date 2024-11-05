@@ -1077,6 +1077,8 @@ def generate_pyi_stub(output_dir, filter_class_info):
         pyi_lines.append(f"class {class_name}(FilterBase):")
         pyi_lines.append('    """')
         pyi_lines.append(f'    {description}')
+        pyi_lines.append(f'# For more info on Filters and their respective arguments,
+                         please visit https://ffmpeg.org/ffmpeg-filters.html')
         pyi_lines.append('    """')
         if not methods:
             pyi_lines.append("    pass")

@@ -160,6 +160,7 @@ void Decoder::initialize(const std::string& filePath)
                codecCtx->codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
 
     if (filters_.size() > 0) {
+        CELUX_INFO("Applying filters to the decoder");
         initFilterGraph();
     }
 }
@@ -216,7 +217,7 @@ bool Decoder::initFilterGraph()
     {
 		filter_desc += filter->getFilterDescription() + ",";
 	}
-
+    CELUX_DEBUG("Filter command/description being used: {}", filter_desc);
     // Parse and create the filter graph
     AVFilterInOut* inputs = avfilter_inout_alloc();
     AVFilterInOut* outputs = avfilter_inout_alloc();
