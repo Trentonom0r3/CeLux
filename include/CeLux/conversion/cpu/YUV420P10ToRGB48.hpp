@@ -2,18 +2,7 @@
 #pragma once
 
 #include "CPUConverter.hpp"
-#include "Frame.hpp"
-#include <cstring> // For memcpy
-#include <iostream>
-#include <stdexcept>
-#include <type_traits>
 
-extern "C"
-{
-#include <libavutil/imgutils.h>
-#include <libavutil/pixdesc.h>
-#include <libswscale/swscale.h>
-}
 
 namespace celux
 {

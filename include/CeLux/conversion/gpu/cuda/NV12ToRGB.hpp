@@ -3,8 +3,6 @@
 #pragma once
 
 #include "BaseConverter.hpp"
-#include "Frame.hpp"
-
 // Helper function to check if the frame is a hardware frame
 inline bool is_hw_frame(const AVFrame* frame)
 {

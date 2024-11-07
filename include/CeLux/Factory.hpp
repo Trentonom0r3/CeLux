@@ -3,7 +3,6 @@
 #define FACTORY_HPP
 
 #include <Decoders.hpp>
-#include <torch/extension.h>
 
 using ConverterKey = std::tuple<bool, AVPixelFormat>;
 
@@ -55,6 +54,7 @@ class Factory
             throw std::invalid_argument("Unsupported backend: " + device.str());
         }
     }
+
 
     /**
      * @brief Creates a Converter instance based on the specified backend and pixel
@@ -116,6 +116,19 @@ class Factory
 					 CELUX_DEBUG("Creating RGB24ToRGB converter");
 					 return std::make_unique<cpu::RGBToRGB>();
 				 }},
+                // New CPU converters with alpha channels
+                {std::make_tuple(true, AV_PIX_FMT_RGBA),
+                 []() -> std::unique_ptr<IConverter>
+                 {
+                     CELUX_DEBUG("Creating RGBAToRGB converter");
+                     return std::make_unique<cpu::RGBAToRGB>();
+                 }},
+                {std::make_tuple(true, AV_PIX_FMT_BGRA),
+                 []() -> std::unique_ptr<IConverter>
+                 {
+                     CELUX_DEBUG("Creating BGRAToRGB converter");
+                     return std::make_unique<cpu::BGRAToRGB>();
+                 }},
 
 #ifdef CUDA_ENABLED
                 // CUDA converters
@@ -164,6 +177,8 @@ class Factory
         case AV_PIX_FMT_RGB24:
         case AV_PIX_FMT_NV12:
         case AV_PIX_FMT_BGR24:
+        case AV_PIX_FMT_RGBA:
+        case AV_PIX_FMT_BGRA:
             return 8;
         case AV_PIX_FMT_YUV420P10LE:
         case AV_PIX_FMT_P010LE:

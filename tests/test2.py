@@ -140,7 +140,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode",
         type=str,
-        default="lite",
+        default="full",
         help="The mode to run the test in. 'lite' for github actions and 'full' for local testing.",
         choices=["lite", "full"],
     )

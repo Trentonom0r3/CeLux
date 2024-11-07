@@ -3,9 +3,8 @@
 
 #include "CxException.hpp"
 #include <Conversion.hpp>
-#include <Frame.hpp>
 #include <FilterFactory.hpp>
-
+#include <Frame.hpp>
 
 namespace celux
 {
@@ -53,7 +52,6 @@ class Decoder
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
 
-
     /**
      * @brief Decode the next frame and store it in the provided buffer.
      *
@@ -87,41 +85,14 @@ class Decoder
     virtual int64_t convertTimestamp(double timestamp) const;
     void populateProperties();
     void setFormatFromBitDepth();
-    // Deleters and smart pointers
-    struct AVFormatContextDeleter
-    {
-        void operator()(AVFormatContext* ctx) const
-        {
-            avformat_close_input(&ctx);
-        }
-    };
 
-    struct AVCodecContextDeleter
-    {
-        void operator()(AVCodecContext* ctx) const
-        {
-            avcodec_free_context(&ctx);
-        }
-    };
-
-    struct AVBufferRefDeleter
-    {
-        void operator()(AVBufferRef* ref) const
-        {
-            av_buffer_unref(&ref);
-        }
-    };
-
-    struct AVPacketDeleter
-    {
-        void operator()(AVPacket* pkt) const
-        {
-            av_packet_free(&pkt);
-        }
-    };
-    AVFilterGraph* filter_graph_;
-    AVFilterContext* buffersrc_ctx_;
-    AVFilterContext* buffersink_ctx_;
+    /**
+     * @brief Get the timestamp of the frame in seconds.
+     *
+     * @param frame Pointer to the AVFrame.
+     * @return double Timestamp in seconds.
+     */
+    double getFrameTimestamp(AVFrame* frame);
 
     std::vector<std::shared_ptr<FilterBase>> filters_;
 
@@ -132,15 +103,14 @@ class Decoder
      * @return false otherwise.
      */
     bool initFilterGraph();
-    using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
-    using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
-    using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;
-    using AVPacketPtr = std::unique_ptr<AVPacket, AVPacketDeleter>;
+
     void set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth);
-    std::string buildFilterArgs(const AVCodecContext* codecCtx,
-                                const AVFormatContext* formatCtx, int videoStreamIndex) const;
-    std::string ptrToHexString(void* ptr) const;
+
     // Member variables
+
+    AVFilterGraphPtr filter_graph_;
+    AVFilterContext* buffersrc_ctx_;
+    AVFilterContext* buffersink_ctx_;
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;
     AVPacketPtr pkt;
@@ -152,12 +122,5 @@ class Decoder
     AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
     AVBufferRefPtr hwFramesCtx; // For hardware acceleration
     int numThreads;
-    /**
-     * @brief Get the timestamp of the frame in seconds.
-     *
-     * @param frame Pointer to the AVFrame.
-     * @return double Timestamp in seconds.
-     */
-    double getFrameTimestamp(AVFrame* frame);
 };
 } // namespace celux

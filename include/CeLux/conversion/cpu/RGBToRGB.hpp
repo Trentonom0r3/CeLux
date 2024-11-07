@@ -2,8 +2,6 @@
 #pragma once
 
 #include "CPUConverter.hpp"
-#include "Frame.hpp"
-#include <type_traits>
 
 namespace celux
 {

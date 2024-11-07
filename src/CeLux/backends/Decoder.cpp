@@ -171,7 +171,7 @@ bool Decoder::initFilterGraph()
     int ret = 0;
 
     // Create the filter graph
-    filter_graph_ = avfilter_graph_alloc();
+    filter_graph_.reset(avfilter_graph_alloc());
     if (!filter_graph_)
     {
        CELUX_DEBUG("Cannot create filter graph");
@@ -190,7 +190,7 @@ bool Decoder::initFilterGraph()
              formatCtx->streams[videoStreamIndex]->time_base.den);
 
     ret = avfilter_graph_create_filter(&buffersrc_ctx_local, buffersrc, "in", args,
-                                       nullptr, filter_graph_);
+                                       nullptr, filter_graph_.get());
     if (ret < 0)
     {
         CELUX_CRITICAL("Cannot create buffer source: {} ", celux::errorToString(ret));
@@ -203,7 +203,7 @@ bool Decoder::initFilterGraph()
     AVFilterContext* buffersink_ctx_local = nullptr;
 
     ret = avfilter_graph_create_filter(&buffersink_ctx_local, buffersink, "out",
-                                       nullptr, nullptr, filter_graph_);
+                                       nullptr, nullptr, filter_graph_.get());
     if (ret < 0)
     {
         CELUX_CRITICAL("Cannot create buffer sink: {}", celux::errorToString(ret));
@@ -237,7 +237,7 @@ bool Decoder::initFilterGraph()
     inputs->pad_idx = 0;
     inputs->next = nullptr;
 
-    ret = avfilter_graph_parse_ptr(filter_graph_, filter_desc.c_str(), &inputs,
+    ret = avfilter_graph_parse_ptr(filter_graph_.get(), filter_desc.c_str(), &inputs,
                                    &outputs, nullptr);
     if (ret < 0)
     {
@@ -245,7 +245,7 @@ bool Decoder::initFilterGraph()
         return false;
     }
 
-    ret = avfilter_graph_config(filter_graph_, nullptr);
+    ret = avfilter_graph_config(filter_graph_.get(), nullptr);
     if (ret < 0)
     {
         CELUX_ERROR("Error configuring filter graph: {}", celux::errorToString(ret));
@@ -687,22 +687,51 @@ bool Decoder::seekToNearestKeyframe(double timestamp)
 
     return true;
 }
-// In Decoder.cpp
 
-double Decoder::getFrameTimestamp(AVFrame* frame)
+double Decoder::getFrameTimestamp(AVFrame* frame) 
 {
+    if (!frame)
+    {
+        CELUX_WARN("Received a null frame pointer.");
+        return -1.0;
+    }
+
+    // Define a lambda to convert AV_TIME_BASE to seconds
+    auto convert_to_seconds = [&](int64_t timestamp, AVRational time_base) -> double
+    { return static_cast<double>(timestamp) * av_q2d(time_base); };
+
+    // Attempt to retrieve the best_effort_timestamp first
     if (frame->best_effort_timestamp != AV_NOPTS_VALUE)
     {
         AVRational time_base = formatCtx->streams[videoStreamIndex]->time_base;
-        double timestamp = frame->best_effort_timestamp * av_q2d(time_base);
+        double timestamp = convert_to_seconds(frame->best_effort_timestamp, time_base);
+        CELUX_DEBUG("Using best_effort_timestamp: {}", timestamp);
         return timestamp;
     }
-    else
+
+    // Fallback to frame->pts
+    if (frame->pts != AV_NOPTS_VALUE)
     {
-        CELUX_WARN("Frame has no valid timestamp");
-        return -1.0; // You can choose how to handle frames without a valid timestamp
+        AVRational time_base = formatCtx->streams[videoStreamIndex]->time_base;
+        double timestamp = convert_to_seconds(frame->pts, time_base);
+        CELUX_DEBUG("Using frame->pts: {}", timestamp);
+        return timestamp;
     }
+
+    // Fallback to frame->pkt_dts if available
+    if (frame->pkt_dts != AV_NOPTS_VALUE)
+    {
+        AVRational time_base = formatCtx->streams[videoStreamIndex]->time_base;
+        double timestamp = convert_to_seconds(frame->pkt_dts, time_base);
+        CELUX_DEBUG("Using frame->pkt_dts: {}", timestamp);
+        return timestamp;
+    }
+
+    // If all timestamp fields are invalid, log a warning and handle accordingly
+    CELUX_WARN("Frame has no valid timestamp. Returning -1.0");
+    return -1.0;
 }
+
 
 
 } // namespace celux

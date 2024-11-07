@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BaseConverter.hpp"
-#include "Frame.hpp"
+
 extern "C"
 {
     /**

@@ -1,5 +1,13 @@
 ## 📈 Changelog
 
+### Version 0.5.2 (2024-11-05)
+  - Finalized fixes for CPU Color Conversions.
+  - Added Support for `RGBA`, `BGRA` pixel formats. 
+  - Adjusted `__call__` and `set_range` methods for `VideoReader`.
+    - Now takes `int` for frame steps, `float` for timestamp steps. 
+      - Pass int or float and the reader will handle things internally.
+  - No new benchmarks. Not need for this release.
+
 ### Version 0.5.1.2 (2024-11-05)
   - Fixed issue with Color Conversion.
 

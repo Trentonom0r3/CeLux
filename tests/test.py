@@ -106,7 +106,7 @@ def process_video_color_similarity(video_path):
         delta_e_total = 0.0
         start = time.time()
 
-        celux_reader = celux.VideoReader(video_path, device="cpu", num_threads=16)((0,100))
+        celux_reader = celux.VideoReader(video_path, device="cuda", num_threads=16)((0,100))
 
         # Initialize OpenCV VideoCapture
         opencv_cap = cv2.VideoCapture(video_path)
@@ -114,7 +114,7 @@ def process_video_color_similarity(video_path):
             logging.error(f"Failed to open video with OpenCV: {video_path}")
             return
 
-        input("Press Enter to start processing video...")
+        #input("Press Enter to start processing video...")
 
         while True:
             # Read frame from Celux
