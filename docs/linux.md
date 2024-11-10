@@ -6,12 +6,13 @@
 git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
 
-# Bootstrap vcpkg
-./bootstrap-vcpkg.sh
 
 # Update and install required system packages
 sudo apt-get update
 sudo apt-get install curl zip unzip tar nasm
+
+# Bootstrap vcpkg
+./bootstrap-vcpkg.sh
 ```
 
 # Install CMake v3.30.1
@@ -41,8 +42,9 @@ sudo apt-get -y install cuda-toolkit-12-6
 # Install Project Dependencies with vcpkg
 
 ```bash
+sudo apt-get install pkg-config
 # Install FFmpeg with specific features
-./vcpkg install "ffmpeg[avcodec,avformat,swscale,avfilter,nvcodec]:x64-linux"
+./vcpkg install "ffmpeg[avcodec,avformat,swscale,avfilter,nvcodec, x264, x265]:x64-linux"
 
 # Install additional libraries
 ./vcpkg install pybind11

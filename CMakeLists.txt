@@ -7,10 +7,14 @@ cmake_minimum_required(VERSION 3.15)
 # Option to enable or disable CUDA support
 option(ENABLE_CUDA "Enable CUDA support" ON)
 
-# Use vcpkg toolchain if on Windows
+# Use vcpkg toolchain
 if (WIN32)
+    # Windows-specific vcpkg toolchain
     set(CMAKE_TOOLCHAIN_FILE "C:/Users/tjerf/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+else()
+    # Linux-specific vcpkg toolchain
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
 endif()
 
 # Conditionally include CUDA in the project languages
@@ -29,52 +33,58 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ------------------------------
 
 if(ENABLE_CUDA)
-    # Define CUDA toolkit root path
-    set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
-
-    # Include CUDA directories
-    include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
-    link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
-
-    # Include NPP headers
-    include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
-
-    # List of NPP libraries
-    set(NPP_LIBRARIES
-        nppicc.lib   # Core functions for image processing
-    )
+    if(WIN32)
+        # Windows-specific CUDA paths
+        set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
+        include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
+        link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
+        set(NPP_LIBRARIES nppicc.lib)
+    else()
+        # Linux-specific CUDA paths
+        set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
+        include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
+        link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
+        set(NPP_LIBRARIES nppicc)
+    endif()
 endif()
 
 # ------------------------------
 # 3. Manually Specify FFmpeg Static Libraries
 # ------------------------------
 
-# Define the vcpkg installation path for FFmpeg static libraries
-set(FFMPEG_VCPKG_STATIC_DIR "C:/Users/tjerf/vcpkg/installed/x64-windows-static")
+if(WIN32)
+    # Windows-specific FFmpeg paths
+    set(FFMPEG_VCPKG_STATIC_DIR "C:/Users/tjerf/vcpkg/installed/x64-windows-static")
+    set(FFMPEG_LIB_EXT ".lib")
+else()
+    # Linux-specific FFmpeg paths
+    set(FFMPEG_VCPKG_STATIC_DIR "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-linux")
+    set(FFMPEG_LIB_EXT ".a")
+endif()
 
-# Specify the path to FFmpeg include directories
+# Common FFmpeg include directories
 set(FFMPEG_INCLUDE_DIRS "${FFMPEG_VCPKG_STATIC_DIR}/include")
 
-# Add WebP, x264, and x265 libraries to the list of FFmpeg dependencies
+# FFmpeg dependencies
 set(FFMPEG_DEPENDENCIES
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebp.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdecoder.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdemux.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpmux.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libx264.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/x265-static.lib" #libsharpyuv.lib
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libsharpyuv.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebp${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdecoder${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdemux${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpmux${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libx264${FFMPEG_LIB_EXT}"
+	"${FFMPEG_VCPKG_STATIC_DIR}/lib/x265-static${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libsharpyuv${FFMPEG_LIB_EXT}"
 )
 
-# List the static FFmpeg libraries you want to link against
+# FFmpeg static libraries
 set(FFMPEG_STATIC_LIBS
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avutil.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avcodec.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avformat.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avdevice.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swscale.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swresample.lib"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avfilter.lib"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avutil${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avcodec${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avformat${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avdevice${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swscale${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swresample${FFMPEG_LIB_EXT}"
+    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avfilter${FFMPEG_LIB_EXT}"
     ${FFMPEG_DEPENDENCIES}
 )
 
@@ -82,11 +92,18 @@ set(FFMPEG_STATIC_LIBS
 # 4. Keep Torch/CUDA as Dynamic Libraries (B)
 # ------------------------------
 
-# Set the path to the root of the libtorch installation
-if(ENABLE_CUDA)
-    set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cu121/libtorch")
+if(WIN32)
+    if(ENABLE_CUDA)
+        set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cu121/libtorch")
+    else()
+        set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cpu/libtorch")
+    endif()
 else()
-    set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cpu/libtorch")
+    if(ENABLE_CUDA)
+        set(TORCH_INSTALL_PREFIX "/opt/libtorch_cuda/libtorch")
+    else()
+        set(TORCH_INSTALL_PREFIX "/opt/libtorch_cpu/libtorch")
+    endif()
 endif()
 set(CMAKE_PREFIX_PATH "${TORCH_INSTALL_PREFIX}")
 
@@ -97,42 +114,55 @@ find_package(Torch REQUIRED)
 # 5. Find Windows Media Foundation Libraries
 # ------------------------------
 
-# Define the Windows SDK lib path (adjust the version as needed)
-set(WINDOW_SDK_LIB_PATH "C:/Program Files (x86)/Windows Kits/10/Lib")
+if(WIN32)
+    # Windows-specific code for Media Foundation
+    set(WINDOW_SDK_LIB_PATH "C:/Program Files (x86)/Windows Kits/10/Lib")
 
-find_library(MF_LIB NAMES mf PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
-if(NOT MF_LIB)
-    message(FATAL_ERROR "mf.lib not found. Ensure the Windows SDK is installed.")
-endif()
+    find_library(MF_LIB NAMES mf PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
+    if(NOT MF_LIB)
+        message(FATAL_ERROR "mf.lib not found. Ensure the Windows SDK is installed.")
+    endif()
 
-find_library(MFUUUID_LIB NAMES mfuuid PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
-if(NOT MFUUUID_LIB)
-    message(FATAL_ERROR "mfuuid.lib not found. Ensure the Windows SDK is installed.")
-endif()
+    find_library(MFUUUID_LIB NAMES mfuuid PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
+    if(NOT MFUUUID_LIB)
+        message(FATAL_ERROR "mfuuid.lib not found. Ensure the Windows SDK is installed.")
+    endif()
 
-find_library(OLE32_LIB NAMES ole32 PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
-if(NOT OLE32_LIB)
-    message(FATAL_ERROR "ole32.lib not found. Ensure the Windows SDK is installed.")
+    find_library(OLE32_LIB NAMES ole32 PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
+    if(NOT OLE32_LIB)
+        message(FATAL_ERROR "ole32.lib not found. Ensure the Windows SDK is installed.")
+    endif()
 endif()
 
 # ------------------------------
 # 6. Manually Specify Python 3.12 Paths (C)
 # ------------------------------
 
-set(PYTHON_EXECUTABLE "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/python.exe")
-set(PYTHON_INCLUDE_DIR "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/include")
-set(PYTHON_LIBRARY "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/libs/python312.lib")
+if(WIN32)
+    set(PYTHON_EXECUTABLE "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/python.exe")
+    set(PYTHON_INCLUDE_DIR "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/include")
+    set(PYTHON_LIBRARY "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/libs/python312.lib")
 
-if(NOT EXISTS "${PYTHON_EXECUTABLE}")
-    message(FATAL_ERROR "Python executable not found at ${PYTHON_EXECUTABLE}")
-endif()
+    if(NOT EXISTS "${PYTHON_EXECUTABLE}")
+        message(FATAL_ERROR "Python executable not found at ${PYTHON_EXECUTABLE}")
+    endif()
 
-if(NOT EXISTS "${PYTHON_INCLUDE_DIR}")
-    message(FATAL_ERROR "Python include directory not found at ${PYTHON_INCLUDE_DIR}")
-endif()
+    if(NOT EXISTS "${PYTHON_INCLUDE_DIR}")
+        message(FATAL_ERROR "Python include directory not found at ${PYTHON_INCLUDE_DIR}")
+    endif()
 
-if(NOT EXISTS "${PYTHON_LIBRARY}")
-    message(FATAL_ERROR "Python library not found at ${PYTHON_LIBRARY}")
+    if(NOT EXISTS "${PYTHON_LIBRARY}")
+        message(FATAL_ERROR "Python library not found at ${PYTHON_LIBRARY}")
+    endif()
+else()
+    # Linux-specific code to find Python 3.12
+    find_package(Python3 3.12 COMPONENTS Interpreter Development REQUIRED)
+    if(NOT Python3_FOUND)
+        message(FATAL_ERROR "Python 3.12 not found.")
+    endif()
+    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
+    set(PYTHON_INCLUDE_DIR ${Python3_INCLUDE_DIRS})
+    set(PYTHON_LIBRARY ${Python3_LIBRARIES})
 endif()
 
 # ------------------------------
@@ -193,10 +223,13 @@ add_library(CeLuxLib STATIC ${SOURCES})
 if(ENABLE_CUDA)
     target_compile_definitions(CeLuxLib PUBLIC CUDA_ENABLED)
 endif()
+
 find_package(spdlog CONFIG REQUIRED)
 message(STATUS "spdlog found: ${spdlog_VERSION}")
-   find_package(fmt CONFIG REQUIRED)
-   message(STATUS "fmt found: ${fmt_VERSION}")
+
+find_package(fmt CONFIG REQUIRED)
+message(STATUS "fmt found: ${fmt_VERSION}")
+
 target_include_directories(CeLuxLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include/CeLux
     ${CMAKE_SOURCE_DIR}/include/CeLux/conversion
@@ -206,12 +239,11 @@ target_include_directories(CeLuxLib PUBLIC
     ${CMAKE_SOURCE_DIR}/include/CeLux/error
     ${CMAKE_SOURCE_DIR}/include/CeLux/backends
     ${CMAKE_SOURCE_DIR}/include/CeLux/filters
-    ${CMAKE_SOURCE_DIR}/magic_enum/include
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
-    ${spdlog_INCLUDE_DIRS} #- this does not work
+    ${spdlog_INCLUDE_DIRS}
     ${fmt_INCLUDE_DIRS}
 )
 
@@ -232,36 +264,65 @@ if(ENABLE_CUDA)
     )
 endif()
 
-target_link_libraries(CeLuxLib PUBLIC
-    ws2_32
-    bcrypt
-    secur32
-    mfplat
-    strmiids
-    ${MFUUUID_LIB}
-    ${MF_LIB}
-    ${OLE32_LIB}
-    ${FFMPEG_STATIC_LIBS}
-    ${TORCH_LIBRARIES}
-    spdlog::spdlog_header_only
-    fmt::fmt-header-only
-)
+# ------------------------------
+# 10. Link Libraries
+# ------------------------------
 
-if(ENABLE_CUDA)
+if(WIN32)
     target_link_libraries(CeLuxLib PUBLIC
-        CUDA::cudart
-        "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib"
-        ${NPP_LIBRARIES}
+        ws2_32
+        bcrypt
+        secur32
+        mfplat
+        strmiids
+        ${MFUUUID_LIB}
+        ${MF_LIB}
+        ${OLE32_LIB}
+        ${FFMPEG_STATIC_LIBS}
+        ${TORCH_LIBRARIES}
+        spdlog::spdlog_header_only
+        fmt::fmt-header-only
+    )
+else()
+    target_link_libraries(CeLuxLib PUBLIC
+        ${FFMPEG_STATIC_LIBS}
+        ${TORCH_LIBRARIES}
+        spdlog::spdlog_header_only
+        fmt::fmt-header-only
+        pthread
+        dl
     )
 endif()
 
+if(ENABLE_CUDA)
+    if(WIN32)
+        target_link_libraries(CeLuxLib PUBLIC
+            CUDA::cudart
+            "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib"
+            ${NPP_LIBRARIES}
+        )
+    else()
+        target_link_libraries(CeLuxLib PUBLIC
+            CUDA::cudart
+            "${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcuda.so"
+            ${NPP_LIBRARIES}
+        )
+    endif()
+endif()
+
 # ------------------------------
-# 10. Build the Python Module
+# 11. Build the Python Module
 # ------------------------------
 
 add_library(celux MODULE  ${CMAKE_SOURCE_DIR}/src/CeLux/Python/Bindings.cpp)
 
-target_compile_options(celux PRIVATE /O2 /Ob2 /Oi /Ot /GL)
+# Compiler optimizations
+if(WIN32)
+    target_compile_options(celux PRIVATE /O2 /Ob2 /Oi /Ot /GL)
+else()
+    target_compile_options(celux PRIVATE -O3)
+endif()
+
 if(ENABLE_CUDA)
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -use_fast_math")
 endif()
@@ -276,19 +337,25 @@ target_include_directories(celux PUBLIC
     ${CMAKE_SOURCE_DIR}/include/CeLux/backends
     ${CMAKE_SOURCE_DIR}/include/CeLux/python
     ${CMAKE_SOURCE_DIR}/include/CeLux/filters
-        ${CMAKE_SOURCE_DIR}/magic_enum/include
     ${TORCH_INCLUDE_DIRS}
     ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
     ${FFMPEG_INCLUDE_DIRS}
     ${pybind11_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_DIR}
-    ${spdlog_INCLUDE_DIRS} #- this does not work
+    ${spdlog_INCLUDE_DIRS}
     ${fmt_INCLUDE_DIRS}
 )
 
+# Set module suffix
+if(WIN32)
+    set(MODULE_SUFFIX ".pyd")
+else()
+    set(MODULE_SUFFIX ".so")
+endif()
+
 set_target_properties(celux PROPERTIES
-    PREFIX ""  
-    SUFFIX ".pyd"
+    PREFIX ""
+    SUFFIX "${MODULE_SUFFIX}"
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     POSITION_INDEPENDENT_CODE ON
@@ -313,22 +380,37 @@ set_target_properties(celux PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${ARCHIVE_OUTPUT_DIRECTORY}
 )
 
-target_link_libraries(celux PUBLIC
-    CeLuxLib
-    ${TORCH_LIBRARIES}
-    ${TORCH_PYTHON_LIBRARY}
-    ${FFMPEG_STATIC_LIBS}
-    ${PYTHON_LIBRARY}
-    spdlog::spdlog_header_only
-    fmt::fmt-header-only
-)
+# Link libraries to the Python module
+if(WIN32)
+    target_link_libraries(celux PUBLIC
+        CeLuxLib
+        ${TORCH_LIBRARIES}
+        ${TORCH_PYTHON_LIBRARY}
+        ${FFMPEG_STATIC_LIBS}
+        ${PYTHON_LIBRARY}
+        spdlog::spdlog_header_only
+        fmt::fmt-header-only
+    )
+else()
+    target_link_libraries(celux PUBLIC
+        CeLuxLib
+        ${TORCH_LIBRARIES}
+        ${TORCH_PYTHON_LIBRARY}
+        ${FFMPEG_STATIC_LIBS}
+        ${PYTHON_LIBRARY}
+        spdlog::spdlog_header_only
+        fmt::fmt-header-only
+        pthread
+        dl
+    )
+endif()
 
 if(ENABLE_CUDA)
     target_link_libraries(celux PUBLIC CUDA::cudart)
 endif()
 
 # ------------------------------
-# 11. Optional: Clean Up Other Output Directories
+# 12. Optional: Clean Up Other Output Directories
 # ------------------------------
 
 set_target_properties(CeLuxLib PROPERTIES

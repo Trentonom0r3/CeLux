@@ -1,5 +1,9 @@
 ## 📈 Changelog
 
+### Version 0.5.3 (2024-11-10)
+  - Fixed issue with floating point ranges.
+  - Fixed/added quicktime and `RGB24` support.
+  
 ### Version 0.5.2 (2024-11-05)
   - Finalized fixes for CPU Color Conversions.
   - Added Support for `RGBA`, `BGRA` pixel formats. 

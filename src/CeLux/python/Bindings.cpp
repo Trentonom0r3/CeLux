@@ -69,6 +69,7 @@ PYBIND11_MODULE(celux, m)
                     else if (py::isinstance<py::float_>(start_obj) &&
                              py::isinstance<py::float_>(end_obj))
                     {
+                        
                         double start = start_obj.cast<double>();
                         double end = end_obj.cast<double>();
                         self.setRange(start, end);

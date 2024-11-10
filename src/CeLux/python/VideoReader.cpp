@@ -107,21 +107,33 @@ VideoReader::~VideoReader()
     close();
 }
 
-void VideoReader::setRange(double start, double end)
+void VideoReader::setRange(std::variant<int, double> start, std::variant<int, double> end)
 {
-    CELUX_INFO("Setting range: start={}, end={}", start, end);
-
-    // Check if both start and end are integers (frame numbers)
-    if (std::floor(start) == start && std::floor(end) == end)
+	// Check if both start and end are of the same type
+    if (start.index() != end.index())
     {
-        // Both are integers, treat as frame numbers
-        setRangeByFrames(static_cast<int>(start), static_cast<int>(end));
-    }
+	
+		throw std::invalid_argument("Start and end must be of the same type.");
+	}
+
+	// Set the range based on the type of start and end
+    if (std::holds_alternative<int>(start) && std::holds_alternative<int>(end))
+    {
+		int startFrame = std::get<int>(start);
+		int endFrame = std::get<int>(end);
+		setRangeByFrames(startFrame, endFrame);
+	}
+    else if (std::holds_alternative<double>(start) && std::holds_alternative<double>(end))
+    {
+		double startTime = std::get<double>(start);
+		double endTime = std::get<double>(end);
+		setRangeByTimestamps(startTime, endTime);
+	}
     else
     {
-        // Treat as timestamps
-        setRangeByTimestamps(start, end);
-    }
+
+		throw std::invalid_argument("Unsupported type for start and end.");
+	}
 }
 
 void VideoReader::setRangeByFrames(int startFrame, int endFrame)

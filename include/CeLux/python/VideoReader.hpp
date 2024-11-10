@@ -121,7 +121,7 @@ class VideoReader
      * @param start Starting frame number or timestamp.
      * @param end Ending frame number or timestamp.
      */
-    void setRange(double start, double end);
+    void setRange(std::variant<int, double> start, std::variant<int, double> end);
 
     /**
      * @brief Add a filter to the decoder's filter pipeline.
