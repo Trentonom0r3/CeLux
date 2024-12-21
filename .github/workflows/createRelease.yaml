@@ -24,12 +24,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3  # Updated to the latest version
+        uses: actions/checkout@v4  # Updated to the latest version
 
       - name: Set up Python
-        uses: actions/setup-python@v4  # Updated to the latest version
+        uses: actions/setup-python@v5  # Updated to the latest version
         with:
-          python-version: '3.12.7'
+          python-version: '3.12.8'
 
       - name: Install Build Dependencies
         run: |
