@@ -101,6 +101,12 @@ class Factory
                      CELUX_DEBUG("Creating YUV420P10LEToRGB48 converter");
                      return std::make_unique<cpu::YUV420P10ToRGB48>();
                  }},
+                {std::make_tuple(true, AV_PIX_FMT_YUV422P10LE),
+				 []() -> std::unique_ptr<IConverter>
+				 {
+					 CELUX_DEBUG("Creating YUV422P10LEToRGB48 converter");
+					 return std::make_unique<cpu::YUV422P10ToRGB48>();
+				 }},
 
                 // bgr24
                 {std::make_tuple(true, AV_PIX_FMT_BGR24),
@@ -129,6 +135,13 @@ class Factory
                      CELUX_DEBUG("Creating BGRAToRGB converter");
                      return std::make_unique<cpu::BGRAToRGB>();
                  }},
+                {std::make_tuple(true, AV_PIX_FMT_GBRP),
+				 []() -> std::unique_ptr<IConverter>
+				 {
+					 CELUX_DEBUG("Creating GBRPToRGB converter");
+					 return std::make_unique<cpu::GBRPToRGB>();
+				 }},
+                
 
 #ifdef CUDA_ENABLED
                 // CUDA converters
@@ -179,8 +192,10 @@ class Factory
         case AV_PIX_FMT_BGR24:
         case AV_PIX_FMT_RGBA:
         case AV_PIX_FMT_BGRA:
+        case AV_PIX_FMT_GBRP:
             return 8;
         case AV_PIX_FMT_YUV420P10LE:
+        case AV_PIX_FMT_YUV422P10LE:
         case AV_PIX_FMT_P010LE:
         case AV_PIX_FMT_RGB48LE:
             return 10;

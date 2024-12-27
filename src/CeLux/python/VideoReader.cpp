@@ -3,12 +3,13 @@
 #include "Python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
 #include <torch/torch.h> // Ensure you have included the necessary Torch headers
+#include <TensorBuilder.hpp>
 
 namespace py = pybind11;
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads,
                          const std::string& device,
-                         std::vector<std::shared_ptr<FilterBase>> filters)
+                         std::vector<std::shared_ptr<FilterBase>> filters, std::string tensorShape)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
       start_time(-1.0), end_time(-1.0), filters_(filters)
 {
@@ -82,12 +83,11 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
                    properties.width, properties.height, properties.fps,
                    properties.duration, properties.totalFrames,
                    av_get_pix_fmt_name(properties.pixelFormat), properties.hasAudio);
-
+        TensorBuilder builder(tensorShape);
+        builder.createTensor(properties.height, properties.width, torchDataType,
+                             torchDevice);
         // Initialize tensor
-        tensor = torch::empty(
-                     {properties.height, properties.width, 3},
-                     torch::TensorOptions().dtype(torchDataType).device(torchDevice))
-                     .contiguous();
+        tensor = builder.getTensor().contiguous().clone();
 
         CELUX_INFO("Torch tensor initialized with shape: [{}, {}, {}] :, "
                    "device: {}",

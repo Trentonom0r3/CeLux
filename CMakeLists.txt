@@ -10,7 +10,7 @@ option(ENABLE_CUDA "Enable CUDA support" ON)
 # Use vcpkg toolchain
 if (WIN32)
     # Windows-specific vcpkg toolchain
-    set(CMAKE_TOOLCHAIN_FILE "C:/Users/tjerf/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
+    set(CMAKE_TOOLCHAIN_FILE "D:/dev/C++/Dependency_Managers/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "Vcpkg toolchain file")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     # Linux-specific vcpkg toolchain
@@ -54,7 +54,7 @@ endif()
 
 if(WIN32)
     # Windows-specific FFmpeg paths
-    set(FFMPEG_VCPKG_STATIC_DIR "C:/Users/tjerf/vcpkg/installed/x64-windows-static")
+    set(FFMPEG_VCPKG_STATIC_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static")
     set(FFMPEG_LIB_EXT ".lib")
 else()
     # Linux-specific FFmpeg paths
@@ -94,9 +94,9 @@ set(FFMPEG_STATIC_LIBS
 
 if(WIN32)
     if(ENABLE_CUDA)
-        set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cu121/libtorch")
+        set(TORCH_INSTALL_PREFIX "D:/dev/C++/Libraries/libtorch-cuda/libtorch")
     else()
-        set(TORCH_INSTALL_PREFIX "C:/Users/tjerf/Downloads/libtorch-win-shared-with-deps-2.4.0+cpu/libtorch")
+        set(TORCH_INSTALL_PREFIX "D:/dev/C++/Libraries/libtorch-cpu/libtorch")
     endif()
 else()
     if(ENABLE_CUDA)
@@ -168,6 +168,9 @@ endif()
 # ------------------------------
 # 7. Find pybind11 using vcpkg
 # ------------------------------
+set(pybind11_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static/share/pybind11")
+set(spdlog_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static/share/spdlog")
+set(fmt_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static/share/fmt")
 
 find_package(pybind11 REQUIRED)
 

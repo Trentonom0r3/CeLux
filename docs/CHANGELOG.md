@@ -1,4 +1,11 @@
 ## 📈 Changelog
+### Version 0.5.4 (2024-12-27)
+  - Added Support for YUV422P10LE to RGB48 conversion. (CPU)
+  - Added Support for GBRP Conversion. (CPU)
+  - Added New Argument, `tensor_shape`
+    - Default is `HWC`, but can be set to `CHW`, etc. 
+    
+
 
 ### Version 0.5.3 (2024-11-10)
   - Fixed issue with floating point ranges.
