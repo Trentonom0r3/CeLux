@@ -37,22 +37,10 @@ class Factory
     static std::unique_ptr<Decoder> createDecoder(torch::Device device, const std::string& filename, int numThreads,
                   std::vector<std::shared_ptr<FilterBase>> filters)
     {
-        if (device.is_cpu())
-        {
+
             return std::make_unique<celux::backends::cpu::Decoder>(filename, numThreads,
                                                                    filters);
-        }
-#ifdef CUDA_ENABLED
-        else if (device.is_cuda())
-        {
-            return std::make_unique<celux::backends::gpu::cuda::Decoder>(
-                filename, numThreads, filters);
-        }
-#endif // CUDA_ENABLED
-        else
-        {
-            throw std::invalid_argument("Unsupported backend: " + device.str());
-        }
+      
     }
 
 
@@ -142,28 +130,6 @@ class Factory
 					 return std::make_unique<cpu::GBRPToRGB>();
 				 }},
                 
-
-#ifdef CUDA_ENABLED
-                // CUDA converters
-                {std::make_tuple(false, AV_PIX_FMT_NV12),
-                 []( )
-                     -> std::unique_ptr<IConverter>
-                 {
-                     CELUX_DEBUG("Creating NV12ToRGB converter");
-                     return std::make_unique<gpu::cuda::NV12ToRGB>();
-                 }},
-
-                {std::make_tuple(false, AV_PIX_FMT_P010LE),
-                 []( )
-                     -> std::unique_ptr<IConverter>
-                 {
-                     CELUX_DEBUG("Creating P010LEToRGB48LE converter");
-                     // Uncomment and implement the converter when ready
-                     return std::make_unique<gpu::cuda::P010LEToRGB>(
-                         );
-                 }},
-
-#endif
             };
 
         // Search for the converter in the map

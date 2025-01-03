@@ -24,7 +24,7 @@ Decoder::Decoder(Decoder&& other) noexcept
     : formatCtx(std::move(other.formatCtx)), codecCtx(std::move(other.codecCtx)),
       pkt(std::move(other.pkt)), videoStreamIndex(other.videoStreamIndex),
       properties(std::move(other.properties)), frame(std::move(other.frame)),
-      converter(std::move(other.converter)), hwDeviceCtx(std::move(other.hwDeviceCtx))
+      converter(std::move(other.converter))
 {
     CELUX_DEBUG("BASE DECODER: Decoder move constructor called");
     other.videoStreamIndex = -1;
@@ -45,7 +45,6 @@ Decoder& Decoder::operator=(Decoder&& other) noexcept
         properties = std::move(other.properties);
         frame = std::move(other.frame);
         converter = std::move(other.converter);
-        hwDeviceCtx = std::move(other.hwDeviceCtx);
 
         other.videoStreamIndex = -1;
         // Reset other members if necessary
@@ -82,7 +81,7 @@ void Decoder::setProperties()
     }
 
     // Set pixel format and bit depth
-    properties.pixelFormat = isHwAccel ? codecCtx->sw_pix_fmt : codecCtx->pix_fmt;
+    properties.pixelFormat = codecCtx->pix_fmt;
     properties.bitDepth = getBitDepth();
 
     // Check for audio stream
@@ -143,16 +142,12 @@ void Decoder::initialize(const std::string& filePath)
 {
     CELUX_DEBUG("BASE DECODER: Initializing decoder with file: {}", filePath);
     openFile(filePath);
-    initHWAccel(); // Initialize HW acceleration (overridden in GPU Decoder)
     findVideoStream();
     initCodecContext();
     setProperties();
 
-    converter = celux::Factory::createConverter(isHwAccel ? torch::kCUDA : torch::kCPU,
+    converter = celux::Factory::createConverter(torch::kCPU,
                                                 properties.pixelFormat);
-
-    CELUX_DEBUG("BASE DECODER: Converter initialized. HW accel is {}",
-                isHwAccel ? "enabled" : "disabled");
 
     CELUX_DEBUG("BASE DECODER: Decoder initialization completed");
 
@@ -281,12 +276,6 @@ void Decoder::openFile(const std::string& filePath)
     CELUX_DEBUG("BASE DECODER: Stream information retrieved successfully");
 }
 
-void Decoder::initHWAccel()
-{
-    CELUX_DEBUG("BASE DECODER: Initializing hardware acceleration");
-    // Default implementation does nothing
-}
-
 void Decoder::findVideoStream()
 {
     CELUX_DEBUG("BASE DECODER: Finding best video stream");
@@ -333,17 +322,6 @@ void Decoder::initCodecContext()
                  std::string("Failed to copy codec parameters:"));
 
     CELUX_DEBUG("BASE DECODER: Codec parameters copied to codec context");
-    // Set hardware device context if available
-    if (hwDeviceCtx)
-    {
-        codecCtx->hw_device_ctx = av_buffer_ref(hwDeviceCtx.get());
-        if (!codecCtx->hw_device_ctx)
-        {
-            CELUX_ERROR("Failed to reference HW device context");
-            throw CxException("Failed to reference HW device context");
-        }
-        CELUX_DEBUG("BASE DECODER: Hardware device context set");
-    }
 
     codecCtx->thread_count = numThreads;
     codecCtx->thread_type = FF_THREAD_FRAME | FF_THREAD_SLICE;
@@ -356,45 +334,6 @@ void Decoder::initCodecContext()
                  std::string("Failed to open codec:"));
 
     CELUX_DEBUG("BASE DECODER: Codec opened successfully");
-    if (isHwAccel)
-    {
-        // Initialize hardware frames context
-        AVBufferRef* hw_frames_ref = av_hwframe_ctx_alloc(hwDeviceCtx.get());
-        if (!hw_frames_ref)
-        {
-            CELUX_ERROR("Failed to allocate hardware frames context");
-            throw CxException("Failed to allocate hardware frames context");
-        }
-        codecCtx->pix_fmt = AV_PIX_FMT_CUDA;
-        set_sw_pix_fmt(codecCtx, getBitDepth());
-        AVHWFramesContext* frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
-        frames_ctx->format = codecCtx->pix_fmt;    // AV_PIX_FMT_CUDA
-        frames_ctx->sw_format = codecCtx->sw_pix_fmt; // e.g., AV_PIX_FMT_NV12
-        frames_ctx->width = codecCtx->width;
-        frames_ctx->height = codecCtx->height;
-        frames_ctx->initial_pool_size = 32; // Adjust as needed
-
-        int ret = av_hwframe_ctx_init(hw_frames_ref);
-        if (ret < 0)
-        {
-            CELUX_ERROR("Failed to initialize hardware frames context");
-            av_buffer_unref(&hw_frames_ref);
-            throw CxException("Failed to initialize hardware frames context");
-        }
-
-        // Assign the hardware frames context to the codec context
-        codecCtx->hw_frames_ctx = av_buffer_ref(hw_frames_ref);
-        if (!codecCtx->hw_frames_ctx)
-        {
-            CELUX_ERROR("Failed to set hardware frames context in codec context");
-            av_buffer_unref(&hw_frames_ref);
-            throw CxException("Failed to set hardware frames context in codec context");
-        }
-
-        hwFramesCtx.reset(hw_frames_ref);
-        frame = Frame(hwFramesCtx.get());
-        CELUX_DEBUG("Hardware frames context initialized and set in codec context");
-    }
 }
 
 // Decoder.cpp
@@ -560,11 +499,6 @@ void Decoder::close()
         formatCtx.reset();
         CELUX_DEBUG("BASE DECODER: Format context reset");
     }
-    if (hwDeviceCtx)
-    {
-        hwDeviceCtx.reset();
-        CELUX_DEBUG("BASE DECODER: Hardware device context reset");
-    }
     if (converter)
     {
         CELUX_DEBUG("BASE DECODER: Synchronizing converter in Decoder close");
@@ -575,6 +509,40 @@ void Decoder::close()
     properties = VideoProperties{};
     CELUX_DEBUG("BASE DECODER: Decoder closed");
 }
+
+bool Decoder::seekToPreciseTimestamp(double targetTimestamp)
+{
+    CELUX_TRACE("Seeking precisely to timestamp: {}", targetTimestamp);
+
+    // Step 1: Seek to the nearest keyframe
+    if (!seekToNearestKeyframe(targetTimestamp))
+    {
+        CELUX_ERROR("Failed to seek to nearest keyframe for timestamp: {}",
+                    targetTimestamp);
+        return false;
+    }
+
+    // Step 2: Decode frames until reaching the target timestamp
+    double currentTimestamp = 0.0;
+    void* buffer = nullptr; // Allocate or provide a valid buffer
+    while (true)
+    {
+        if (!decodeNextFrame(buffer, &currentTimestamp))
+        {
+            CELUX_WARN("Failed to decode frame during precise seeking");
+            return false;
+        }
+
+        if (currentTimestamp >= targetTimestamp)
+        {
+            CELUX_INFO("Reached target timestamp: {}", currentTimestamp);
+            break;
+        }
+    }
+
+    return true;
+}
+
 
 std::vector<std::string> Decoder::listSupportedDecoders() const
 {
@@ -630,34 +598,6 @@ int Decoder::getBitDepth() const
     int bitDepth = desc->comp[0].depth;
     CELUX_TRACE("Bit depth: {}", bitDepth);
     return bitDepth;
-}
-
-void Decoder::set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth)
-{
-    if (isHwAccel)
-    {
-
-        CELUX_TRACE("Setting software pixel format");
-        if (bitDepth == 8)
-        {
-            codecCtx->sw_pix_fmt = AV_PIX_FMT_NV12;
-        }
-        else if (bitDepth == 10)
-        {
-            codecCtx->sw_pix_fmt = AV_PIX_FMT_P010LE;
-        }
-        else
-        {
-            CELUX_WARN("Unsupported bit depth, defaulting to 8-bit");
-            codecCtx->sw_pix_fmt = AV_PIX_FMT_NV12;
-        }
-        CELUX_TRACE("Software pixel format set: {}",
-                    av_get_pix_fmt_name(codecCtx->sw_pix_fmt));
-    }
-    else
-    {
-        CELUX_TRACE("Using CPU. Software pixel format will be set by Decoder");
-    }
 }
 
 bool Decoder::seekToNearestKeyframe(double timestamp)

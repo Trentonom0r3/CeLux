@@ -8,14 +8,13 @@
 namespace py = pybind11;
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads,
-                         const std::string& device,
                          std::vector<std::shared_ptr<FilterBase>> filters, std::string tensorShape)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
       start_time(-1.0), end_time(-1.0), filters_(filters)
 {
     //set ffmpeg log level
     CELUX_INFO("VideoReader constructor called with filePath: {}", filePath);
-    CELUX_INFO("Device: {}", device);
+
     if (numThreads > std::thread::hardware_concurrency())
     {
         throw std::invalid_argument("Number of threads cannot exceed hardware concurrency");
@@ -26,37 +25,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
 
         torch::Device torchDevice = torch::Device(torch::kCPU);
         CELUX_INFO("Creating VideoReader instance");
-        if (device == "cuda")
-        {
-            CELUX_INFO("Device is set to CUDA");
-            if (!torch::cuda::is_available())
-            {
-                CELUX_CRITICAL("CUDA is not available. Please install a CUDA-enabled "
-                               "version of celux.");
-                throw std::runtime_error("CUDA is not available. Please install a "
-                                         "CUDA-enabled version of celux.");
-            }
-            if (torch::cuda::device_count() == 0)
-            {
-                CELUX_CRITICAL(
-                    "No CUDA devices found. Please check your CUDA installation.");
-                throw std::runtime_error(
-                    "No CUDA devices found. Please check your CUDA installation.");
-            }
-            torchDevice = torch::Device(torch::kCUDA);
-        }
-        else if (device == "cpu")
-        {
-            CELUX_INFO("Device is set to CPU");
-            CELUX_TRACE("Using CPU device for VideoReader");
-            torchDevice = torch::Device(torch::kCPU);
-        }
-        else
-        {
-            CELUX_CRITICAL("Unsupported device: {}", device);
-            throw std::invalid_argument("Unsupported device: " + device);
-        }
-
+       
         decoder =
             celux::Factory::createDecoder(torchDevice, filePath, numThreads, filters_);
         CELUX_INFO("Decoder created successfully");
@@ -83,15 +52,12 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
                    properties.width, properties.height, properties.fps,
                    properties.duration, properties.totalFrames,
                    av_get_pix_fmt_name(properties.pixelFormat), properties.hasAudio);
+
         TensorBuilder builder(tensorShape);
         builder.createTensor(properties.height, properties.width, torchDataType,
                              torchDevice);
         // Initialize tensor
         tensor = builder.getTensor().contiguous().clone();
-
-        CELUX_INFO("Torch tensor initialized with shape: [{}, {}, {}] :, "
-                   "device: {}",
-                   properties.height, properties.width, 3, device);
   //  list_ffmpeg_filters("ffmpeg_filters.json");
     }
     catch (const std::exception& ex)
@@ -179,27 +145,26 @@ void VideoReader::setRangeByFrames(int startFrame, int endFrame)
 
 void VideoReader::setRangeByTimestamps(double startTime, double endTime)
 {
-    CELUX_INFO("Setting timestamp range: start={}, end={}", startTime, endTime);
+    CELUX_INFO("Setting precise timestamp range: start={}, end={}", startTime, endTime);
 
-    // Validate the timestamp range
-    if (startTime < 0 || endTime < 0)
+    // Seek to the start timestamp
+    if (!decoder->seekToPreciseTimestamp(startTime))
     {
-        CELUX_ERROR("Timestamps cannot be negative: start={}, end={}", startTime,
-                    endTime);
-        throw std::invalid_argument("Timestamps cannot be negative.");
-    }
-    if (endTime <= startTime)
-    {
-        CELUX_ERROR("Invalid timestamp range: end ({}) must be greater than start ({})",
-                    endTime, startTime);
-        throw std::invalid_argument("end must be greater than start.");
+        CELUX_ERROR("Failed to seek to precise start timestamp: {}", startTime);
+        throw std::runtime_error("Failed to seek to start_time");
     }
 
-    // Set the timestamp range
+    // Initialize current timestamp
+    current_timestamp = startTime;
+
+    // Store the range for iteration
     start_time = startTime;
     end_time = endTime;
-    CELUX_INFO("Timestamp range set: start_time={}, end_time={}", start_time, end_time);
+
+    CELUX_INFO("Precise timestamp range set successfully: start={}, end={}", start_time,
+               end_time);
 }
+
 
 
 torch::Tensor VideoReader::readFrame()
@@ -215,12 +180,20 @@ torch::Tensor VideoReader::readFrame()
         return torch::Tensor(); // Return an empty tensor if decoding failed
     }
 
-    // Update current timestamp
-    current_timestamp = frame_timestamp;
+    // Ensure current_timestamp reflects the actual position
+    if (frame_timestamp >= 0)
+    {
+        current_timestamp = frame_timestamp; // Update to the correct value
+    }
+    else
+    {
+        CELUX_WARN("Decoder returned a frame with invalid timestamp");
+    }
 
     CELUX_TRACE("Frame decoded successfully at timestamp: {}", current_timestamp);
     return tensor;
 }
+
 
 
 void VideoReader::close()
@@ -459,15 +432,6 @@ torch::Tensor VideoReader::next()
             throw py::stop_iteration();
         }
     }
-    else if (start_frame >= 0 && end_frame >= 0)
-    {
-        if (currentIndex > end_frame)
-        {
-            CELUX_INFO("Frame range exhausted: currentIndex={}, end_frame={}",
-                       currentIndex, end_frame);
-            throw py::stop_iteration();
-        }
-    }
 
     torch::Tensor frame = readFrame();
     if (!frame.defined() || frame.numel() == 0)
@@ -476,11 +440,9 @@ torch::Tensor VideoReader::next()
         throw py::stop_iteration(); // Stop iteration if no more frames are available
     }
 
-    // Update iterator state
-    currentIndex++;
     // current_timestamp is already updated in readFrame()
 
-    CELUX_TRACE("Returning frame number {}, timestamp {}", currentIndex - 1,
+    CELUX_TRACE("Returning frame number {}, timestamp {}", currentIndex,
                 current_timestamp);
     return frame;
 }

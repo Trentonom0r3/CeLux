@@ -21,7 +21,6 @@ class VideoReader
     VideoReader(const std::string& filePath,
                 int numThreads = static_cast<int>(std::thread::hardware_concurrency() /
                                                   2),
-                const std::string& device = "cuda",
                 std::vector<std::shared_ptr<FilterBase>> filter = {}, std::string tensorShape = "CHW");
 
     /**

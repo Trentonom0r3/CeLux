@@ -26,13 +26,13 @@ def set_log_level(level: LogLevel) -> None:
 
 class VideoReader:
     def __init__(self, input_path: str, num_threads: int = os.cpu_count() / 2,
-                 device: str = "cuda", filters : list[FilterBase] = [], tensor_shape : str = "HWC") -> None:
+                 filters : list[FilterBase] = [], tensor_shape : str = "HWC") -> None:
         """
         Initialize the VideoReader object.
 
         Args:
             input_path (str): Path to the video file.
-            device (str): Device to be used. Default is "cuda".
+        
             filters (Optional[list[str]]): List of filters to apply to the video.
                 - EX. filters = [("scale", "1280:720"), ("hue", "0.5")]
         """

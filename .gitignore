@@ -5,8 +5,8 @@ build/*
 ffmpy.egg-info/*
 *.mp4
 *.mkv
-/dist
-/build
+#s/dist
+#/build
 runTests.yaml
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -68,6 +68,13 @@ class Decoder
     virtual void close();
     virtual std::vector<std::string> listSupportedDecoders() const;
     AVCodecContext* getCtx();
+    /**
+     * @brief Seek to a precise timestamp by decoding frames after keyframe seeking.
+     *
+     * @param timestamp Target timestamp in seconds.
+     * @return true if successful, false otherwise.
+     */
+    bool seekToPreciseTimestamp(double timestamp);
 
     // getter for bit depth
     int getBitDepth() const;
@@ -75,11 +82,9 @@ class Decoder
   protected:
     // Initialization method
     void initialize(const std::string& filePath);
-    bool isHardwareAccelerated(const AVCodec* codec);
     void setProperties();
     // Virtual methods for customization
     virtual void openFile(const std::string& filePath);
-    virtual void initHWAccel(); // Default does nothing
     virtual void findVideoStream();
     virtual void initCodecContext();
     virtual int64_t convertTimestamp(double timestamp) const;
@@ -117,10 +122,7 @@ class Decoder
     int videoStreamIndex;
     VideoProperties properties;
     Frame frame;
-    bool isHwAccel;
     std::unique_ptr<celux::conversion::IConverter> converter;
-    AVBufferRefPtr hwDeviceCtx; // For hardware acceleration
-    AVBufferRefPtr hwFramesCtx; // For hardware acceleration
     int numThreads;
 };
 } // namespace celux

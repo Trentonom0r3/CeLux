@@ -14,12 +14,11 @@ PYBIND11_MODULE(celux, m)
     register_filters(m);
     // VideoReader bindings
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, int, const std::string&,
+        .def(py::init<const std::string&, int, 
                       std::vector<std::shared_ptr<FilterBase>>, std::string&>(),
              py::arg("input_path"),
              py::arg("num_threads") =
                  static_cast<int>(std::thread::hardware_concurrency() / 2),
-             py::arg("device") = "cuda",
              py::arg("filters") = std::vector<std::shared_ptr<FilterBase>>(),
              py::arg("tensor_shape") = "HWC")
         .def("read_frame", &VideoReader::readFrame)
