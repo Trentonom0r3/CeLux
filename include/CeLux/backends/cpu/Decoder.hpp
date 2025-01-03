@@ -12,7 +12,6 @@ class Decoder : public celux::Decoder
             std::vector<std::shared_ptr<FilterBase>> filters)
         : celux::Decoder( numThreads, filters)
     {
-        isHwAccel = false;
         initialize(filePath);
     }
 
