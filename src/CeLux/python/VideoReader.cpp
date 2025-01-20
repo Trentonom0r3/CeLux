@@ -6,6 +6,11 @@
 #include <TensorBuilder.hpp>
 
 namespace py = pybind11;
+#define CHECK_TENSOR(tensor)                                                  \
+	if (!tensor.defined() || tensor.numel() == 0)                              \
+	{                                                                         \
+		throw std::runtime_error("Invalid tensor: undefined or empty");        \
+	}
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads,
                          std::vector<std::shared_ptr<FilterBase>> filters, std::string tensorShape)
@@ -58,6 +63,8 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
                              torchDevice);
         // Initialize tensor
         tensor = builder.getTensor().contiguous().clone();
+        CHECK_TENSOR(tensor);
+        
   //  list_ffmpeg_filters("ffmpeg_filters.json");
     }
     catch (const std::exception& ex)
@@ -67,39 +74,42 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
     }
 }
 
+
 VideoReader::~VideoReader()
 {
     CELUX_INFO("VideoReader destructor called");
     close();
 }
 
-void VideoReader::setRange(std::variant<int, double> start, std::variant<int, double> end)
+void VideoReader::setRange(std::variant<int, double> start,
+                           std::variant<int, double> end)
 {
-	// Check if both start and end are of the same type
+    // Check if both start and end are of the same type
     if (start.index() != end.index())
     {
-	
-		throw std::invalid_argument("Start and end must be of the same type.");
-	}
 
-	// Set the range based on the type of start and end
+        throw std::invalid_argument("Start and end must be of the same type.");
+    }
+
+    // Set the range based on the type of start and end
     if (std::holds_alternative<int>(start) && std::holds_alternative<int>(end))
     {
-		int startFrame = std::get<int>(start);
-		int endFrame = std::get<int>(end);
-		setRangeByFrames(startFrame, endFrame);
-	}
-    else if (std::holds_alternative<double>(start) && std::holds_alternative<double>(end))
+        int startFrame = std::get<int>(start);
+        int endFrame = std::get<int>(end);
+        setRangeByFrames(startFrame, endFrame);
+    }
+    else if (std::holds_alternative<double>(start) &&
+             std::holds_alternative<double>(end))
     {
-		double startTime = std::get<double>(start);
-		double endTime = std::get<double>(end);
-		setRangeByTimestamps(startTime, endTime);
-	}
+        double startTime = std::get<double>(start);
+        double endTime = std::get<double>(end);
+        setRangeByTimestamps(startTime, endTime);
+    }
     else
     {
 
-		throw std::invalid_argument("Unsupported type for start and end.");
-	}
+        throw std::invalid_argument("Unsupported type for start and end.");
+    }
 }
 
 void VideoReader::setRangeByFrames(int startFrame, int endFrame)
@@ -145,27 +155,27 @@ void VideoReader::setRangeByFrames(int startFrame, int endFrame)
 
 void VideoReader::setRangeByTimestamps(double startTime, double endTime)
 {
-    CELUX_INFO("Setting precise timestamp range: start={}, end={}", startTime, endTime);
+    CELUX_INFO("Setting timestamp range: start={}, end={}", startTime, endTime);
 
-    // Seek to the start timestamp
-    if (!decoder->seekToPreciseTimestamp(startTime))
+    // Validate the timestamp range
+    if (startTime < 0 || endTime < 0)
     {
-        CELUX_ERROR("Failed to seek to precise start timestamp: {}", startTime);
-        throw std::runtime_error("Failed to seek to start_time");
+        CELUX_ERROR("Timestamps cannot be negative: start={}, end={}", startTime,
+                    endTime);
+        throw std::invalid_argument("Timestamps cannot be negative.");
+    }
+    if (endTime <= startTime)
+    {
+        CELUX_ERROR("Invalid timestamp range: end ({}) must be greater than start ({})",
+                    endTime, startTime);
+        throw std::invalid_argument("end must be greater than start.");
     }
 
-    // Initialize current timestamp
-    current_timestamp = startTime;
-
-    // Store the range for iteration
+    // Set the timestamp range
     start_time = startTime;
     end_time = endTime;
-
-    CELUX_INFO("Precise timestamp range set successfully: start={}, end={}", start_time,
-               end_time);
+    CELUX_INFO("Timestamp range set: start_time={}, end_time={}", start_time, end_time);
 }
-
-
 
 torch::Tensor VideoReader::readFrame()
 {
@@ -180,21 +190,12 @@ torch::Tensor VideoReader::readFrame()
         return torch::Tensor(); // Return an empty tensor if decoding failed
     }
 
-    // Ensure current_timestamp reflects the actual position
-    if (frame_timestamp >= 0)
-    {
-        current_timestamp = frame_timestamp; // Update to the correct value
-    }
-    else
-    {
-        CELUX_WARN("Decoder returned a frame with invalid timestamp");
-    }
+    // Update current timestamp
+    current_timestamp = frame_timestamp;
 
     CELUX_TRACE("Frame decoded successfully at timestamp: {}", current_timestamp);
     return tensor;
 }
-
-
 
 void VideoReader::close()
 {
@@ -312,7 +313,6 @@ py::object VideoReader::operator[](const std::string& key) const
     throw std::out_of_range("Key not found: " + key);
 }
 
-
 void VideoReader::reset()
 {
     CELUX_INFO("Resetting VideoReader to the beginning");
@@ -373,19 +373,54 @@ VideoReader& VideoReader::iter()
     // Reset iterator state
     currentIndex = 0;
     current_timestamp = 0.0;
+    bufferedFrame = torch::Tensor(); // Clear any old buffered frame
+    hasBufferedFrame = false;
 
     if (start_time >= 0.0 && end_time > 0.0)
     {
         // Using timestamp range
         CELUX_INFO("Using timestamp range for iteration: start_time={}, end_time={}",
                    start_time, end_time);
+
         bool success = seek(start_time);
         if (!success)
         {
             CELUX_ERROR("Failed to seek to start_time: {}", start_time);
             throw std::runtime_error("Failed to seek to start_time.");
         }
-        current_timestamp = start_time;
+
+        // -------------------------------------------------------
+        // 1) DECODING + DISCARD loop
+        // -------------------------------------------------------
+        // Keep reading frames, discarding them, until we hit >= start_time.
+        while (true)
+        {
+            // Attempt to decode a frame
+            torch::Tensor f = readFrame();
+            if (!f.defined() || f.numel() == 0)
+            {
+                // No more frames, or decode error
+                CELUX_WARN("Ran out of frames while discarding up to start_time={}",
+                           start_time);
+                break;
+            }
+
+            // current_timestamp was updated in readFrame().
+            if (current_timestamp >= start_time)
+            {
+                // We have reached or passed start_time
+                // --> store this frame for later return in next()
+                bufferedFrame = f;
+                hasBufferedFrame = true;
+                CELUX_DEBUG("Discard loop found first frame at timestamp {}",
+                            current_timestamp);
+                break;
+            }
+            // else discard and loop again
+        }
+        // -------------------------------------------------------
+
+        current_timestamp = std::max(current_timestamp, start_time);
     }
     else if (start_frame >= 0 && end_frame >= 0)
     {
@@ -414,9 +449,9 @@ VideoReader& VideoReader::iter()
         current_timestamp = 0.0;
     }
 
+    // Return self for iterator protocol
     return *this;
 }
-
 
 torch::Tensor VideoReader::next()
 {
@@ -432,17 +467,41 @@ torch::Tensor VideoReader::next()
             throw py::stop_iteration();
         }
     }
-
-    torch::Tensor frame = readFrame();
-    if (!frame.defined() || frame.numel() == 0)
+    else if (start_frame >= 0 && end_frame >= 0)
     {
-        CELUX_INFO("No more frames available for iteration");
-        throw py::stop_iteration(); // Stop iteration if no more frames are available
+        if (currentIndex > end_frame)
+        {
+            CELUX_INFO("Frame range exhausted: currentIndex={}, end_frame={}",
+                       currentIndex, end_frame);
+            throw py::stop_iteration();
+        }
     }
 
-    // current_timestamp is already updated in readFrame()
+    torch::Tensor frame;
+    if (hasBufferedFrame)
+    {
+        // The "first valid" frame is waiting here
+        frame = bufferedFrame;
+        hasBufferedFrame = false; // We have now consumed it
+        // current_timestamp should already be the correct timestamp
+        // because readFrame() updated it earlier
+    }
+    else
+    {
+        // Otherwise, just decode normally
+        frame = readFrame();
+        if (!frame.defined() || frame.numel() == 0)
+        {
+            CELUX_INFO("No more frames available for iteration");
+            throw py::stop_iteration();
+        }
+    }
 
-    CELUX_TRACE("Returning frame number {}, timestamp {}", currentIndex,
+    // Update iterator state
+    currentIndex++;
+    // current_timestamp is updated in readFrame()
+
+    CELUX_TRACE("Returning frame number {}, timestamp {}", currentIndex - 1,
                 current_timestamp);
     return frame;
 }
