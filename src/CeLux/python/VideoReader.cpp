@@ -457,13 +457,33 @@ torch::Tensor VideoReader::next()
 {
     CELUX_TRACE("next() called: Retrieving next frame");
 
-    // Check if we have reached the end of the range
+    // If we have a buffered frame from the discard loop, consume it first.
+    torch::Tensor frame;
+    if (hasBufferedFrame)
+    {
+        frame = bufferedFrame;
+        hasBufferedFrame = false;
+        // current_timestamp is already set by readFrame() earlier.
+    }
+    else
+    {
+        // Otherwise decode the next frame
+        frame = readFrame();
+        if (!frame.defined() || frame.numel() == 0)
+        {
+            CELUX_INFO("No more frames available (decode returned empty).");
+            throw py::stop_iteration();
+        }
+    }
+
+    // -- Now check if we exceeded the time range AFTER decoding.
     if (start_time >= 0.0 && end_time > 0.0)
     {
+        // If the current frame's timestamp is >= end_time, skip/stop.
         if (current_timestamp >= end_time)
         {
-            CELUX_INFO("Timestamp range exhausted: current_timestamp={}, end_time={}",
-                       current_timestamp, end_time);
+            CELUX_DEBUG("Frame timestamp {} >= end_time {}, skipping frame.",
+                        current_timestamp, end_time);
             throw py::stop_iteration();
         }
     }
@@ -471,37 +491,14 @@ torch::Tensor VideoReader::next()
     {
         if (currentIndex > end_frame)
         {
-            CELUX_INFO("Frame range exhausted: currentIndex={}, end_frame={}",
-                       currentIndex, end_frame);
+            CELUX_DEBUG("Frame range exhausted: currentIndex={}, end_frame={}",
+                        currentIndex, end_frame);
             throw py::stop_iteration();
         }
     }
 
-    torch::Tensor frame;
-    if (hasBufferedFrame)
-    {
-        // The "first valid" frame is waiting here
-        frame = bufferedFrame;
-        hasBufferedFrame = false; // We have now consumed it
-        // current_timestamp should already be the correct timestamp
-        // because readFrame() updated it earlier
-    }
-    else
-    {
-        // Otherwise, just decode normally
-        frame = readFrame();
-        if (!frame.defined() || frame.numel() == 0)
-        {
-            CELUX_INFO("No more frames available for iteration");
-            throw py::stop_iteration();
-        }
-    }
-
-    // Update iterator state
     currentIndex++;
-    // current_timestamp is updated in readFrame()
-
-    CELUX_TRACE("Returning frame number {}, timestamp {}", currentIndex - 1,
+    CELUX_TRACE("Returning frame index={}, timestamp={}", currentIndex - 1,
                 current_timestamp);
     return frame;
 }

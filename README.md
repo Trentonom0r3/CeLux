@@ -45,8 +45,8 @@ from celux import VideoReader, Scale
 filters = [Scale(width = 1920, height = 1080)]
 reader = VideoReader("/path/to/video.ext",
                     #num_threads: int = os.cpu_count(),
-                    device = "cuda",
-                    filters = filters
+                    filters = filters,
+                    #tensor_shape: str = 'HWC'
                     )
 for frame in reader:
 # do something

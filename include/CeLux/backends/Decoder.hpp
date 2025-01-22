@@ -5,6 +5,7 @@
 #include <Conversion.hpp>
 #include <FilterFactory.hpp>
 #include <Frame.hpp>
+#include <backends/cpu/Remuxer.hpp>
 
 namespace celux
 {
@@ -124,5 +125,6 @@ class Decoder
     Frame frame;
     std::unique_ptr<celux::conversion::IConverter> converter;
     int numThreads;
+    Remuxer remuxer_; // Keep a member to store the remuxer
 };
 } // namespace celux

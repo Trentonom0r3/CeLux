@@ -1,4 +1,12 @@
 ## 📈 Changelog
+
+
+### Version 0.5.6 (2025-1-22)
+  = Removed `CUDA` Dependency in favor of CPU decoding. (It's faster anyways.)
+  - Updated repo + docs
+  - Tested and adjusted time range-- *should* match `OpenCV` behavior in all cases.
+  = Looking into color space differences...
+
 ### Version 0.5.4 (2024-12-27)
   - Added Support for YUV422P10LE to RGB48 conversion. (CPU)
   - Added Support for GBRP Conversion. (CPU)

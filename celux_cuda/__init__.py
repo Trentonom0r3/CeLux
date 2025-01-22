@@ -1,2 +1,2 @@
 import torch
-from .celux_cuda import *
+from .celux import *
