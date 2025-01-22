@@ -21,7 +21,6 @@ class VideoReader
     VideoReader(const std::string& filePath,
                 int numThreads = static_cast<int>(std::thread::hardware_concurrency() /
                                                   2),
-                const std::string& device = "cuda",
                 std::vector<std::shared_ptr<FilterBase>> filter = {}, std::string tensorShape = "CHW");
 
     /**
@@ -186,6 +185,8 @@ class VideoReader
     double current_timestamp; // Add this line
     // List of filters to be added before initialization
     std::vector<std::shared_ptr<FilterBase>> filters_;
+    torch::Tensor bufferedFrame; // The "first valid" frame, if we found it early
+    bool hasBufferedFrame = false;
 };
 
 #endif // VIDEOREADER_HPP
