@@ -1,5 +1,10 @@
 ## 📈 Changelog
 
+### Version 0.5.6.1 (2025-1-23)
+  = Adusted `__call__` method handling.
+    - `Int` values seek as frames, `Float` values seek as times.
+  - Added several tests against `OpenCV` and `FFMPEG` for confirmation on frame/time ranges.
+  - Added tests for color formats.
 
 ### Version 0.5.6 (2025-1-22)
   = Removed `CUDA` Dependency in favor of CPU decoding. (It's faster anyways.)

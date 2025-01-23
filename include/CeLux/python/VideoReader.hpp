@@ -140,16 +140,6 @@ class VideoReader
      * @return false otherwise.
      */
     bool initialize();
-
-  private:
-    bool seekToFrame(int frame_number);
-    torch::ScalarType findTypeFromBitDepth();
-
-    /**
-     * @brief Close the video reader and release resources.
-     */
-    void close();
-
     /**
      * @brief Set the range of frames to read (helper function).
      *
@@ -165,6 +155,14 @@ class VideoReader
      * @param endTime Ending timestamp (-1 for no limit).
      */
     void setRangeByTimestamps(double startTime, double endTime);
+  private:
+    bool seekToFrame(int frame_number);
+    torch::ScalarType findTypeFromBitDepth();
+
+    /**
+     * @brief Close the video reader and release resources.
+     */
+    void close();
 
     // Member variables
     std::unique_ptr<celux::Decoder> decoder;

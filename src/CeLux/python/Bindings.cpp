@@ -59,21 +59,26 @@ PYBIND11_MODULE(celux, m)
                     py::object start_obj = range_list[0];
                     py::object end_obj = range_list[1];
 
+                    // ----------------------------
+                    // If both are ints => frames
+                    // ----------------------------
                     if (py::isinstance<py::int_>(start_obj) &&
                         py::isinstance<py::int_>(end_obj))
                     {
                         int start = start_obj.cast<int>();
                         int end = end_obj.cast<int>();
-                        self.setRange(static_cast<double>(start),
-                                      static_cast<double>(end));
+                        // Call the *frame-based* method
+                        self.setRangeByFrames(start, end);
                     }
+                    // --------------------------------
+                    // If both are floats => timestamps
+                    // --------------------------------
                     else if (py::isinstance<py::float_>(start_obj) &&
                              py::isinstance<py::float_>(end_obj))
                     {
-                        
                         double start = start_obj.cast<double>();
                         double end = end_obj.cast<double>();
-                        self.setRange(start, end);
+                        self.setRangeByTimestamps(start, end);
                     }
                     else
                     {
