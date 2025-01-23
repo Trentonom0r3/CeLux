@@ -5,6 +5,7 @@ build/*
 ffmpy.egg-info/*
 *.mp4
 *.mkv
+*.yuv
 #s/dist
 #/build
 runTests.yaml

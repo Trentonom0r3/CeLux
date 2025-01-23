@@ -10,7 +10,7 @@ namespace celux
 
 Decoder::Decoder(int numThreads, std::vector<std::shared_ptr<FilterBase>> filters)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
-      videoStreamIndex(-1), numThreads(numThreads), filters_(filters), remuxer_("")
+      videoStreamIndex(-1), numThreads(numThreads), filters_(filters)
 {
     CELUX_DEBUG("BASE DECODER: Decoder constructed");
 }
@@ -25,7 +25,7 @@ Decoder::Decoder(Decoder&& other) noexcept
     : formatCtx(std::move(other.formatCtx)), codecCtx(std::move(other.codecCtx)),
       pkt(std::move(other.pkt)), videoStreamIndex(other.videoStreamIndex),
       properties(std::move(other.properties)), frame(std::move(other.frame)),
-      converter(std::move(other.converter)), remuxer_(std::move(other.remuxer_))
+      converter(std::move(other.converter))
 {
     CELUX_DEBUG("BASE DECODER: Decoder move constructor called");
     other.videoStreamIndex = -1;
