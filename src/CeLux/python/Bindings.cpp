@@ -23,6 +23,54 @@ PYBIND11_MODULE(celux, m)
              py::arg("tensor_shape") = "HWC")
         .def("read_frame", &VideoReader::readFrame)
         .def_property_readonly("properties", &VideoReader::getProperties)
+        .def_property_readonly("properties",
+                               &VideoReader::getProperties) // Keep full dict access
+        .def_property_readonly("width", [](const VideoReader& self)
+                               { return self.getProperties()["width"].cast<int>(); })
+        .def_property_readonly("height", [](const VideoReader& self)
+                               { return self.getProperties()["height"].cast<int>(); })
+        .def_property_readonly("fps", [](const VideoReader& self)
+                               { return self.getProperties()["fps"].cast<double>(); })
+        .def_property_readonly(
+            "min_fps", [](const VideoReader& self)
+            { return self.getProperties()["min_fps"].cast<double>(); })
+        .def_property_readonly(
+            "max_fps", [](const VideoReader& self)
+            { return self.getProperties()["max_fps"].cast<double>(); })
+        .def_property_readonly(
+            "duration", [](const VideoReader& self)
+            { return self.getProperties()["duration"].cast<double>(); })
+        .def_property_readonly(
+            "total_frames", [](const VideoReader& self)
+            { return self.getProperties()["total_frames"].cast<int>(); })
+        .def_property_readonly(
+            "pixel_format", [](const VideoReader& self)
+            { return self.getProperties()["pixel_format"].cast<std::string>(); })
+        .def_property_readonly(
+            "has_audio", [](const VideoReader& self)
+            { return self.getProperties()["has_audio"].cast<bool>(); })
+        .def_property_readonly(
+            "audio_bitrate", [](const VideoReader& self)
+            { return self.getProperties()["audio_bitrate"].cast<int>(); })
+        .def_property_readonly(
+            "audio_channels", [](const VideoReader& self)
+            { return self.getProperties()["audio_channels"].cast<int>(); })
+        .def_property_readonly(
+            "audio_sample_rate", [](const VideoReader& self)
+            { return self.getProperties()["audio_sample_rate"].cast<int>(); })
+        .def_property_readonly(
+            "audio_codec", [](const VideoReader& self)
+            { return self.getProperties()["audio_codec"].cast<std::string>(); })
+        .def_property_readonly("bit_depth",
+                               [](const VideoReader& self) {
+                                   return self.getProperties()["bit_depth"].cast<int>();
+                               })
+        .def_property_readonly(
+            "aspect_ratio", [](const VideoReader& self)
+            { return self.getProperties()["aspect_ratio"].cast<double>(); })
+        .def_property_readonly(
+            "codec", [](const VideoReader& self)
+            { return self.getProperties()["codec"].cast<std::string>(); })
         .def("supported_codecs", &VideoReader::supportedCodecs)
         .def("get_properties", &VideoReader::getProperties)
         .def("__getitem__", &VideoReader::operator[])

@@ -34,9 +34,88 @@ class VideoReader:
             input_path (str): Path to the video file.
             num_threads (int, optional): Number of threads for decoding. Defaults to half of CPU cores.
             filters (Optional[List[FilterBase]]): List of filters to apply to the video.
-                - Example: filters = [("scale", "1280:720"), ("hue", "0.5")]
             tensor_shape (str, optional): Shape format of the output tensor. Defaults to "HWC".
         """
+        ...
+
+    @property
+    def width(self) -> int:
+        """Get the video width."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """Get the video height."""
+        ...
+
+    @property
+    def fps(self) -> float:
+        """Get the frames per second of the video."""
+        ...
+
+    @property
+    def min_fps(self) -> float:
+        """Get the minimum frames per second of the video."""
+        ...
+
+    @property
+    def max_fps(self) -> float:
+        """Get the maximum frames per second of the video."""
+        ...
+
+    @property
+    def duration(self) -> float:
+        """Get the duration of the video in seconds."""
+        ...
+
+    @property
+    def total_frames(self) -> int:
+        """Get the total number of frames in the video."""
+        ...
+
+    @property
+    def pixel_format(self) -> str:
+        """Get the pixel format of the video."""
+        ...
+
+    @property
+    def has_audio(self) -> bool:
+        """Check if the video contains audio."""
+        ...
+
+    @property
+    def audio_bitrate(self) -> Optional[int]:
+        """Get the audio bitrate if available."""
+        ...
+
+    @property
+    def audio_channels(self) -> Optional[int]:
+        """Get the number of audio channels if available."""
+        ...
+
+    @property
+    def audio_sample_rate(self) -> Optional[int]:
+        """Get the audio sample rate if available."""
+        ...
+
+    @property
+    def audio_codec(self) -> Optional[str]:
+        """Get the audio codec name if available."""
+        ...
+
+    @property
+    def bit_depth(self) -> int:
+        """Get the bit depth of the video."""
+        ...
+
+    @property
+    def aspect_ratio(self) -> str:
+        """Get the aspect ratio of the video."""
+        ...
+
+    @property
+    def codec(self) -> str:
+        """Get the video codec name."""
         ...
 
     def __call__(self, frame_range: Union[Tuple[int, int], Tuple[float, float],
@@ -44,28 +123,12 @@ class VideoReader:
         """
         Set the frame range for the video reader.
 
-        This method allows setting a **range** using **frame indices (int)** or **timestamps (float)**.
-
-        **Example:**
-        ```python
-        with VideoReader('input.mp4')([10, 20]) as reader:  # Using frames
-            for frame in reader:
-                process_frame(frame)
-
-        with VideoReader('input.mp4')([1.5, 2.5]) as reader:  # Using timestamps
-            for frame in reader:
-                process_frame(frame)
-        ```
-
         Args:
             frame_range (Union[Tuple[int, int], Tuple[float, float], List[int], List[float]]):
                 A tuple or list containing the start and end frame indices or timestamps.
-
+        
         Returns:
             VideoReader: The video reader object itself.
-
-        Raises:
-            ValueError: If `frame_range` is not a tuple or list of two **ints or two floats**.
         """
         ...
 
@@ -94,18 +157,9 @@ class VideoReader:
         """
         Set the playback range using either **frame numbers (int)** or **timestamps (float)**.
 
-        **Example:**
-        ```python
-        reader.set_range(10, 50)      # Frame-based range
-        reader.set_range(1.5, 2.5)    # Time-based range
-        ```
-
         Args:
             start (Union[int, float]): Starting frame number or timestamp.
             end (Union[int, float]): Ending frame number or timestamp.
-
-        Raises:
-            ValueError: If `start` and `end` are not both **ints** or both **floats**.
         """
         ...
 
@@ -115,31 +169,6 @@ class VideoReader:
 
         Returns:
             List[str]: List of supported codec names.
-        """
-        ...
-
-    def get_properties(self) -> dict:
-        """
-        Retrieve video properties.
-
-        Returns:
-            dict: A dictionary containing the following properties:
-                - width (int): Video width.
-                - height (int): Video height.
-                - fps (float): Frames per second.
-                - min_fps (float): Minimum frames per second.
-                - max_fps (float): Maximum frames per second.
-                - duration (float): Video duration in seconds.
-                - total_frames (int): Total number of frames.
-                - pixel_format (str): Video pixel format.
-                - has_audio (bool): Whether the video contains audio.
-                - audio_bitrate (Optional[int]): Audio bitrate (if applicable).
-                - audio_channels (Optional[int]): Number of audio channels.
-                - audio_sample_rate (Optional[int]): Audio sample rate.
-                - audio_codec (Optional[str]): Audio codec name.
-                - bit_depth (int): Bit depth of the video.
-                - aspect_ratio (str): Video aspect ratio.
-                - codec (str): Video codec name.
         """
         ...
 
@@ -167,9 +196,6 @@ class VideoReader:
 
         Returns:
             torch.Tensor: The next frame as a PyTorch tensor.
-
-        Raises:
-            StopIteration: Raised when no more frames are available.
         """
         ...
 
@@ -186,11 +212,6 @@ class VideoReader:
         """
         Exit the context manager.
 
-        Args:
-            exc_type (Optional[type]): The exception type, if any.
-            exc_value (Optional[BaseException]): The exception value, if any.
-            traceback (Optional[Any]): The traceback object, if any.
-
         Returns:
             bool: False to propagate exceptions, True to suppress them.
         """
@@ -202,18 +223,17 @@ class VideoReader:
         """
         ...
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: Union[int, float]) -> torch.Tensor:
         """
-        Retrieve a specific property of the video.
+        Retrieve a frame at a specific timestamp or frame index.
 
         Args:
-            key (str): Property name.
+            key (Union[int, float]): Frame index (int) or timestamp (float).
 
         Returns:
-            Any: The value of the requested property.
+            torch.Tensor: The retrieved frame.
         """
         ...
-
 # This file is autogenerated. Do not modify manually.
 from typing import List, Optional, Any, Tuple
 from enum import Enum

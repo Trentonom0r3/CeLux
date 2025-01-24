@@ -27,7 +27,8 @@ def test_video(input_video):
 
         # Initialize the video reader
         reader = celux.VideoReader(input_video)
-
+        print(reader.pixel_format)
+        print(reader.properties)
         # Decode the first frame
         first_frame = next(iter(reader))
         if first_frame is None:

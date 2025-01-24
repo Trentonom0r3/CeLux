@@ -13,7 +13,7 @@
 
 The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (light), reflecting its commitment to speed and efficiency.
 
-# [Check out the latest changes](docs/CHANGELOG.md#version-057)
+# [Check out the latest changes](docs/CHANGELOG.md#version-058)
 
 ## 📚 Documentation
 

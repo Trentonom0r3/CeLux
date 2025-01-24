@@ -34,8 +34,7 @@ class VideoReader
      * @param key The property key to access.
      * @return py::object The value associated with the key.
      */
-    py::object operator[](const std::string& key) const;
-
+    py::object operator[](py::object key);
     /**
      * @brief Read a frame from the video.
      *
