@@ -540,6 +540,10 @@ torch::ScalarType VideoReader::findTypeFromBitDepth()
         CELUX_DEBUG("Setting tensor data type to torch::kUInt16");
         torchDataType = torch::kUInt16;
         break;
+    case 12:
+        CELUX_DEBUG("Setting tensor data type to torch::kUInt16");
+		torchDataType = torch::kUInt16;
+		break;
     case 16:
         CELUX_DEBUG("Setting tensor data type to torch::kUInt16");
         torchDataType = torch::kUInt16;
