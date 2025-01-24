@@ -107,9 +107,9 @@ def extract_clip_celux_frames(video_path, start_frame, end_frame, output_video):
     # because we're passing integers. It decodes that exact slice.
     reader([start_frame, end_frame])
 
-    fps    = int(reader["fps"])
-    width  = reader["width"]
-    height = reader["height"]
+    fps    = reader.fps
+    width  = reader.width
+    height = reader.height
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out    = cv2.VideoWriter(output_video, fourcc, fps, (width, height))

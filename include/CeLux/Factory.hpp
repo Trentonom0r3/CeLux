@@ -251,7 +251,6 @@ class Factory
             return 12;
 
         // ProRes4444 often decodes to YUVA444P10 or YUVA444P16.
-        // If you know specifically it's 10-bit:
         case AV_PIX_FMT_YUVA444P10LE:
             return 10;
         // Or if you also want to handle 12-bit alpha:

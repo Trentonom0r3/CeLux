@@ -217,24 +217,28 @@ void VideoReader::close()
 bool VideoReader::seek(double timestamp)
 {
     CELUX_TRACE("Seeking to timestamp: {}", timestamp);
-    bool success;
 
-    // Release GIL during seeking
+    if (timestamp < 0 || timestamp > properties.duration)
     {
-        // py::gil_scoped_release release; // Uncomment if GIL management is needed
-        success = decoder->seek(timestamp);
+        CELUX_ERROR("Timestamp out of range: {}", timestamp);
+        return false;
     }
 
-    if (success)
+    bool success = decoder->seekToNearestKeyframe(timestamp);
+    if (!success)
     {
-        CELUX_TRACE("Seek to timestamp {} successful", timestamp);
-    }
-    else
-    {
-        CELUX_WARN("Seek to timestamp {} failed", timestamp);
+        CELUX_WARN("Seek to keyframe failed at timestamp {}", timestamp);
+        return false;
     }
 
-    return success;
+    // Decode frames until reaching the exact timestamp
+    while (current_timestamp < timestamp)
+    {
+        readFrame();
+    }
+
+    CELUX_TRACE("Exact seek to timestamp {} successful", timestamp);
+    return true;
 }
 
 std::vector<std::string> VideoReader::supportedCodecs()
@@ -275,42 +279,50 @@ py::dict VideoReader::getProperties() const
     return props;
 }
 
-py::object VideoReader::operator[](const std::string& key) const
+py::object VideoReader::operator[](py::object key)
 {
-    CELUX_TRACE("__getitem__ called with key: {}", key);
 
-    if (key == "width")
-        return py::cast(properties.width); // Cast integer to py::object
-    else if (key == "height")
-        return py::cast(properties.height); // Cast integer to py::object
-    else if (key == "fps")
-        return py::cast(properties.fps); // Cast double to py::object
-    else if (key == "duration")
-        return py::cast(properties.duration); // Cast double to py::object
-    else if (key == "total_frames")
-        return py::cast(properties.totalFrames); // Cast integer to py::object
-    else if (key == "pixel_format")
-        return py::cast(
-            av_get_pix_fmt_name(properties.pixelFormat)); // Cast string to py::object
-    else if (key == "has_audio")
-        return py::cast(properties.hasAudio); // Cast boolean to py::object
-    else if (key == "audio_bitrate")
-        return py::cast(properties.audioBitrate); // Cast integer to py::object
-    else if (key == "audio_channels")
-        return py::cast(properties.audioChannels); // Cast integer to py::object
-    else if (key == "audio_sample_rate")
-        return py::cast(properties.audioSampleRate); // Cast integer to py::object
-    else if (key == "audio_codec")
-        return py::cast(properties.audioCodec); // Cast string to py::object
-    else if (key == "bit_depth")
-        return py::cast(properties.bitDepth); // Cast integer to py::object
-    else if (key == "aspect_ratio")
-        return py::cast(properties.aspectRatio); // Cast double to py::object
-    else if (key == "codec")
-        return py::cast(properties.codec); // Cast string to py::object
+    if (py::isinstance<py::int_>(key))
+    {
+        int frame_number = key.cast<int>();
+        if (frame_number < 0 || frame_number >= properties.totalFrames)
+        {
+            throw std::out_of_range("Frame index out of range: " +
+                                    std::to_string(frame_number));
+        }
 
-    CELUX_WARN("Key '{}' not found in video properties", key);
-    throw std::out_of_range("Key not found: " + key);
+        bool success = seekToFrame(frame_number);
+        if (!success)
+        {
+            throw std::runtime_error("Failed to seek to frame: " +
+                                     std::to_string(frame_number));
+        }
+
+        return py::cast(readFrame());
+    }
+    else if (py::isinstance<py::float_>(key))
+    {
+        double timestamp = key.cast<double>();
+        if (timestamp < 0 || timestamp > properties.duration)
+        {
+            throw std::out_of_range("Timestamp out of range: " +
+                                    std::to_string(timestamp));
+        }
+
+        bool success = seek(timestamp);
+        if (!success)
+        {
+            throw std::runtime_error("Failed to seek to timestamp: " +
+                                     std::to_string(timestamp));
+        }
+
+        return py::cast(readFrame());
+    }
+    else
+    {
+        throw std::invalid_argument("__getitem__ must be called with an int (frame "
+                                    "index) or float (timestamp).");
+    }
 }
 
 void VideoReader::reset()
@@ -331,40 +343,36 @@ void VideoReader::reset()
 bool VideoReader::seekToFrame(int frame_number)
 {
     CELUX_INFO("Seeking to frame number: {}", frame_number);
-    if (frame_number < 0 || frame_number > properties.totalFrames)
+
+    if (frame_number < 0 || frame_number >= properties.totalFrames)
     {
         CELUX_ERROR("Frame number {} is out of range (0 to {})", frame_number,
                     properties.totalFrames);
-        return false; // Out of range
+        return false;
     }
+    double seek_timestamp = frame_number / properties.fps;
 
-    // Calculate timestamp for the exact frame
-    double exact_timestamp = static_cast<double>(frame_number) / properties.fps;
-    CELUX_INFO("Exact timestamp for frame {}: {} seconds", frame_number,
-               exact_timestamp);
 
-    // Seek to the nearest keyframe before the target frame
-    bool success = decoder->seekToNearestKeyframe(exact_timestamp);
+    // Seek to the closest keyframe first
+    bool success = decoder->seekToNearestKeyframe(seek_timestamp);
     if (!success)
     {
-        CELUX_WARN("Seeking to the nearest keyframe failed for frame number {}",
-                   frame_number);
+        CELUX_WARN("Seek to keyframe for frame {} failed", frame_number);
         return false;
     }
 
-    // Decode frames until reaching the target frame number
-    int current_frame = static_cast<int>(std::round(exact_timestamp * properties.fps));
-
+    // Decode frames until reaching the exact requested frame
+    int current_frame = static_cast<int>(current_timestamp * properties.fps);
     while (current_frame < frame_number)
     {
-        CELUX_INFO("Within Seek: Decoding frame number {}", current_frame);
         readFrame();
         current_frame++;
     }
 
-    CELUX_INFO("Seek to frame {} successful", frame_number);
+    CELUX_INFO("Exact seek to frame {} successful", frame_number);
     return true;
 }
+
 
 VideoReader& VideoReader::iter()
 {
@@ -480,9 +488,9 @@ torch::Tensor VideoReader::next()
     if (start_time >= 0.0 && end_time > 0.0)
     {
         // If the current frame's timestamp is >= end_time, skip/stop.
-        if (current_timestamp >= end_time)
+        if (current_timestamp > end_time)
         {
-            CELUX_DEBUG("Frame timestamp {} >= end_time {}, skipping frame.",
+            CELUX_DEBUG("Frame timestamp {} > end_time {}, skipping frame.",
                         current_timestamp, end_time);
             throw py::stop_iteration();
         }

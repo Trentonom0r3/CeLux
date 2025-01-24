@@ -29,8 +29,6 @@ class Decoder
         std::string audioCodec;
         double min_fps;
         double max_fps;
-        bool isRawVideo; // ✅ New: Identifies raw video formats
-        bool needsRemux; // ✅ New: Flag if remuxing is needed
     };
 
     Decoder() = default;
@@ -71,10 +69,6 @@ class Decoder
 
     bool initFilterGraph();
     void set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth);
-
-    // ✅ New Methods for Handling Raw Video & Remuxing
-    bool isRawFormat(const std::string& filePath);
-    std::string remuxToSupportedFormat(const std::string& inputPath);
 
     AVFilterGraphPtr filter_graph_;
     AVFilterContext* buffersrc_ctx_;
