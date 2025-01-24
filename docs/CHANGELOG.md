@@ -1,5 +1,23 @@
 ## 📈 Changelog
 
+### Version 0.5.7 (2025-1-23)
+
+- **New color format support**  
+  Added CPU-based conversions for:
+  - 12-bit YUV (420, 422, and 444)
+  - 10-bit YUV444
+  - ProRes 4444 with alpha (10-bit or 12-bit)
+  - Anything NOT 8-bit uses `uint-16` tensors.
+  
+- **Notes on rawvideo**  
+  Raw `.yuv` files still require specifying resolution and pixel format manually.  
+  (`-f rawvideo -pix_fmt yuv420p -s 1920x1080 …`)  
+  - **IN PROGRESS****
+
+- **Other improvements**  
+  - Minor cleanups in converter classes.
+  - Updated tests to cover the newly supported pixel formats.
+
 ### Version 0.5.6.1 (2025-1-23)
   = Adusted `__call__` method handling.
     - `Int` values seek as frames, `Float` values seek as times.

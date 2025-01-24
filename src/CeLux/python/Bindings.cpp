@@ -22,7 +22,7 @@ PYBIND11_MODULE(celux, m)
              py::arg("filters") = std::vector<std::shared_ptr<FilterBase>>(),
              py::arg("tensor_shape") = "HWC")
         .def("read_frame", &VideoReader::readFrame)
-        .def("seek", &VideoReader::seek)
+        .def_property_readonly("properties", &VideoReader::getProperties)
         .def("supported_codecs", &VideoReader::supportedCodecs)
         .def("get_properties", &VideoReader::getProperties)
         .def("__getitem__", &VideoReader::operator[])

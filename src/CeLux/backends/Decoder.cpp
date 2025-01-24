@@ -446,6 +446,21 @@ bool Decoder::decodeNextFrame(void* buffer, double* frame_timestamp)
     }
 }
 
+bool Decoder::seekFrame(int frameIndex)
+{
+    CELUX_TRACE("Seeking to frame index: {}", frameIndex);
+
+    if (frameIndex < 0 || frameIndex > properties.totalFrames)
+    {
+        CELUX_WARN("Frame index out of bounds: {}", frameIndex);
+        return false;
+    }
+
+    double timestamp = static_cast<double>(frameIndex) / properties.fps;
+    return seek(timestamp); // Call existing timestamp-based seek method
+}
+
+
 bool Decoder::seek(double timestamp)
 {
     CELUX_TRACE("Seeking to timestamp: {}", timestamp);

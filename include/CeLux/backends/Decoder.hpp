@@ -45,7 +45,7 @@ class Decoder
     void addFilter(const std::unique_ptr<FilterBase>& filter);
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
-
+    bool seekFrame(int frameIndex);
     virtual bool decodeNextFrame(void* buffer, double* frame_timestamp = nullptr);
     virtual bool seek(double timestamp);
     virtual VideoProperties getVideoProperties() const;
