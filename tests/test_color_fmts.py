@@ -50,7 +50,7 @@ def test_video_format_loading(video_file):
         reader = celux.VideoReader(video_path)
         logging.info(f"🔍 Loading video: {video_file}")
         # pixel_format is a property of the VideoReader class
-        logging.info(f"    - Pixel Format: {reader['pixel_format']}")
+        logging.info(f"    - Pixel Format: {reader.pixel_format}")
 
         first_frame = next(iter(reader))
         assert first_frame is not None, "❌ Failed to decode first frame"

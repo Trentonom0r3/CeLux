@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 # Adjust if needed to locate your Celux package
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from celux import VideoReader
-
+import celux
+celux.set_log_level(celux.LogLevel.off)  # trace, debug, info, error, warn, critical, off
 # ----------------------------------------------------------------------------
 # Configuration
 # ----------------------------------------------------------------------------
@@ -100,9 +101,9 @@ def extract_clip_celux_times(video_path, start_time, end_time, output_video):
     # That means decode from start_time s up to end_time s
     reader([start_time, end_time])
 
-    fps    = int(reader["fps"])
-    width  = reader["width"]
-    height = reader["height"]
+    fps    = reader.fps
+    width  = reader.width
+    height = reader.height
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out    = cv2.VideoWriter(output_video, fourcc, fps, (width, height))

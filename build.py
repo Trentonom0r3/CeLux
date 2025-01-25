@@ -64,7 +64,7 @@ def main():
     build_package(is_cuda=False)
 
     # Build the CUDA version
-    build_package(is_cuda=True)
+   # build_package(is_cuda=True)
 
 if __name__ == "__main__":
     main()

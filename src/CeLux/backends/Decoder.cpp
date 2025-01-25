@@ -456,8 +456,9 @@ bool Decoder::seekFrame(int frameIndex)
         return false;
     }
 
-    double timestamp = static_cast<double>(frameIndex) / properties.fps;
-    return seek(timestamp); // Call existing timestamp-based seek method
+    int64_t target_pts = av_rescale_q(frameIndex, {1, static_cast<int>(properties.fps)},
+                                      formatCtx->streams[videoStreamIndex]->time_base);
+    return seek(target_pts * av_q2d(formatCtx->streams[videoStreamIndex]->time_base));
 }
 
 
@@ -474,6 +475,7 @@ bool Decoder::seek(double timestamp)
     CELUX_DEBUG("Converted timestamp for seeking: {}", ts);
     int ret = av_seek_frame(formatCtx.get(), videoStreamIndex, ts,
                             AVSEEK_FLAG_BACKWARD);
+
     if (ret < 0)
     {
         CELUX_ERROR("Seek failed to timestamp: {}", timestamp);
