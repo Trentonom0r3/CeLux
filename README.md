@@ -13,8 +13,10 @@
 
 The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (light), reflecting its commitment to speed and efficiency.
 
-# [Check out the latest changes](docs/CHANGELOG.md#version-0585)
-
+# [Check out the latest changes](docs/CHANGELOG.md#version-060)
+  - **CeLux** now has basic audio support!
+    - Decode into tensor, or directly into file.
+    
 ## 📚 Documentation
 
 - [📝 Changelog](docs/CHANGELOG.md)

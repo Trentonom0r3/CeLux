@@ -1,5 +1,36 @@
 ## 📈 Changelog
 
+### **Version 0.6.0 (2025-1-25)**  
+
+#### **New Audio API in `VideoReader`**
+#### **Retrieve Audio Data as a Tensor or File**
+
+A new `.audio` property has been added to `VideoReader`, allowing direct access to the `Audio` object:
+
+```python
+reader = VideoReader("test.mp4")
+if reader.has_audio:
+    audio = reader.audio  # Access the audio object
+    tensor = audio.tensor()  # Retrieve audio as a PyTorch tensor, 1D. NOTE. THIS HAS BEEN MINIMALLY TESTED
+    success = audio.file("output.wav")  # Extract audio to a WAV file
+```
+
+#### **Audio Class Features**
+- **`tensor()`** – Extracts the audio stream as a PyTorch tensor.
+- **`file(output_path)`** – Saves the audio to a specified file path.
+- **Read-only Properties:**
+  - `sample_rate`: Audio sample rate in Hz.
+  - `channels`: Number of audio channels.
+  - `bit_depth`: Bit depth of the audio.
+  - `codec`: Audio codec format.
+  - `bitrate`: Audio bitrate.
+
+Example usage:
+```python
+print(audio.sample_rate)  # Get the sample rate
+print(audio.channels)  # Number of channels
+```
+
 ### **Version 0.5.8.5 (2025-1-24)**  
 - Fixed an issue with ranges being off by 1 frame.
 

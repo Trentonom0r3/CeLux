@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 import celux
-
+celux.set_log_level(celux.LogLevel.off)
 def get_opencv_frame(video_path, seek_value, seek_by="time"):
     """
     Extract a frame using OpenCV, either by time (seconds) or frame index.
@@ -132,8 +132,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Test seeking
-    seek_times = [1.0, 2.5, 5.0, 10.0, 60.0]  # Seconds
+    seek_times = [1.0, 2.5, 5.0, 10.0, 60.0]   # Seconds
     seek_frames = [10, 50, 100, 200]  # Frame numbers
 
     compare_seeking(input_video, seek_times, "time")
     compare_seeking(input_video, seek_frames, "frame")
+
+

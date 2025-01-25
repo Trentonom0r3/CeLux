@@ -154,6 +154,51 @@ class VideoReader
      * @param endTime Ending timestamp (-1 for no limit).
      */
     void setRangeByTimestamps(double startTime, double endTime);
+
+    
+    /**
+     * @brief Retrieve the audio object for interaction.
+     *
+     * @return Audio instance.
+     */
+    class Audio
+    {
+      public:
+        explicit Audio(std::shared_ptr<celux::Decoder> decoder);
+
+        /**
+         * @brief Get audio data as a tensor.
+         *
+         * @return torch::Tensor The extracted audio data.
+         */
+        torch::Tensor getAudioTensor();
+
+        /**
+         * @brief Extracts the audio to a file.
+         *
+         * @param outputFilePath The path where the audio file should be saved.
+         * @return True if successful, false otherwise.
+         */
+        bool extractToFile(const std::string& outputFilePath);
+
+        /**
+         * @brief Get audio properties such as sample rate, channels, and codec.
+         *
+         * @return A struct containing audio properties.
+         */
+        celux::Decoder::VideoProperties getProperties() const;
+
+      private:
+        std::shared_ptr<celux::Decoder> decoder;
+    };
+
+    /**
+     * @brief Get the audio interface.
+     *
+     * @return A reference to the Audio class.
+     */
+    std::shared_ptr<Audio> getAudio();
+
   private:
     bool seekToFrame(int frame_number);
     torch::ScalarType findTypeFromBitDepth();
@@ -164,7 +209,7 @@ class VideoReader
     void close();
 
     // Member variables
-    std::unique_ptr<celux::Decoder> decoder;
+    std::shared_ptr<celux::Decoder> decoder;
     celux::Decoder::VideoProperties properties;
 
     torch::Tensor tensor;
@@ -184,6 +229,7 @@ class VideoReader
     std::vector<std::shared_ptr<FilterBase>> filters_;
     torch::Tensor bufferedFrame; // The "first valid" frame, if we found it early
     bool hasBufferedFrame = false;
+    std::shared_ptr<Audio> audio;
 };
 
 #endif // VIDEOREADER_HPP

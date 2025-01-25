@@ -71,6 +71,7 @@ PYBIND11_MODULE(celux, m)
         .def_property_readonly(
             "codec", [](const VideoReader& self)
             { return self.getProperties()["codec"].cast<std::string>(); })
+        .def_property_readonly("audio", &VideoReader::getAudio)
         .def("supported_codecs", &VideoReader::supportedCodecs)
         .def("get_properties", &VideoReader::getProperties)
         .def("__getitem__", &VideoReader::operator[])
@@ -141,7 +142,33 @@ PYBIND11_MODULE(celux, m)
                 }
                 return self;
             },
-            py::return_value_policy::reference_internal);
+            py::return_value_policy::reference_internal)
+    // -------------------
+    // Bind getAudio()
+    // -------------------
+    .def("get_audio", &VideoReader::getAudio,
+         py::return_value_policy::reference_internal, "Retrieve the Audio object");
+
+    // -------------------
+    // Bind Audio Class
+    // -------------------
+    py::class_<VideoReader::Audio, std::shared_ptr<VideoReader::Audio>>(m, "Audio")
+        .def(py::init<std::shared_ptr<celux::Decoder>>())
+        .def("tensor", &VideoReader::Audio::getAudioTensor,
+             "Retrieve audio as a PyTorch tensor")
+        .def("file", &VideoReader::Audio::extractToFile,
+             py::arg("output_path"), "Extract audio to a specified file path")
+        .def_property_readonly("properties", &VideoReader::Audio::getProperties)
+        .def_property_readonly("sample_rate", [](const VideoReader::Audio& self)
+                               { return self.getProperties().audioSampleRate; })
+        .def_property_readonly("channels", [](const VideoReader::Audio& self)
+                               { return self.getProperties().audioChannels; })
+        .def_property_readonly("bit_depth", [](const VideoReader::Audio& self)
+                               { return self.getProperties().bitDepth; })
+        .def_property_readonly("codec", [](const VideoReader::Audio& self)
+                               { return self.getProperties().audioCodec; })
+        .def_property_readonly("bitrate", [](const VideoReader::Audio& self)
+                               { return self.getProperties().audioBitrate; });
 
 
     py::enum_<spdlog::level::level_enum>(m, "LogLevel")

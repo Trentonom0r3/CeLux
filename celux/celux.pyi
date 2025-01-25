@@ -23,7 +23,6 @@ def set_log_level(level: LogLevel) -> None:
         level (LogLevel): The logging level to set.
     """
     ...
-
 class VideoReader:
     def __init__(self, input_path: str, num_threads: int = os.cpu_count() // 2,
                  filters: Optional[List['FilterBase']] = None, tensor_shape: str = "HWC") -> None:
@@ -38,6 +37,73 @@ class VideoReader:
         """
         ...
 
+    class Audio:
+        def tensor(self) -> torch.Tensor:
+            """
+            Retrieve the audio data as a PyTorch tensor.
+
+            Returns:
+                torch.Tensor: The extracted audio data.
+            """
+            ...
+
+        def file(self, output_path: str) -> bool:
+            """
+            Extract audio from the video and save it as a separate file.
+
+            Args:
+                output_path (str): Path to save the extracted audio file.
+
+            Returns:
+                bool: True if extraction is successful, False otherwise.
+            """
+            ...
+
+        @property
+        def sample_rate(self) -> int:
+            """Get the audio sample rate (Hz)."""
+            ...
+
+        @property
+        def channels(self) -> int:
+            """Get the number of audio channels."""
+            ...
+
+        @property
+        def bit_depth(self) -> int:
+            """Get the bit depth of the audio."""
+            ...
+
+        @property
+        def codec(self) -> str:
+            """Get the audio codec name."""
+            ...
+
+        @property
+        def bitrate(self) -> int:
+            """Get the audio bitrate."""
+            ...
+            
+    def get_audio(self) -> 'Audio':
+        """
+        Retrieve the Audio object for handling audio extraction and processing.
+
+        Returns:
+            Audio: An instance of the Audio class.
+        """
+        ...
+
+
+    @property
+    def audio(self) -> 'Audio':
+        """
+        Retrieve the Audio object for handling audio extraction and processing.
+
+        Returns:
+            Audio: An instance of the Audio class.
+        """
+        ...
+        
     @property
     def width(self) -> int:
         """Get the video width."""
@@ -81,55 +147,6 @@ class VideoReader:
     @property
     def has_audio(self) -> bool:
         """Check if the video contains audio."""
-        ...
-
-    @property
-    def audio_bitrate(self) -> Optional[int]:
-        """Get the audio bitrate if available."""
-        ...
-
-    @property
-    def audio_channels(self) -> Optional[int]:
-        """Get the number of audio channels if available."""
-        ...
-
-    @property
-    def audio_sample_rate(self) -> Optional[int]:
-        """Get the audio sample rate if available."""
-        ...
-
-    @property
-    def audio_codec(self) -> Optional[str]:
-        """Get the audio codec name if available."""
-        ...
-
-    @property
-    def bit_depth(self) -> int:
-        """Get the bit depth of the video."""
-        ...
-
-    @property
-    def aspect_ratio(self) -> str:
-        """Get the aspect ratio of the video."""
-        ...
-
-    @property
-    def codec(self) -> str:
-        """Get the video codec name."""
-        ...
-
-    def __call__(self, frame_range: Union[Tuple[int, int], Tuple[float, float],
-                                          List[int], List[float]]) -> 'VideoReader':
-        """
-        Set the frame range for the video reader.
-
-        Args:
-            frame_range (Union[Tuple[int, int], Tuple[float, float], List[int], List[float]]):
-                A tuple or list containing the start and end frame indices or timestamps.
-        
-        Returns:
-            VideoReader: The video reader object itself.
-        """
         ...
 
     def read_frame(self) -> torch.Tensor:
@@ -199,41 +216,15 @@ class VideoReader:
         """
         ...
 
-    def __enter__(self) -> 'VideoReader':
+    def get_properties(self) -> dict:
         """
-        Enter the context manager.
+        Retrieve all properties of the video as a dictionary.
 
         Returns:
-            VideoReader: The video reader object itself.
+            dict: A dictionary containing metadata about the video.
         """
         ...
 
-    def __exit__(self, exc_type: Optional[type], exc_value: Optional[BaseException], traceback: Optional[Any]) -> bool:
-        """
-        Exit the context manager.
-
-        Returns:
-            bool: False to propagate exceptions, True to suppress them.
-        """
-        ...
-
-    def reset(self) -> None:
-        """
-        Reset the video reader to the beginning of the video.
-        """
-        ...
-
-    def __getitem__(self, key: Union[int, float]) -> torch.Tensor:
-        """
-        Retrieve a frame at a specific timestamp or frame index.
-
-        Args:
-            key (Union[int, float]): Frame index (int) or timestamp (float).
-
-        Returns:
-            torch.Tensor: The retrieved frame.
-        """
-        ...
 # This file is autogenerated. Do not modify manually.
 from typing import List, Optional, Any, Tuple
 from enum import Enum

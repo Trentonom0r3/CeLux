@@ -34,12 +34,12 @@ class Factory
      * @param converter Unique pointer to the IConverter instance.
      * @return std::unique_ptr<Decoder> Pointer to the created Decoder.
      */
-    static std::unique_ptr<Decoder>
+    static std::shared_ptr<Decoder>
     createDecoder(torch::Device device, const std::string& filename, int numThreads,
                   std::vector<std::shared_ptr<FilterBase>> filters)
     {
 
-        return std::make_unique<celux::backends::cpu::Decoder>(filename, numThreads,
+        return std::make_shared<celux::backends::cpu::Decoder>(filename, numThreads,
                                                                filters);
     }
 
