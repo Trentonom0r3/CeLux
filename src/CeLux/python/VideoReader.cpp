@@ -479,8 +479,8 @@ torch::Tensor VideoReader::next()
     // -- Now check if we exceeded the time range AFTER decoding.
     if (start_time >= 0.0 && end_time > 0.0)
     {
-        // If the current frame's timestamp is >= end_time, skip/stop.
-        if (current_timestamp >= end_time)
+        // If the current frame's timestamp is >= end_time, skip/stop. end time + 1 frame
+        if (current_timestamp > end_time + 1/properties.fps)
         {
             CELUX_DEBUG("Frame timestamp {} >= end_time {}, skipping frame.",
                         current_timestamp, end_time);

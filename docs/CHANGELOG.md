@@ -1,5 +1,33 @@
 ## 📈 Changelog
 
+### **Version 0.5.8.5 (2025-1-24)**  
+- Fixed an issue with ranges being off by 1 frame.
+
+### **Version 0.5.8 (2025-1-24)**  
+
+#### **Improved Property Access for VideoReader**  
+- Added direct property access for video metadata.  
+- Users can now retrieve video properties directly instead of accessing `properties["key"]`.  
+- Example:  
+  ```python
+  reader = VideoReader("test.mp4")
+  print(reader.width)  # Instead of video.properties["width"]
+  print(reader.fps)  # Instead of video.properties["fps"]
+  ```
+
+- **Available properties:**  
+  `width, height, fps, min_fps, max_fps, duration, total_frames, pixel_format, has_audio, audio_bitrate, audio_channels, audio_sample_rate, audio_codec, bit_depth, aspect_ratio, codec`
+
+#### **`__getitem__` Seeking Behavior Update**  
+- `__getitem__` now only accepts **seconds (float)** for seeking.  
+- Frame-based seeking (int) is currently **not supported** via `__getitem__`.  
+- Example usage:  
+  ```python
+  reader = VideoReader("test.mp4")
+  frame = reader[2.5]  # Seeks to 2.5 seconds into the video
+  ```
+
+
 ### Version 0.5.7 (2025-1-23)
 
 - **New color format support**  
