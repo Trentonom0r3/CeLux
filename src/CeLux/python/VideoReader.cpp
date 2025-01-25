@@ -490,7 +490,7 @@ torch::Tensor VideoReader::next()
         // If the current frame's timestamp is >= end_time, skip/stop. end time + 1 frame
         if (current_timestamp > end_time + 1/properties.fps)
         {
-            CELUX_DEBUG("Frame timestamp {} > end_time {}, skipping frame.",
+            CELUX_DEBUG("Frame timestamp {} >= end_time {}, skipping frame.",
                         current_timestamp, end_time);
             throw py::stop_iteration();
         }
