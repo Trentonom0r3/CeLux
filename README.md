@@ -3,8 +3,6 @@
 [![PyPI Version](https://img.shields.io/pypi/v/celux)](https://pypi.org/project/celux/)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/celux)](https://pypi.org/project/celux/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/celux)](https://pypi.org/project/celux/)
-[![Discord](https://img.shields.io/discord/1041502781808328704.svg?label=Join%20Us%20on%20Discord&logo=discord&colorB=7289da)](https://discord.gg/hFSHjGyp4p)
-
 
 # CeLux
 
