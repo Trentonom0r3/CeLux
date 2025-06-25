@@ -1,8 +1,9 @@
-#include "Python/VideoReader.hpp"
+#include "VideoReader.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <filter_bindings.hpp>
 #include <torch/extension.h>
+#include <VideoEncoder.hpp>
 
 namespace py = pybind11;
 #define PYBIND11_DETAILED_ERROR_MESSAGES
@@ -170,6 +171,50 @@ PYBIND11_MODULE(celux, m)
         .def_property_readonly("bitrate", [](const VideoReader::Audio& self)
                                { return self.getProperties().audioBitrate; });
 
+    py::class_<celux::VideoEncoder>(m, "VideoEncoder")
+        .def(py::init<const std::string&, std::optional<std::string>,
+                      std::optional<int>, std::optional<int>, std::optional<int>,
+                      std::optional<int>, std::optional<int>, std::optional<int>,
+                      std::optional<int>, std::optional<std::string>>(),
+             py::arg("filename"), py::arg("codec") = std::nullopt,
+             py::arg("width") = std::nullopt, py::arg("height") = std::nullopt,
+             py::arg("bitRate") = std::nullopt, py::arg("fps") = std::nullopt,
+             py::arg("audioBitRate") = std::nullopt,
+             py::arg("audioSampleRate") = std::nullopt,
+             py::arg("audioChannels") = std::nullopt,
+             py::arg("audioCodec") = std::nullopt)
+
+        .def(
+            "encodeFrame",
+            [](celux::VideoEncoder& self, const torch::Tensor& frame)
+            { self.encodeFrame(frame); },
+            py::arg("frame"))
+
+        .def(
+            "encodeAudioFrame",
+            [](celux::VideoEncoder& self, const torch::Tensor& audio)
+            { self.encodeAudioFrame(audio); },
+            py::arg("audio"))
+
+        .def("close", &celux::VideoEncoder::close)
+
+        .def_readwrite("props", &celux::VideoEncoder::props);
+
+    // Expose EncodingProperties structure
+    py::class_<celux::Encoder::EncodingProperties>(m, "EncodingProperties")
+        .def(py::init<>())
+        .def_readwrite("codec", &celux::Encoder::EncodingProperties::codec)
+        .def_readwrite("width", &celux::Encoder::EncodingProperties::width)
+        .def_readwrite("height", &celux::Encoder::EncodingProperties::height)
+        .def_readwrite("bitRate", &celux::Encoder::EncodingProperties::bitRate)
+        .def_readwrite("pixelFormat", &celux::Encoder::EncodingProperties::pixelFormat)
+        .def_readwrite("gopSize", &celux::Encoder::EncodingProperties::gopSize)
+        .def_readwrite("maxBFrames", &celux::Encoder::EncodingProperties::maxBFrames)
+        .def_readwrite("fps", &celux::Encoder::EncodingProperties::fps)
+        .def_readwrite("audioBitRate", &celux::Encoder::EncodingProperties::audioBitRate)
+        .def_readwrite("audioSampleRate", &celux::Encoder::EncodingProperties::audioSampleRate)
+        .def_readwrite("audioChannels", &celux::Encoder::EncodingProperties::audioChannels)
+        .def_readwrite("audioCodec", &celux::Encoder::EncodingProperties::audioCodec);
 
     py::enum_<spdlog::level::level_enum>(m, "LogLevel")
         .value("trace", spdlog::level::trace)

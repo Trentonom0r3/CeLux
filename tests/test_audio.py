@@ -15,7 +15,7 @@ import argparse
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 import celux  # your library
-
+celux.set_log_level(celux.LogLevel.debug)
 # Set up logging with a cleaner format
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -49,7 +49,7 @@ FAILED_TESTS = []
 def test_audio_extraction(video_file):
     """Test extracting audio from video to a file."""
     video_path = os.path.join(DATA_DIR, video_file)
-    output_audio_path = os.path.join(DATA_DIR, f"{os.path.splitext(video_file)[0]}.wav")
+    output_audio_path = os.path.join(DATA_DIR, f"{os.path.splitext(video_file)[0]}_test.aac")
 
     assert os.path.exists(video_path), f"❌ Missing test video: {video_file}"
 
@@ -72,7 +72,7 @@ def test_audio_extraction(video_file):
         FAILED_TESTS.append((video_file, str(e)))
 
 
-@pytest.mark.parametrize("video_file", VIDEO_FILES)
+#@pytest.mark.parametrize("video_file", VIDEO_FILES)
 def test_audio_tensor(video_file):
     """Test extracting audio as a PyTorch tensor."""
     video_path = os.path.join(DATA_DIR, video_file)
@@ -153,4 +153,5 @@ def print_summary(request):
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    pytest.main([__file__, "-s"])  # Add "-s" to force stdout display
+

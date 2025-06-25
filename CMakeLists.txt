@@ -1,449 +1,240 @@
-cmake_minimum_required(VERSION 3.15)
+﻿cmake_minimum_required(VERSION 3.23)
 
-# ------------------------------
-# 1. Project Setup
-# ------------------------------
+# ======================================================
+# 1. User-configurable options
+# ======================================================
+option(CELUX_ENABLE_CUDA   "Build with CUDA acceleration" OFF)
+option(CELUX_BUILD_PYTHON  "Build the Python extension (requires pybind11)" ON)
+option(CELUX_BUILD_SHARED  "Build CeLux as a shared library" OFF)
 
-# Option to enable or disable CUDA support
-option(ENABLE_CUDA "Enable CUDA support" ON)
-
-# Enable response files for CUDA on Windows to handle long argument lists
-if(ENABLE_CUDA)
-    # The following lines help keep 'nvcc' command lines from overflowing
-    set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_OBJECTS ON)
-    set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_INCLUDES ON)
-    set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_LIBRARIES ON)
+if (NOT CELUX_ENABLE_CUDA)
+    set(CMAKE_DISABLE_FIND_PACKAGE_CUDAToolkit ON)
 endif()
-# Use vcpkg toolchain
-if(WIN32)
-    set(CMAKE_TOOLCHAIN_FILE
-        "D:/dev/C++/Dependency_Managers/vcpkg/scripts/buildsystems/vcpkg.cmake"
-        CACHE STRING "Vcpkg toolchain file"
-    )
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+# ======================================================
+# 2. Project declaration
+# ======================================================
+if (CELUX_ENABLE_CUDA)
+    project(CeLux VERSION 1.0 LANGUAGES CXX CUDA)
 else()
-    set(CMAKE_TOOLCHAIN_FILE
-        "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-        CACHE STRING ""
-    )
+    project(CeLux VERSION 1.0 LANGUAGES CXX)
 endif()
 
-# Conditionally include CUDA in the project languages
-if(ENABLE_CUDA)
-    project(CeLux LANGUAGES CXX CUDA)
-else()
-    project(CeLux LANGUAGES CXX)
-endif()
-
-# Set the C++ standard
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# ------------------------------
-# 2. Specify CUDA Paths Directly
-# ------------------------------
-
-if(ENABLE_CUDA)
-    if(WIN32)
-        # Windows-specific CUDA paths
-        # NOTE: If you actually want CUDA 12.2, change v12.1 to v12.2 here
-        set(CUDA_TOOLKIT_ROOT_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1")
-        include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
-        link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib/x64")
-        set(NPP_LIBRARIES nppicc.lib)
-    else()
-        # Linux-specific CUDA paths
-        set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
-        include_directories("${CUDA_TOOLKIT_ROOT_DIR}/include")
-        link_directories("${CUDA_TOOLKIT_ROOT_DIR}/lib64")
-        set(NPP_LIBRARIES nppicc)
+# ======================================================
+# 3. Build acceleration (optional)
+# ======================================================
+find_program(CCACHE_PROGRAM ccache)
+if (CCACHE_PROGRAM)
+    message(STATUS "Enabling ccache")
+    set(CMAKE_C_COMPILER_LAUNCHER   ${CCACHE_PROGRAM})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    if (CELUX_ENABLE_CUDA)
+        set(CMAKE_CUDA_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     endif()
 endif()
 
-# ------------------------------
-# 3. Manually Specify FFmpeg Static Libraries
-# ------------------------------
+# ======================================================
+# 4. Dependencies
+# ======================================================
+find_package(spdlog CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
-if(WIN32)
-    # Windows-specific FFmpeg paths
-    set(FFMPEG_VCPKG_STATIC_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static")
-    set(FFMPEG_LIB_EXT ".lib")
-else()
-    # Linux-specific FFmpeg paths
-    set(FFMPEG_VCPKG_STATIC_DIR "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-linux")
-    set(FFMPEG_LIB_EXT ".a")
+if (NOT TARGET fmt::fmt-header_only AND TARGET fmt::fmt)
+    add_library(fmt::fmt-header_only ALIAS fmt::fmt)
 endif()
 
-# Common FFmpeg include directories
-set(FFMPEG_INCLUDE_DIRS "${FFMPEG_VCPKG_STATIC_DIR}/include")
-
-# FFmpeg dependencies
-set(FFMPEG_DEPENDENCIES
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebp${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdecoder${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpdemux${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libwebpmux${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libx264${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/x265-static${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/libsharpyuv${FFMPEG_LIB_EXT}"
-)
-
-# FFmpeg static libraries
-set(FFMPEG_STATIC_LIBS
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avutil${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avcodec${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avformat${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avdevice${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swscale${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/swresample${FFMPEG_LIB_EXT}"
-    "${FFMPEG_VCPKG_STATIC_DIR}/lib/avfilter${FFMPEG_LIB_EXT}"
-    ${FFMPEG_DEPENDENCIES}
-)
-
-# ------------------------------
-# 4. Keep Torch/CUDA as Dynamic Libraries (B)
-# ------------------------------
-
-if(WIN32)
-    if(ENABLE_CUDA)
-        set(TORCH_INSTALL_PREFIX "D:/dev/C++/Libraries/libtorch-cuda/libtorch")
-    else()
-        set(TORCH_INSTALL_PREFIX "D:/dev/C++/Libraries/libtorch-cpu/libtorch")
-    endif()
-else()
-    if(ENABLE_CUDA)
-        set(TORCH_INSTALL_PREFIX "/opt/libtorch_cuda/libtorch")
-    else()
-        set(TORCH_INSTALL_PREFIX "/opt/libtorch_cpu/libtorch")
-    endif()
+# ---- Torch ----
+if (NOT DEFINED Torch_DIR)
+    message(FATAL_ERROR "Torch_DIR not set. Please define it via environment or CMakePresets.json.")
 endif()
-set(CMAKE_PREFIX_PATH "${TORCH_INSTALL_PREFIX}")
-
-# Find Torch
 find_package(Torch REQUIRED)
 
-# ------------------------------
-# 5. Find Windows Media Foundation Libraries
-# ------------------------------
-
-if(WIN32)
-    # Windows-specific code for Media Foundation
-    set(WINDOW_SDK_LIB_PATH "C:/Program Files (x86)/Windows Kits/10/Lib")
-
-    find_library(MF_LIB NAMES mf PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
-    if(NOT MF_LIB)
-        message(FATAL_ERROR "mf.lib not found. Ensure the Windows SDK is installed.")
-    endif()
-
-    find_library(MFUUUID_LIB NAMES mfuuid PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
-    if(NOT MFUUUID_LIB)
-        message(FATAL_ERROR "mfuuid.lib not found. Ensure the Windows SDK is installed.")
-    endif()
-
-    find_library(OLE32_LIB NAMES ole32 PATHS "${WINDOW_SDK_LIB_PATH}/*/um/x64" NO_DEFAULT_PATH)
-    if(NOT OLE32_LIB)
-        message(FATAL_ERROR "ole32.lib not found. Ensure the Windows SDK is installed.")
-    endif()
-endif()
-
-# ------------------------------
-# 6. Manually Specify Python 3.12 Paths (C)
-# ------------------------------
-
-if(WIN32)
-    set(PYTHON_EXECUTABLE "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/python.exe")
-    set(PYTHON_INCLUDE_DIR "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/include")
-    set(PYTHON_LIBRARY "C:/Users/tjerf/AppData/Local/Programs/Python/Python312/libs/python312.lib")
-
-    if(NOT EXISTS "${PYTHON_EXECUTABLE}")
-        message(FATAL_ERROR "Python executable not found at ${PYTHON_EXECUTABLE}")
-    endif()
-
-    if(NOT EXISTS "${PYTHON_INCLUDE_DIR}")
-        message(FATAL_ERROR "Python include directory not found at ${PYTHON_INCLUDE_DIR}")
-    endif()
-
-    if(NOT EXISTS "${PYTHON_LIBRARY}")
-        message(FATAL_ERROR "Python library not found at ${PYTHON_LIBRARY}")
-    endif()
-else()
-    # Linux-specific code to find Python 3.12
-    find_package(Python3 3.12 COMPONENTS Interpreter Development REQUIRED)
-    if(NOT Python3_FOUND)
-        message(FATAL_ERROR "Python 3.12 not found.")
-    endif()
-    set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
-    set(PYTHON_INCLUDE_DIR ${Python3_INCLUDE_DIRS})
-    set(PYTHON_LIBRARY ${Python3_LIBRARIES})
-endif()
-
-# ------------------------------
-# 7. Find pybind11 using vcpkg
-# ------------------------------
-set(pybind11_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static/share/pybind11")
-set(spdlog_DIR "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static/share/spdlog")
-set(fmt_DIR    "D:/dev/C++/Dependency_Managers/vcpkg/installed/x64-windows-static/share/fmt")
-
-find_package(pybind11 REQUIRED)
-
-# ------------------------------
-# 8. Find Torch Python Library
-# ------------------------------
-
-execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} -c "import torch; import os; print(os.path.dirname(torch.__file__))"
-    OUTPUT_VARIABLE TORCH_PYTHON_PATH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-if(NOT TORCH_PYTHON_PATH)
-    message(FATAL_ERROR "Could not find torch in the current Python environment.")
-endif()
-
-find_library(
-    TORCH_PYTHON_LIBRARY
-    NAMES torch_python
-    PATHS "${TORCH_PYTHON_PATH}/lib" "${TORCH_PYTHON_PATH}"
-    NO_DEFAULT_PATH
-)
-
-if(NOT TORCH_PYTHON_LIBRARY)
-    message(FATAL_ERROR "Torch Python library not found.")
-endif()
-
-# ------------------------------
-# 9. Add Source Files
-# ------------------------------
-
-file(GLOB_RECURSE SOURCES_COMMON
-    "src/CeLux/*.cpp"
-    "src/CeLux/conversion/*.cpp"
-    "src/CeLux/backends/*.cpp"
-    "src/CeLux/conversion/cpu/*.cpp"
-    "src/CeLux/filters/*.cpp"
-)
-
-if(ENABLE_CUDA)
-    # Gather .cu files separately
-    file(GLOB_RECURSE SOURCES_CUDA
-        "src/CeLux/cuda/*.cu"
-    )
-    set(SOURCES ${SOURCES_COMMON} ${SOURCES_CUDA})
-else()
-    set(SOURCES ${SOURCES_COMMON})
-endif()
-
-# Create the main CeLuxLib static library
-add_library(CeLuxLib STATIC ${SOURCES})
-
-# If CUDA is enabled, define a macro and set CUDA properties
-if(ENABLE_CUDA)
-    target_compile_definitions(CeLuxLib PUBLIC CUDA_ENABLED)
-
-    set_target_properties(CeLuxLib PROPERTIES
-        CUDA_STANDARD 17
-        CUDA_STANDARD_REQUIRED ON
-        CUDA_SEPARABLE_COMPILATION ON
-    )
-endif()
-
-# We need spdlog and fmt
-find_package(spdlog CONFIG REQUIRED)
-message(STATUS "spdlog found: ${spdlog_VERSION}")
-
-find_package(fmt CONFIG REQUIRED)
-message(STATUS "fmt found: ${fmt_VERSION}")
-
-target_include_directories(CeLuxLib PUBLIC
-    ${CMAKE_SOURCE_DIR}/include/CeLux
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/cpu
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu/cuda
-    ${CMAKE_SOURCE_DIR}/include/CeLux/error
-    ${CMAKE_SOURCE_DIR}/include/CeLux/backends
-    ${CMAKE_SOURCE_DIR}/include/CeLux/filters
-    ${TORCH_INCLUDE_DIRS}
-    ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
-    ${FFMPEG_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_DIR}
-    ${spdlog_INCLUDE_DIRS}
-    ${fmt_INCLUDE_DIRS}
-)
-
-if(ENABLE_CUDA)
-    target_include_directories(CeLuxLib PUBLIC "${CUDA_TOOLKIT_ROOT_DIR}/include")
-endif()
-
-set_target_properties(CeLuxLib PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    POSITION_INDEPENDENT_CODE ON
-)
-
-# ------------------------------
-# 10. Link Libraries
-# ------------------------------
-
-if(WIN32)
-    target_link_libraries(CeLuxLib PUBLIC
-        ws2_32
-        bcrypt
-        secur32
-        mfplat
-        strmiids
-        ${MFUUUID_LIB}
-        ${MF_LIB}
-        ${OLE32_LIB}
-        ${FFMPEG_STATIC_LIBS}
-        ${TORCH_LIBRARIES}
-        spdlog::spdlog_header_only
-        fmt::fmt-header-only
-    )
-else()
-    target_link_libraries(CeLuxLib PUBLIC
-        ${FFMPEG_STATIC_LIBS}
-        ${TORCH_LIBRARIES}
-        spdlog::spdlog_header_only
-        fmt::fmt-header_only
-        pthread
-        dl
-    )
-endif()
-
-if(ENABLE_CUDA)
-    if(WIN32)
-        target_link_libraries(CeLuxLib PUBLIC
-            CUDA::cudart
-            "${CUDA_TOOLKIT_ROOT_DIR}/lib/x64/cuda.lib"
-            ${NPP_LIBRARIES}
-        )
+if (NOT TARGET Torch::Torch)
+    if (TARGET torch)
+        add_library(Torch::Torch ALIAS torch)
+    elseif (TARGET torch_cpu)
+        add_library(Torch::Torch ALIAS torch_cpu)
     else()
-        target_link_libraries(CeLuxLib PUBLIC
-            CUDA::cudart
-            "${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcuda.so"
-            ${NPP_LIBRARIES}
-        )
+        message(FATAL_ERROR "LibTorch found but no usable target (torch / torch_cpu) exported.")
     endif()
 endif()
 
-# ------------------------------
-# 11. Build the Python Module
-# ------------------------------
-
-add_library(celux MODULE ${CMAKE_SOURCE_DIR}/src/CeLux/Python/Bindings.cpp)
-
-# Compiler optimizations
-if(WIN32)
-    target_compile_options(celux PRIVATE /O2 /Ob2 /Oi /Ot /GL)
-else()
-    target_compile_options(celux PRIVATE -O3)
+if (NOT CELUX_ENABLE_CUDA)
+    if (TARGET torch_cuda OR TORCH_CUDA_FOUND)
+        message(FATAL_ERROR "CPU-only build requested but GPU-enabled libtorch detected. Use a CPU-only LibTorch build.")
+    endif()
 endif()
 
-if(ENABLE_CUDA)
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 -use_fast_math")
-    # Turn off object-level PDB generation on CUDA files
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=\"/Z7\"")
+# ---- FFmpeg ----
+find_package(FFMPEG REQUIRED COMPONENTS avcodec avformat avutil swscale swresample)
+
+# ---- Python + pybind11 ----
+if (CELUX_BUILD_PYTHON)
+    if (NOT DEFINED Python3_EXECUTABLE OR NOT DEFINED Python3_ROOT_DIR)
+        message(FATAL_ERROR "Missing Python config. Set PYTHON_EXECUTABLE and PYTHON_ROOT in environment or presets.")
+    endif()
+
+    set(Python3_FIND_REGISTRY NEVER)
+    set(Python3_FIND_STRATEGY LOCATION)
+    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter Development)
+
+    if (Python3_VERSION VERSION_GREATER_EQUAL 3.14)
+        message(FATAL_ERROR "Python ≥3.14 is not supported. Use Python 3.12 or 3.13.")
+    endif()
+
+    find_package(pybind11 CONFIG REQUIRED)
 endif()
 
+# ======================================================
+# 5. Source Files
+# ======================================================
+file(GLOB_RECURSE CELUX_SOURCES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/conversion/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/backends/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/filters/*.cpp)
 
-# Enable verbose build output
-set(CMAKE_VERBOSE_MAKEFILE ON)
-# Enable Ninja verbose output
-add_compile_options(-v)
-# Add verbose flag to CUDA compiler
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -v")
+if (CELUX_ENABLE_CUDA)
+    file(GLOB_RECURSE CELUX_CUDA_SOURCES CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/cuda/*.cu)
+    list(APPEND CELUX_SOURCES ${CELUX_CUDA_SOURCES})
+endif()
 
+# ======================================================
+# 6. CeLux core library
+# ======================================================
+set(CELUX_LIB_TYPE STATIC)
+if (CELUX_BUILD_SHARED)
+    set(CELUX_LIB_TYPE SHARED)
+endif()
 
-target_include_directories(celux PUBLIC
-    ${CMAKE_SOURCE_DIR}/include/CeLux
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/cpu
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu
-    ${CMAKE_SOURCE_DIR}/include/CeLux/conversion/gpu/cuda
-    ${CMAKE_SOURCE_DIR}/include/CeLux/error
-    ${CMAKE_SOURCE_DIR}/include/CeLux/backends
-    ${CMAKE_SOURCE_DIR}/include/CeLux/python
-    ${CMAKE_SOURCE_DIR}/include/CeLux/filters
-    ${TORCH_INCLUDE_DIRS}
-    ${TORCH_INCLUDE_DIRS}/torch/csrc/api/include
-    ${FFMPEG_INCLUDE_DIRS}
-    ${pybind11_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_DIR}
-    ${spdlog_INCLUDE_DIRS}
-    ${fmt_INCLUDE_DIRS}
+add_library(CeLuxLib ${CELUX_LIB_TYPE} ${CELUX_SOURCES})
+
+target_include_directories(CeLuxLib
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+        ${FFMPEG_INCLUDE_DIRS}
+        ${Python3_INCLUDE_DIRS}
+    PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/error>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/conversion>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/conversion/cpu>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/backends>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/backends/cpu>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/filters>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/filters/generated>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/python>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/python>
 )
 
-# Set module suffix for Python library
-if(WIN32)
-    set(MODULE_SUFFIX ".pyd")
-else()
-    set(MODULE_SUFFIX ".so")
+set(FFMPEG_LIBS ${FFMPEG_LIBRARIES})
+
+target_link_libraries(CeLuxLib PUBLIC
+    ${FFMPEG_LIBS}
+    Torch::Torch
+    spdlog::spdlog_header_only
+    fmt::fmt-header_only)
+
+if (WIN32)
+    target_link_libraries(CeLuxLib PUBLIC ws2_32 bcrypt)
 endif()
 
-set_target_properties(celux PROPERTIES
-    PREFIX ""
-    SUFFIX "${MODULE_SUFFIX}"
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-    POSITION_INDEPENDENT_CODE ON
-)
-
-# Ensure the output directory exists
-if(ENABLE_CUDA)
-    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/celux_cuda")
-    set(LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux_cuda")
-    set(RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux_cuda")
-    set(ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib_cuda")
-else()
-    file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/celux")
-    set(LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux")
-    set(RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/celux")
-    set(ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+if (CELUX_ENABLE_CUDA)
+    target_compile_definitions(CeLuxLib PUBLIC CELUX_WITH_CUDA)
+    set_property(TARGET CeLuxLib PROPERTY CUDA_STANDARD 17)
 endif()
 
-set_target_properties(celux PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_DIRECTORY}
-    RUNTIME_OUTPUT_DIRECTORY ${RUNTIME_OUTPUT_DIRECTORY}
-    ARCHIVE_OUTPUT_DIRECTORY ${ARCHIVE_OUTPUT_DIRECTORY}
-)
+# ======================================================
+# 7. Python bindings
+# ======================================================
+if (CELUX_BUILD_PYTHON)
+    pybind11_add_module(celux src/CeLux/Python/Bindings.cpp)
 
-# Link libraries to the Python module
-if(WIN32)
-    target_link_libraries(celux PUBLIC
-        CeLuxLib
-        ${TORCH_LIBRARIES}
-        ${TORCH_PYTHON_LIBRARY}
-        ${FFMPEG_STATIC_LIBS}
-        ${PYTHON_LIBRARY}
-        spdlog::spdlog_header_only
-        fmt::fmt-header-only
+    target_include_directories(celux PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/include/CeLux/error
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/python
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/backends
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/backends/cpu
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/conversion
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/conversion/cpu
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/filters
     )
-else()
-    target_link_libraries(celux PUBLIC
-        CeLuxLib
-        ${TORCH_LIBRARIES}
-        ${TORCH_PYTHON_LIBRARY}
-        ${FFMPEG_STATIC_LIBS}
-        ${PYTHON_LIBRARY}
-        spdlog::spdlog_header_only
-        fmt::fmt-header-only
-        pthread
-        dl
+
+    target_link_libraries(celux PRIVATE CeLuxLib Python3::Python)
+
+    if (NOT DEFINED PYTORCH_PYTHON_LIB_DIR)
+        message(FATAL_ERROR "PYTORCH_PYTHON_LIB_DIR not set. Set via environment or preset.")
+    endif()
+
+    target_link_directories(celux PRIVATE ${PYTORCH_PYTHON_LIB_DIR})
+    target_link_libraries(celux PRIVATE
+        ${PYTORCH_PYTHON_LIB_DIR}/torch.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/c10.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/torch_cpu.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/torch_python.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/asmjit.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/fbgemm.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/fmt.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/cpuinfo.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/pthreadpool.lib
+        ${PYTORCH_PYTHON_LIB_DIR}/XNNPACK.lib
+    )
+
+    set_target_properties(celux PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python
+        OUTPUT_NAME "celux"
     )
 endif()
 
-if(ENABLE_CUDA)
-    target_link_libraries(celux PUBLIC CUDA::cudart)
+# ======================================================
+# 8. Install rules
+# ======================================================
+include(GNUInstallDirs)
+
+install(TARGETS CeLuxLib EXPORT CeLuxTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT CeLuxTargets NAMESPACE CeLux:: FILE CeLuxTargets.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+
+if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/cmake/CeLuxConfig.cmake.in")
+    configure_package_config_file(
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/CeLuxConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux)
+else()
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
+        "# Auto-generated minimal config\ninclude(\"${CMAKE_CURRENT_LIST_DIR}/CeLuxTargets.cmake\")\n")
 endif()
 
-# ------------------------------
-# 12. Optional: Clean Up Other Output Directories
-# ------------------------------
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux)
 
-# Example: unify library outputs for CeLuxLib
-set_target_properties(CeLuxLib PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${ARCHIVE_OUTPUT_DIRECTORY}"
-)
-
-message(STATUS "CMake configuration complete. Building with CUDA = ${ENABLE_CUDA}.")
+# ======================================================
+# 9. Build summary
+# ======================================================
+message(STATUS "\n================= CeLux build summary =================")
+message(STATUS "CUDA support         : ${CELUX_ENABLE_CUDA}")
+message(STATUS "Python bindings      : ${CELUX_BUILD_PYTHON}")
+message(STATUS "Torch_DIR            : ${Torch_DIR}")
+message(STATUS "Install prefix       : ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "======================================================\n")

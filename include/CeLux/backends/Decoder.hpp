@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "CxException.hpp"
+#include "error/CxException.hpp"
 #include <Conversion.hpp>
 #include <FilterFactory.hpp>
 #include <Frame.hpp>
@@ -52,7 +52,6 @@ class Decoder
     virtual void close();
     virtual std::vector<std::string> listSupportedDecoders() const;
     AVCodecContext* getCtx();
-    bool seekToPreciseTimestamp(double timestamp);
     int getBitDepth() const;
     bool extractAudioToFile(const std::string& outputFilePath);
     torch::Tensor getAudioTensor();

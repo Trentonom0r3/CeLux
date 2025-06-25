@@ -1,30 +1,23 @@
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
 from pathlib import Path
 
-# Set the version from environment variable
 VERSION = os.getenv("CELUX_VERSION", "0.0.1")
 
-# Set the package name for the CPU version
-package_name = "celux"
-
-# Read the contents of your README file
-this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text(encoding="utf-8")
-
 setup(
-    name=package_name,  # Package name on PyPI will be "celux"
+    name="celux",
     version=VERSION,
     author="Trenton Flanagan",
     author_email="spigonvids@gmail.com",
-    description="HW accelerated video reading for ML Inference (CPU version).",
-    long_description=long_description,
+    description="HW accelerated video reader for ML inference (CPU version)",
+    long_description=(Path(__file__).parent / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
-    url="https://github.com/Trentonom0r3/celux",  # Update with the correct GitHub URL
-    packages=["celux"],  # Install the 'celux' package
-    package_dir={"celux": "celux"},  # Install as celux module
+    url="https://github.com/Trentonom0r3/celux",
+    packages=["celux"],
+    package_dir={"celux": "celux"},
     package_data={
-        "celux": ["*.pyd", "*.dll", "*.pyi", "*.py"],  # Include CPU-specific binaries
+       "celux": ["*.pyd", "*.dll", "*.pyi", "*.py", "py.typed"]
+
     },
     classifiers=[
         "Programming Language :: Python :: 3",

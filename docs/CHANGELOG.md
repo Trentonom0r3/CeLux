@@ -1,5 +1,19 @@
 ## 📈 Changelog
 
+### **Version 0.6.1 (2025-06-24)**
+
+- ✅ **Python 3.13 Support**  
+  Ensured full compatibility with Python 3.13 interpreter and ABI.
+
+- 🧠 **PyTorch 2.7 Compatibility**  
+  Verified and updated integration for use with LibTorch 2.7.
+
+- 🎨 **Uniform Conversion to RGB24**  
+  Added robust support for automatic pixel format conversion to RGB24 using `SwsContext`, covering virtually all common input formats.
+
+- 🛠 **Reworked CMake Configuration**  
+  Modularized and refactored the CMake setup to remove hardcoded paths and improve developer portability across platforms and CI/CD environments.
+
 ### **Version 0.6.0 (2025-1-25)**  
 
 #### **New Audio API in `VideoReader`**

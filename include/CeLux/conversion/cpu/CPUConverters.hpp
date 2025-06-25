@@ -12,6 +12,8 @@
 #include <cpu/YUV420P10ToRGB48.hpp>
 #include <cpu/YUV420PToRGB.hpp>
 #include <cpu/YUV422P10ToRGB48.hpp>
+#include <cpu/RGB24ToYUV420P.hpp>
+#include <cpu/AutoToRGB.hpp>
 
 // -------------------------------------------------------------------------
 // New converters for additional pixel formats

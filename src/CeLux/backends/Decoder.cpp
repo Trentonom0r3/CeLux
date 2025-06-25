@@ -7,22 +7,6 @@ using namespace celux::error;
 
 namespace celux
 {
-struct WAVHeader
-{
-    char riff[4] = {'R', 'I', 'F', 'F'};
-    uint32_t chunkSize = 0; // To be filled later
-    char wave[4] = {'W', 'A', 'V', 'E'};
-    char fmt[4] = {'f', 'm', 't', ' '};
-    uint32_t subchunk1Size = 16;
-    uint16_t audioFormat = 1; // PCM
-    uint16_t numChannels = 2;
-    uint32_t sampleRate = 44100;
-    uint32_t byteRate = 0;   // sampleRate * numChannels * bitsPerSample/8
-    uint16_t blockAlign = 0; // numChannels * bitsPerSample/8
-    uint16_t bitsPerSample = 16;
-    char data[4] = {'d', 'a', 't', 'a'};
-    uint32_t subchunk2Size = 0; // To be filled later
-};
 Decoder::Decoder(int numThreads, std::vector<std::shared_ptr<FilterBase>> filters)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
       videoStreamIndex(-1), numThreads(numThreads), filters_(filters)
@@ -543,40 +527,6 @@ void Decoder::close()
     CELUX_DEBUG("BASE DECODER: Decoder closed");
 }
 
-bool Decoder::seekToPreciseTimestamp(double targetTimestamp)
-{
-    CELUX_TRACE("Seeking precisely to timestamp: {}", targetTimestamp);
-
-    // Step 1: Seek to the nearest keyframe
-    if (!seekToNearestKeyframe(targetTimestamp))
-    {
-        CELUX_DEBUG("Failed to seek to nearest keyframe for timestamp: {}",
-                    targetTimestamp);
-        return false;
-    }
-
-    // Step 2: Decode frames until reaching the target timestamp
-    double currentTimestamp = 0.0;
-    void* buffer = nullptr; // Allocate or provide a valid buffer
-    while (true)
-    {
-        if (!decodeNextFrame(buffer, &currentTimestamp))
-        {
-            CELUX_WARN("Failed to decode frame during precise seeking");
-            return false;
-        }
-
-        if (currentTimestamp >= targetTimestamp)
-        {
-            CELUX_INFO("Reached target timestamp: {}", currentTimestamp);
-            break;
-        }
-    }
-
-    return true;
-}
-
-
 std::vector<std::string> Decoder::listSupportedDecoders() const
 {
     CELUX_DEBUG("BASE DECODER: Listing supported decoders");
@@ -866,7 +816,8 @@ bool Decoder::extractAudioToFile(const std::string& outputFilePath)
         CELUX_DEBUG("Failed to initialize audio decoding.");
         return false;
     }
-    // Reset the decoding process before extracting audio
+
+    // Reset decoding process
     if (av_seek_frame(formatCtx.get(), audioStreamIndex, 0, AVSEEK_FLAG_BACKWARD) < 0)
     {
         CELUX_DEBUG("Failed to seek audio stream to beginning.");
@@ -874,30 +825,125 @@ bool Decoder::extractAudioToFile(const std::string& outputFilePath)
     }
     avcodec_flush_buffers(audioCodecCtx.get());
 
-    // Open output file in binary write mode
-    FILE* outFile = fopen(outputFilePath.c_str(), "wb");
-    if (!outFile)
+    // Detect output format
+    const AVOutputFormat* outputFormat =
+        av_guess_format(nullptr, outputFilePath.c_str(), nullptr);
+    if (!outputFormat)
     {
-        CELUX_DEBUG("Failed to open output file: {}", outputFilePath);
-
+        CELUX_DEBUG("Could not determine output format for: {}", outputFilePath);
         return false;
     }
 
-    // Prepare WAV header with placeholders
-    WAVHeader wavHeader;
-    wavHeader.numChannels = audioCodecCtx->ch_layout.nb_channels;
-    wavHeader.sampleRate = audioCodecCtx->sample_rate;
-    wavHeader.bitsPerSample = 16; // We are converting to S16
-    wavHeader.byteRate =
-        wavHeader.sampleRate * wavHeader.numChannels * (wavHeader.bitsPerSample / 8);
-    wavHeader.blockAlign = wavHeader.numChannels * (wavHeader.bitsPerSample / 8);
+    // Create output format context
+    AVFormatContext* outFormatCtx = nullptr;
+    if (avformat_alloc_output_context2(&outFormatCtx, outputFormat, nullptr,
+                                       outputFilePath.c_str()) < 0)
+    {
+        CELUX_DEBUG("Could not allocate output format context.");
+        return false;
+    }
 
-    // Write placeholder header
-    fwrite(&wavHeader, sizeof(WAVHeader), 1, outFile);
+    // Find encoder for the format
+    const AVCodec* audioEncoder = nullptr;
+    if (outputFormat->audio_codec == AV_CODEC_ID_MP3)
+    {
+        audioEncoder = avcodec_find_encoder_by_name("libmp3lame"); // Use LAME for MP3
+    }
+    else
+    {
+        audioEncoder = avcodec_find_encoder(outputFormat->audio_codec);
+    }
 
-    uint32_t dataSize = 0;
+    if (!audioEncoder)
+    {
+        CELUX_DEBUG("Could not find encoder for format.");
+        avformat_free_context(outFormatCtx);
+        return false;
+    }
 
-    // Read and decode audio packets
+    // Create new codec context
+    AVCodecContext* audioEncCtx = avcodec_alloc_context3(audioEncoder);
+    if (!audioEncCtx)
+    {
+        CELUX_DEBUG("Could not allocate encoder context.");
+        avformat_free_context(outFormatCtx);
+        return false;
+    }
+
+    // Set codec parameters
+    audioEncCtx->bit_rate = 128000;
+    audioEncCtx->sample_rate = audioCodecCtx->sample_rate;
+    av_channel_layout_default(&audioEncCtx->ch_layout, 2); // Stereo
+
+    // Ensure proper sample format for AAC
+    if (outputFormat->audio_codec == AV_CODEC_ID_AAC)
+    {
+        audioEncCtx->sample_fmt = AV_SAMPLE_FMT_FLTP; // AAC expects float planar
+    }
+    else
+    {
+        audioEncCtx->sample_fmt = audioEncoder->sample_fmts
+                                      ? audioEncoder->sample_fmts[0]
+                                      : AV_SAMPLE_FMT_FLTP;
+    }
+
+    audioEncCtx->time_base = {1, audioEncCtx->sample_rate};
+
+    // Open encoder
+    if (avcodec_open2(audioEncCtx, audioEncoder, nullptr) < 0)
+    {
+        CELUX_DEBUG("Could not open encoder.");
+        avcodec_free_context(&audioEncCtx);
+        avformat_free_context(outFormatCtx);
+        return false;
+    }
+
+    // Create a new audio stream
+    AVStream* audioStream = avformat_new_stream(outFormatCtx, audioEncoder);
+    if (!audioStream)
+    {
+        CELUX_DEBUG("Failed to create audio stream.");
+        avcodec_free_context(&audioEncCtx);
+        avformat_free_context(outFormatCtx);
+        return false;
+    }
+
+    audioStream->time_base = {1, audioEncCtx->sample_rate};
+
+    // Copy codec parameters to the stream
+    if (avcodec_parameters_from_context(audioStream->codecpar, audioEncCtx) < 0)
+    {
+        CELUX_DEBUG("Failed to copy encoder parameters.");
+        avcodec_free_context(&audioEncCtx);
+        avformat_free_context(outFormatCtx);
+        return false;
+    }
+
+    // Open output file
+    if (!(outFormatCtx->oformat->flags & AVFMT_NOFILE))
+    {
+        if (avio_open(&outFormatCtx->pb, outputFilePath.c_str(), AVIO_FLAG_WRITE) < 0)
+        {
+            CELUX_DEBUG("Could not open output file: {}", outputFilePath);
+            avcodec_free_context(&audioEncCtx);
+            avformat_free_context(outFormatCtx);
+            return false;
+        }
+    }
+
+    // Write file header
+    if (avformat_write_header(outFormatCtx, nullptr) < 0)
+    {
+        CELUX_DEBUG("Could not write file header.");
+        avcodec_free_context(&audioEncCtx);
+        avformat_free_context(outFormatCtx);
+        return false;
+    }
+
+    AVPacket* pkt = av_packet_alloc();
+    AVFrame* frame = av_frame_alloc();
+
+    // Read and decode audio
     while (av_read_frame(formatCtx.get(), audioPkt.get()) >= 0)
     {
         if (audioPkt->stream_index != audioStreamIndex)
@@ -906,129 +952,62 @@ bool Decoder::extractAudioToFile(const std::string& outputFilePath)
             continue;
         }
 
-        // Send packet to decoder
         if (avcodec_send_packet(audioCodecCtx.get(), audioPkt.get()) < 0)
         {
-            CELUX_DEBUG("Failed to send audio packet for decoding.");
-            fclose(outFile);
- 
-            return false;
+            CELUX_DEBUG("Error sending audio packet.");
+            break;
         }
 
         av_packet_unref(audioPkt.get());
 
-        // Receive all available frames
-        while (avcodec_receive_frame(audioCodecCtx.get(), audioFrame.get()) >= 0)
+        while (avcodec_receive_frame(audioCodecCtx.get(), frame) >= 0)
         {
-            // Allocate buffer for converted samples
-            int dstNbSamples = swr_get_delay(swrCtx.get(), audioCodecCtx->sample_rate) +
-                               audioFrame.get()->nb_samples;
-            dstNbSamples = swr_convert(swrCtx.get(), nullptr, 0, nullptr, 0);
-            if (dstNbSamples < 0)
+            // Check for NaN/Inf values
+            for (int ch = 0; ch < frame->ch_layout.nb_channels; ++ch)
             {
-                CELUX_DEBUG("Error calculating destination samples: {}",
-                            celux::errorToString(dstNbSamples));
-                fclose(outFile);
-  
-                return false;
+                for (int i = 0; i < frame->nb_samples; ++i)
+                {
+                    float* sample = (float*)frame->data[ch];
+                    if (std::isnan(sample[i]) || std::isinf(sample[i]))
+                    {
+                        sample[i] = 0.0f; // Replace invalid values with silence
+                    }
+                }
             }
 
-            // Allocate buffer for converted samples
-            int bufferSize = av_samples_get_buffer_size(
-                nullptr, audioCodecCtx->ch_layout.nb_channels, audioFrame.get()->nb_samples,
-                AV_SAMPLE_FMT_S16, 1);
-            if (bufferSize < 0)
+            // Encode the frame
+            if (avcodec_send_frame(audioEncCtx, frame) < 0)
             {
-                CELUX_DEBUG("Failed to calculate buffer size for audio samples.");
-                fclose(outFile);
-
-                return false;
+                CELUX_DEBUG("Error sending frame to encoder.");
+                break;
             }
 
-            std::vector<uint8_t> buffer(bufferSize);
-            // Prepare buffer pointers for swr_convert
-            uint8_t* out_buffers[] = {buffer.data()};
-            // Convert samples to S16
-            int convertedSamples = swr_convert(
-                swrCtx.get(), out_buffers, audioFrame.get()->nb_samples,
-                (const uint8_t**)audioFrame.get()->data, audioFrame.get()->nb_samples);
-
-            if (convertedSamples < 0)
+            while (avcodec_receive_packet(audioEncCtx, pkt) >= 0)
             {
-                CELUX_DEBUG("Failed to convert audio samples.");
-                fclose(outFile);
-   
-                return false;
+                pkt->stream_index = audioStream->index;
+                av_interleaved_write_frame(outFormatCtx, pkt);
+                av_packet_unref(pkt);
             }
-
-            // Write PCM data to file
-            fwrite(buffer.data(), 1, bufferSize, outFile);
-            dataSize += bufferSize;
         }
     }
 
-    // Flush decoder
-    avcodec_send_packet(audioCodecCtx.get(), nullptr);
-    while (avcodec_receive_frame(audioCodecCtx.get(), audioFrame.get()) >= 0)
+    // Flush encoder
+    avcodec_send_frame(audioEncCtx, nullptr);
+    while (avcodec_receive_packet(audioEncCtx, pkt) >= 0)
     {
-        // Allocate buffer for converted samples
-        int dstNbSamples = swr_get_delay(swrCtx.get(), audioCodecCtx->sample_rate) +
-                           audioFrame.get()->nb_samples;
-        dstNbSamples = swr_convert(swrCtx.get(), nullptr, 0, nullptr, 0);
-        if (dstNbSamples < 0)
-        {
-            CELUX_DEBUG("Error calculating destination samples during flush: {}",
-                        celux::errorToString(dstNbSamples));
-            fclose(outFile);
-
-            return false;
-        }
-
-        int bufferSize =
-            av_samples_get_buffer_size(nullptr, audioCodecCtx->ch_layout.nb_channels,
-                                                    audioFrame.get()->nb_samples,
-                                                    AV_SAMPLE_FMT_S16, 1);
-        if (bufferSize < 0)
-        {
-            CELUX_DEBUG(
-                "Failed to calculate buffer size for audio samples during flush.");
-            fclose(outFile);
-
-            return false;
-        }
-
-        std::vector<uint8_t> buffer(bufferSize);
-        uint8_t* out_buffers[] = {buffer.data()};
-        // Convert samples to S16
-        int convertedSamples =
-            swr_convert(swrCtx.get(), out_buffers, audioFrame.get()->nb_samples,
-            (const uint8_t**)audioFrame.get()->data, audioFrame.get()->nb_samples);
-
-        if (convertedSamples < 0)
-        {
-            CELUX_DEBUG("Failed to convert audio samples during flush.");
-            fclose(outFile);
-
-            return false;
-        }
-
-        // Write PCM data to file
-        fwrite(buffer.data(), 1, bufferSize, outFile);
-        dataSize += bufferSize;
+        pkt->stream_index = audioStream->index;
+        av_interleaved_write_frame(outFormatCtx, pkt);
+        av_packet_unref(pkt);
     }
 
-    // Update WAV header with actual sizes
-    wavHeader.chunkSize = 36 + dataSize;
-    wavHeader.subchunk2Size = dataSize;
+    // Write trailer and cleanup
+    av_write_trailer(outFormatCtx);
+    avcodec_free_context(&audioEncCtx);
+    avformat_free_context(outFormatCtx);
+    av_frame_free(&frame);
+    av_packet_free(&pkt);
 
-    // Seek to the beginning and write the updated header
-    fseek(outFile, 0, SEEK_SET);
-    fwrite(&wavHeader, sizeof(WAVHeader), 1, outFile);
-
-    fclose(outFile);
-
-
-    CELUX_DEBUG("Audio extraction to file completed successfully.");
+    CELUX_DEBUG("Audio extraction completed successfully.");
     return true;
 }
 
