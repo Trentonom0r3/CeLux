@@ -90,20 +90,40 @@ if (CELUX_BUILD_PYTHON)
     find_package(pybind11 CONFIG REQUIRED)
 endif()
 
-# ======================================================
 # 5. Source Files
-# ======================================================
-file(GLOB_RECURSE CELUX_SOURCES CONFIGURE_DEPENDS
+file(GLOB_RECURSE ALL_CELUX_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/conversion/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/backends/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/filters/*.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/filters/*.cpp
+)
+
+set(CELUX_SOURCES "")
+
+if(CELUX_BUILD_PYTHON)
+    # Include ALL sources if Python bindings are ON
+    set(CELUX_SOURCES ${ALL_CELUX_SOURCES})
+else()
+    # Filter out unwanted files if Python bindings are OFF
+    foreach(src_file IN LISTS ALL_CELUX_SOURCES)
+    if(
+        NOT src_file MATCHES "_bindings\\.cpp$"
+        AND NOT src_file MATCHES "filter_bindings_chunk_.*\\.cpp$"
+        AND NOT src_file MATCHES "/Bindings\\.cpp$"
+        AND NOT src_file MATCHES "\\\\Bindings\\.cpp$" # Windows-style path
+    )
+        list(APPEND CELUX_SOURCES ${src_file})
+    endif()
+endforeach()
+
+endif()
 
 if (CELUX_ENABLE_CUDA)
     file(GLOB_RECURSE CELUX_CUDA_SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/cuda/*.cu)
     list(APPEND CELUX_SOURCES ${CELUX_CUDA_SOURCES})
 endif()
+
 
 # ======================================================
 # 6. CeLux core library
@@ -268,11 +288,12 @@ file(GLOB_RECURSE CELUX_HEADERS CONFIGURE_DEPENDS
 
 set(FILTERED_HEADERS "")
 foreach(hdr ${CELUX_HEADERS})
-    if (NOT CELUX_BUILD_PYTHON AND hdr MATCHES "_bindings\\.hpp$")
+    if(NOT CELUX_BUILD_PYTHON AND (hdr MATCHES "_bindings\\.hpp$" OR hdr MATCHES "filter_bindings_chunk_.*\\.hpp$"))
         continue()
     endif()
     list(APPEND FILTERED_HEADERS ${hdr})
 endforeach()
+
 
 find_package(imgui CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
@@ -287,14 +308,15 @@ file(GLOB_RECURSE CELUX_ALL_SOURCES CONFIGURE_DEPENDS
 # Exclude *_bindings.cpp if Python is not enabled
 set(CELUX_SOURCES "")
 foreach(src_file IN LISTS CELUX_ALL_SOURCES)
-    if (CELUX_BUILD_PYTHON)
+    if(CELUX_BUILD_PYTHON)
         list(APPEND CELUX_SOURCES ${src_file})
     else()
-        if (NOT src_file MATCHES "_bindings\\.cpp$")
+        if(NOT src_file MATCHES "_bindings\\.cpp$" AND NOT src_file MATCHES "filter_bindings_chunk_.*\\.cpp$")
             list(APPEND CELUX_SOURCES ${src_file})
         endif()
     endif()
 endforeach()
+
 
 target_link_libraries(CeLuxGUI PRIVATE
     CeLuxLib

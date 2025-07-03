@@ -1,5 +1,6 @@
-// Decoder.cpp
 #include "Decoder.hpp"
+// Decoder.cpp
+#include "backends/Decoder.hpp"
 #include <Factory.hpp>
 
 using namespace celux::error;
@@ -134,6 +135,11 @@ void Decoder::setProperties()
         properties.width, properties.height, properties.fps, properties.duration,
         properties.totalFrames, properties.audioBitrate, properties.audioChannels,
         properties.audioSampleRate, properties.audioCodec, properties.aspectRatio);
+}
+
+bool Decoder::initializeAudio()
+{
+    return false;
 }
 
 void Decoder::initialize(const std::string& filePath)
@@ -280,15 +286,10 @@ void Decoder::findVideoStream()
         av_find_best_stream(formatCtx.get(), AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
     if (ret < 0)
     {
-<<<<<<< Updated upstream
+
 		CELUX_ERROR("No video stream found");
 		throw CxException("No video stream found");
 	}
-=======
-        CELUX_DEBUG("No video stream found");
-        throw CxException("No video stream found");
-    }
->>>>>>> Stashed changes
 
     videoStreamIndex = ret;
     CELUX_DEBUG("BASE DECODER: Video stream found at index {}", videoStreamIndex);
@@ -525,39 +526,6 @@ void Decoder::close()
     CELUX_DEBUG("BASE DECODER: Decoder closed");
 }
 
-bool Decoder::seekToPreciseTimestamp(double targetTimestamp)
-{
-    CELUX_TRACE("Seeking precisely to timestamp: {}", targetTimestamp);
-
-    // Step 1: Seek to the nearest keyframe
-    if (!seekToNearestKeyframe(targetTimestamp))
-    {
-        CELUX_ERROR("Failed to seek to nearest keyframe for timestamp: {}",
-                    targetTimestamp);
-        return false;
-    }
-
-    // Step 2: Decode frames until reaching the target timestamp
-    double currentTimestamp = 0.0;
-    void* buffer = nullptr; // Allocate or provide a valid buffer
-    while (true)
-    {
-        if (!decodeNextFrame(buffer, &currentTimestamp))
-        {
-            CELUX_WARN("Failed to decode frame during precise seeking");
-            return false;
-        }
-
-        if (currentTimestamp >= targetTimestamp)
-        {
-            CELUX_INFO("Reached target timestamp: {}", currentTimestamp);
-            break;
-        }
-    }
-
-    return true;
-}
-
 
 std::vector<std::string> Decoder::listSupportedDecoders() const
 {
@@ -685,138 +653,6 @@ double Decoder::getFrameTimestamp(AVFrame* frame)
     // If all timestamp fields are invalid, log a warning and handle accordingly
     CELUX_WARN("Frame has no valid timestamp. Returning -1.0");
     return -1.0;
-}
-
-<<<<<<< Updated upstream
-=======
-        CELUX_DEBUG("Initializing audio decoding.");
-
-        // Find the audio stream index if not already set
-        if (audioStreamIndex == -1)
-        {
-            CELUX_DEBUG("Finding audio stream index.");
-            for (unsigned int i = 0; i < formatCtx->nb_streams; ++i)
-            {
-                if (formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
-                {
-                    audioStreamIndex = i;
-                    CELUX_DEBUG("Audio stream found at index: {}", audioStreamIndex);
-                    break;
-                }
-            }
-
-            if (audioStreamIndex == -1)
-            {
-                CELUX_DEBUG("Audio stream not found.");
-                return false;
-            }
-        }
-        CELUX_DEBUG("Audio stream index: {}", audioStreamIndex);
-
-        AVCodecParameters* codecPar = formatCtx->streams[audioStreamIndex]->codecpar;
-        const AVCodec* codec = avcodec_find_decoder(codecPar->codec_id);
-        if (!codec)
-        {
-            CELUX_DEBUG("Unsupported audio codec!");
-            return false;
-        }
-
-        // Allocate audio codec context
-        AVCodecContext* codec_ctx = avcodec_alloc_context3(codec);
-        if (!codec_ctx)
-        {
-            CELUX_DEBUG("Could not allocate audio codec context.");
-            return false;
-        }
-        audioCodecCtx.reset(codec_ctx); // Assign to smart pointer
-
-        // Copy codec parameters from input stream to codec context
-        if (avcodec_parameters_to_context(audioCodecCtx.get(), codecPar) < 0)
-        {
-            CELUX_DEBUG("Failed to copy audio codec parameters to context.");
-            return false;
-        }
-
-        // Open audio codec
-        if (avcodec_open2(audioCodecCtx.get(), codec, nullptr) < 0)
-        {
-            CELUX_DEBUG("Failed to open audio codec.");
-            return false;
-        }
-
-        // Initialize channel layouts
-        AVChannelLayout in_channel_layout = audioCodecCtx->ch_layout;
-        if (in_channel_layout.nb_channels == 0)
-        {
-            // If channel layout is not set, infer from channels
-            av_channel_layout_default(&in_channel_layout,
-                                      audioCodecCtx->ch_layout.nb_channels);
-        }
-
-        AVChannelLayout out_channel_layout;
-        av_channel_layout_default(&out_channel_layout, 2); // Stereo output
-
-        AVSampleFormat out_sample_fmt =
-            AV_SAMPLE_FMT_S16; // Desired output sample format
-        int out_sample_rate = audioCodecCtx->sample_rate; // Desired output sample rate
-
-        // Allocate and set up SwrContext
-        SwrContext* swr = nullptr;
-
-        int ret = swr_alloc_set_opts2(&swr,                // Pointer to SwrContext
-                                      &out_channel_layout, // Output channel layout
-                                      out_sample_fmt,      // Output sample format
-                                      out_sample_rate,     // Output sample rate
-                                      &in_channel_layout,  // Input channel layout
-                                      audioCodecCtx->sample_fmt,  // Input sample format
-                                      audioCodecCtx->sample_rate, // Input sample rate
-                                      0,                          // Log offset
-                                      nullptr                     // Log context
-        );
-
-        if (ret < 0 || swr_init(swr) < 0)
-        {
-            CELUX_DEBUG("Failed to allocate and set SwrContext options: {}",
-                        celux::errorToString(ret));
-            swr_free(&swr);
-            return false;
-        }
-
-        swrCtx.reset(swr); // Assign to smart pointer
-        CELUX_DEBUG("SwrContext options set successfully.");
-
-        // Allocate audio frame if not already allocated
-        if (!audioFrame)
-        {
-            AVFrame* frame = av_frame_alloc();
-            if (!frame)
-            {
-                CELUX_DEBUG("Could not allocate audio frame.");
-                return false;
-            }
-            audioFrame = Frame(frame);
-        }
-
-        // Allocate audio packet if not already allocated
-        if (!audioPkt)
-        {
-            AVPacket* pkt = av_packet_alloc();
-            if (!pkt)
-            {
-                CELUX_DEBUG("Could not allocate audio packet.");
-                return false;
-            }
-            audioPkt.reset(pkt);
-        }
-
-        CELUX_DEBUG("Audio decoding initialized successfully.");
-        return true;
-    }
-    catch (const std::exception& e)
-    {
-        CELUX_DEBUG("Exception occurred during audio initialization: {}", e.what());
-        return false;
-    }
 }
 
 void Decoder::closeAudio()
@@ -1172,7 +1008,7 @@ torch::Tensor Decoder::getAudioTensor()
     CELUX_DEBUG("Audio extraction to tensor completed successfully.");
     return audioTensor;
 }
->>>>>>> Stashed changes
+
 
 void Decoder::addFilter(std::shared_ptr<FilterBase> filter)
 {

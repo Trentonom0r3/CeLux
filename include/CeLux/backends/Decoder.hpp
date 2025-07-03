@@ -2,7 +2,7 @@
 
 #include "error/CxException.hpp"
 #include <Conversion.hpp>
-#include <FilterFactory.hpp>
+#include <filters/FilterFactory.hpp>
 #include <Frame.hpp>
 
 namespace celux
@@ -57,6 +57,8 @@ class Decoder
     bool extractAudioToFile(const std::string& outputFilePath);
     torch::Tensor getAudioTensor();
 
+    // Helper methods
+    bool initializeAudio();
   protected:
     void initialize(const std::string& filePath);
     void setProperties();
@@ -92,8 +94,6 @@ class Decoder
     AVPacketPtr audioPkt;
     SwrContextPtr swrCtx;
 
-    // Helper methods
-    bool initializeAudio();
     void closeAudio();
 };
 } // namespace celux
