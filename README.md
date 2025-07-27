@@ -18,7 +18,7 @@ The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (li
 ## 📚 Documentation
 
 - [📝 Changelog](docs/CHANGELOG.md)
-- [📊 Benchmarks]([docs/BENCHMARKS.md](https://github.com/NevermindNilas/python-decoders-benchmarks/blob/main/1280x720_diagram.png)
+- [📊 Benchmarks](https://github.com/NevermindNilas/python-decoders-benchmarks/blob/main/1280x720_diagram.png)
 - [❓ FAQ](docs/FAQ.md)
 
 ## 🚀 Features
