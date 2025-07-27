@@ -1,9 +1,7 @@
 #include "VideoReader.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <filter_bindings.hpp>
 #include <torch/extension.h>
-#include <VideoEncoder.hpp>
 
 namespace py = pybind11;
 #define PYBIND11_DETAILED_ERROR_MESSAGES
@@ -11,17 +9,13 @@ namespace py = pybind11;
 PYBIND11_MODULE(celux, m)
 {
 
-    // Register the filters into the 'filters' submodule
-    register_filters(m);
     // VideoReader bindings
     py::class_<VideoReader>(m, "VideoReader")
-        .def(py::init<const std::string&, int, 
-                      std::vector<std::shared_ptr<FilterBase>>, std::string&>(),
+        .def(py::init<const std::string&, int 
+                      >(),
              py::arg("input_path"),
              py::arg("num_threads") =
-                 static_cast<int>(std::thread::hardware_concurrency() / 2),
-             py::arg("filters") = std::vector<std::shared_ptr<FilterBase>>(),
-             py::arg("tensor_shape") = "HWC")
+                 static_cast<int>(std::thread::hardware_concurrency() / 2))
         .def("read_frame", &VideoReader::readFrame)
         .def_property_readonly("properties", &VideoReader::getProperties)
         .def_property_readonly("properties",
@@ -170,51 +164,6 @@ PYBIND11_MODULE(celux, m)
                                { return self.getProperties().audioCodec; })
         .def_property_readonly("bitrate", [](const VideoReader::Audio& self)
                                { return self.getProperties().audioBitrate; });
-
-    py::class_<celux::VideoEncoder>(m, "VideoEncoder")
-        .def(py::init<const std::string&, std::optional<std::string>,
-                      std::optional<int>, std::optional<int>, std::optional<int>,
-                      std::optional<int>, std::optional<int>, std::optional<int>,
-                      std::optional<int>, std::optional<std::string>>(),
-             py::arg("filename"), py::arg("codec") = std::nullopt,
-             py::arg("width") = std::nullopt, py::arg("height") = std::nullopt,
-             py::arg("bitRate") = std::nullopt, py::arg("fps") = std::nullopt,
-             py::arg("audioBitRate") = std::nullopt,
-             py::arg("audioSampleRate") = std::nullopt,
-             py::arg("audioChannels") = std::nullopt,
-             py::arg("audioCodec") = std::nullopt)
-
-        .def(
-            "encodeFrame",
-            [](celux::VideoEncoder& self, const torch::Tensor& frame)
-            { self.encodeFrame(frame); },
-            py::arg("frame"))
-
-        .def(
-            "encodeAudioFrame",
-            [](celux::VideoEncoder& self, const torch::Tensor& audio)
-            { self.encodeAudioFrame(audio); },
-            py::arg("audio"))
-
-        .def("close", &celux::VideoEncoder::close)
-
-        .def_readwrite("props", &celux::VideoEncoder::props);
-
-    // Expose EncodingProperties structure
-    py::class_<celux::Encoder::EncodingProperties>(m, "EncodingProperties")
-        .def(py::init<>())
-        .def_readwrite("codec", &celux::Encoder::EncodingProperties::codec)
-        .def_readwrite("width", &celux::Encoder::EncodingProperties::width)
-        .def_readwrite("height", &celux::Encoder::EncodingProperties::height)
-        .def_readwrite("bitRate", &celux::Encoder::EncodingProperties::bitRate)
-        .def_readwrite("pixelFormat", &celux::Encoder::EncodingProperties::pixelFormat)
-        .def_readwrite("gopSize", &celux::Encoder::EncodingProperties::gopSize)
-        .def_readwrite("maxBFrames", &celux::Encoder::EncodingProperties::maxBFrames)
-        .def_readwrite("fps", &celux::Encoder::EncodingProperties::fps)
-        .def_readwrite("audioBitRate", &celux::Encoder::EncodingProperties::audioBitRate)
-        .def_readwrite("audioSampleRate", &celux::Encoder::EncodingProperties::audioSampleRate)
-        .def_readwrite("audioChannels", &celux::Encoder::EncodingProperties::audioChannels)
-        .def_readwrite("audioCodec", &celux::Encoder::EncodingProperties::audioCodec);
 
     py::enum_<spdlog::level::level_enum>(m, "LogLevel")
         .value("trace", spdlog::level::trace)

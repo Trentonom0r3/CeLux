@@ -15,7 +15,7 @@ std::shared_ptr<spdlog::logger>& Logger::get_logger()
     {
         // Create a console logger with color
         logger_instance = spdlog::stdout_color_mt("celux");
-        logger_instance->set_level(spdlog::level::critical); // Default level
+        logger_instance->set_level(spdlog::level::trace); // Default level
         logger_instance->set_pattern("[%^%Y-%m-%d %H:%M:%S%$] [%l] %v");
     }
     return logger_instance;

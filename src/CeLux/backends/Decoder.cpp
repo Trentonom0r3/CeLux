@@ -7,9 +7,9 @@ using namespace celux::error;
 
 namespace celux
 {
-Decoder::Decoder(int numThreads, std::vector<std::shared_ptr<FilterBase>> filters)
+Decoder::Decoder(int numThreads)
     : converter(nullptr), formatCtx(nullptr), codecCtx(nullptr), pkt(nullptr),
-      videoStreamIndex(-1), numThreads(numThreads), filters_(filters)
+      videoStreamIndex(-1), numThreads(numThreads)
 {
     CELUX_DEBUG("BASE DECODER: Decoder constructed");
 }
@@ -146,113 +146,22 @@ void Decoder::initialize(const std::string& filePath)
     findVideoStream();
     initCodecContext();
     setProperties();
-
-    converter = celux::Factory::createConverter(torch::kCPU,
-                                                properties.pixelFormat);
-
+///celux::conversion::cpu::AutoToRGB24Converter
+    converter = std::make_unique<celux::conversion::cpu::AutoToRGB24Converter>();
+    const AVCodecParameters* params = formatCtx->streams[videoStreamIndex]->codecpar;
+    AVColorSpace color_space = params->color_space;         // matrix_coefficients
+    AVColorPrimaries colorprim = params->color_primaries;  // color primaries
+    AVColorTransferCharacteristic trc = params->color_trc; // transfer curve
+    AVColorRange colorrange = params->color_range;         // AVCOL_RANGE_MPEG/JPEG
     CELUX_DEBUG("BASE DECODER: Decoder initialization completed");
+    frame.get()->color_range = colorrange;
+    frame.get()->color_primaries = colorprim;
+    frame.get()->colorspace = color_space;
+    frame.get()->color_trc = trc;
+    frame.get()->format = params->format;
 
     CELUX_INFO("BASE DECODER: Decoder using codec: {}, and pixel format: {}",
                codecCtx->codec->name, av_get_pix_fmt_name(codecCtx->pix_fmt));
-
-    if (filters_.size() > 0) {
-        CELUX_INFO("Applying filters to the decoder");
-        initFilterGraph();
-    }
-}
-
-bool Decoder::initFilterGraph()
-{
-    char args[512];
-    int ret = 0;
-
-    // Create the filter graph
-    filter_graph_.reset(avfilter_graph_alloc());
-    if (!filter_graph_)
-    {
-       CELUX_DEBUG("Cannot create filter graph");
-        return false;
-    }
-
-    // Create buffer source
-    const AVFilter* buffersrc = avfilter_get_by_name("buffer");
-    AVFilterContext* buffersrc_ctx_local = nullptr;
-
-    // Prepare buffer source arguments
-    snprintf(args, sizeof(args),
-             "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=1/1",
-             codecCtx->width, codecCtx->height, codecCtx->pix_fmt,
-             formatCtx->streams[videoStreamIndex]->time_base.num,
-             formatCtx->streams[videoStreamIndex]->time_base.den);
-
-    ret = avfilter_graph_create_filter(&buffersrc_ctx_local, buffersrc, "in", args,
-                                       nullptr, filter_graph_.get());
-    if (ret < 0)
-    {
-        CELUX_CRITICAL("Cannot create buffer source: {} ", celux::errorToString(ret));
-        return false;
-    }
-    buffersrc_ctx_ = buffersrc_ctx_local;
-
-    // Create buffer sink
-    const AVFilter* buffersink = avfilter_get_by_name("buffersink");
-    AVFilterContext* buffersink_ctx_local = nullptr;
-
-    ret = avfilter_graph_create_filter(&buffersink_ctx_local, buffersink, "out",
-                                       nullptr, nullptr, filter_graph_.get());
-    if (ret < 0)
-    {
-        CELUX_CRITICAL("Cannot create buffer sink: {}", celux::errorToString(ret));
-        return false;
-    }
-    buffersink_ctx_ = buffersink_ctx_local;
-
-
-    std::string filter_desc;
-    for (const auto& filter : filters_)
-    {
-		filter_desc += filter->getFilterDescription() + ",";
-	}
-    CELUX_DEBUG("Filter command/description being used: {}", filter_desc);
-    // Parse and create the filter graph
-    AVFilterInOut* inputs = avfilter_inout_alloc();
-    AVFilterInOut* outputs = avfilter_inout_alloc();
-    if (!inputs || !outputs)
-    {
-        std::cerr << "Cannot allocate filter in/out.\n";
-        return false;
-    }
-
-    outputs->name = av_strdup("in");
-    outputs->filter_ctx = buffersrc_ctx_;
-    outputs->pad_idx = 0;
-    outputs->next = nullptr;
-
-    inputs->name = av_strdup("out");
-    inputs->filter_ctx = buffersink_ctx_;
-    inputs->pad_idx = 0;
-    inputs->next = nullptr;
-
-    ret = avfilter_graph_parse_ptr(filter_graph_.get(), filter_desc.c_str(), &inputs,
-                                   &outputs, nullptr);
-    if (ret < 0)
-    {
-        CELUX_DEBUG("Error parsing filter graph: {}", celux::errorToString(ret));
-        return false;
-    }
-
-    ret = avfilter_graph_config(filter_graph_.get(), nullptr);
-    if (ret < 0)
-    {
-        CELUX_DEBUG("Error configuring filter graph: {}", celux::errorToString(ret));
-        return false;
-    }
-
-    // Free the in/out structures
-    avfilter_inout_free(&inputs);
-    avfilter_inout_free(&outputs);
-
-    return true;
 }
 
 void Decoder::openFile(const std::string& filePath)
@@ -375,30 +284,7 @@ bool Decoder::decodeNextFrame(void* buffer, double* frame_timestamp)
             // Successfully received a frame
             CELUX_DEBUG("Frame decoded successfully");
 
-            if (filters_.size() > 0)
-            {
-                // Push the decoded frame into the filter graph's buffer source
-                ret = av_buffersrc_add_frame(buffersrc_ctx_, frame.get());
-                if (ret < 0)
-                {
-                    CELUX_DEBUG("Error while feeding the filter graph: {}",
-                                celux::errorToString(ret));
-                    return false;
-                }
-
-                // Retrieve the filtered frame from the buffer sink
-                ret = av_buffersink_get_frame(buffersink_ctx_, frame.get());
-                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-                {
-                    break;
-                }
-                else if (ret < 0)
-                {
-                    CELUX_DEBUG("Error during filtering: {}",
-                                celux::errorToString(ret));
-                    return false;
-                }
-            }
+        
 
             // **Retrieve the frame timestamp**
             if (frame_timestamp)

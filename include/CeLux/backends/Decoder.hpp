@@ -2,7 +2,6 @@
 
 #include "error/CxException.hpp"
 #include <Conversion.hpp>
-#include <FilterFactory.hpp>
 #include <Frame.hpp>
 
 namespace celux
@@ -33,7 +32,7 @@ class Decoder
     };
 
     Decoder() = default;
-    Decoder(int numThreads, std::vector<std::shared_ptr<FilterBase>> filters);
+    Decoder(int numThreads);
     bool seekToNearestKeyframe(double timestamp);
     virtual ~Decoder();
 
@@ -41,7 +40,6 @@ class Decoder
     Decoder(const Decoder&) = delete;
     Decoder& operator=(const Decoder&) = delete;
 
-    void addFilter(const std::unique_ptr<FilterBase>& filter);
     Decoder(Decoder&&) noexcept;
     Decoder& operator=(Decoder&&) noexcept;
     bool seekFrame(int frameIndex);
@@ -67,10 +65,6 @@ class Decoder
     void setFormatFromBitDepth();
     double getFrameTimestamp(AVFrame* frame);
 
-    std::vector<std::shared_ptr<FilterBase>> filters_;
-
-    bool initFilterGraph();
-    void set_sw_pix_fmt(AVCodecContextPtr& codecCtx, int bitDepth);
 
     AVFilterGraphPtr filter_graph_;
     AVFilterContext* buffersrc_ctx_;

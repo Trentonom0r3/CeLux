@@ -35,84 +35,15 @@ class Factory
      * @return std::unique_ptr<Decoder> Pointer to the created Decoder.
      */
     static std::shared_ptr<Decoder>
-    createDecoder(torch::Device device, const std::string& filename, int numThreads,
-                  std::vector<std::shared_ptr<FilterBase>> filters)
+    createDecoder(torch::Device device, const std::string& filename, int numThreads
+                  )
     {
 
-        return std::make_shared<celux::backends::cpu::Decoder>(filename, numThreads,
-                                                               filters);
+        return std::make_shared<celux::backends::cpu::Decoder>(filename, numThreads
+                                                               );
     }
 
-    /**
-     * @brief Creates a Converter instance based on the specified backend and pixel
-     * format.
-     *
-     * @param device Device type (CPU or CUDA).
-     * @param pixfmt Pixel format.
-     * @param  Optional  for CUDA operations.
-     * @return std::unique_ptr<celux::conversion::IConverter> Pointer to the created
-     * Converter.
-     */
-    static std::unique_ptr<celux::conversion::IConverter>
-    createConverter(const torch::Device& device, AVPixelFormat pixfmt)
-    {
-        using namespace celux::conversion; // For IConverter
-        return std::make_unique<celux::conversion::cpu::AutoToRGB24Converter>();
-    }
-
-        /**
-     * @brief Creates a Converter instance based on the specified backend and pixel
-     * format.
-     *
-     * @param device Device type (CPU or CUDA).
-     * @param pixfmt Pixel format.
-     * @param  Optional  for CUDA operations.
-     * @return std::unique_ptr<celux::conversion::IConverter> Pointer to the created
-     * Converter.
-     */
-    static std::unique_ptr<celux::conversion::IConverter>
-    createEncodeConverter(const torch::Device& device, AVPixelFormat pixfmt)
-    {
-        using namespace celux::conversion; // For IConverter
-
-        // Determine device type
-        bool is_cpu = device.is_cpu();
-        bool is_cuda = device.is_cuda();
-
-        // Infer bit depth from pixel format
-        int bit_depth = inferBitDepth(pixfmt);
-
-        // Define the key based on device and pixel format
-        ConverterKey key = std::make_tuple(is_cpu, pixfmt);
-
-        // Define the factory map (CPU only in this example)
-        static const std::unordered_map<ConverterKey,
-                                        std::function<std::unique_ptr<IConverter>()>,
-                                        ConverterKeyHash>
-            converterMap = {
-                // RGB24ToYUV420P
-                {std::make_tuple(true, AV_PIX_FMT_YUV420P),
-                 []() -> std::unique_ptr<IConverter>
-                 {
-                     CELUX_DEBUG("Creating RGB24ToYUV420P converter");
-                     return std::make_unique<cpu::RGBToYUV420P>();
-                 }},
-
-            };
-
-        // Look up the converter in the map
-        auto it = converterMap.find(key);
-        if (it != converterMap.end())
-        {
-            return it->second();
-        }
-
-        // If no match, throw
-        std::string deviceType = is_cpu ? "CPU" : (is_cuda ? "CUDA" : "Unknown");
-        throw std::invalid_argument("Unsupported combination - Device: " + deviceType +
-                                    ", Bit Depth: " + std::to_string(bit_depth) +
-                                    ", Pixel Format: " + av_get_pix_fmt_name(pixfmt));
-    }
+   
 
   private:
     // Helper function to infer bit depth from AVPixelFormat

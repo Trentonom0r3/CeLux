@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-VERSION = "0.6.1"
+VERSION = "0.6.2"
 
 def main():
     os.environ["CELUX_VERSION"] = VERSION

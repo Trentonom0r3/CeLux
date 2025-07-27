@@ -1,5 +1,15 @@
 ## 📈 Changelog
 
+### **Version 0.6.2 (2025-07-26)**
+- **Adjusted API Usage for simpler setup**
+  Tensors now ***HWC*** by default. 
+  Removed Filter option (more on that later)
+
+- **Removed Filters**
+  Found a lot of these to be super buggy, so just removing altogether. 
+
+- **Adjusted Color Conversion for Auto->RGB24, HWC, and more accurate color**
+
 ### **Version 0.6.1 (2025-06-24)**
 
 - ✅ **Python 3.13 Support**  

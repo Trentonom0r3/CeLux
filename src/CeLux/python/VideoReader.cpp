@@ -1,9 +1,8 @@
 // Python/VideoReader.cpp
-
+#include <torch/extension.h>
 #include "Python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
 #include <torch/torch.h> // Ensure you have included the necessary Torch headers
-#include <TensorBuilder.hpp>
 
 namespace py = pybind11;
 #define CHECK_TENSOR(tensor)                                                  \
@@ -12,10 +11,9 @@ namespace py = pybind11;
 		throw std::runtime_error("Invalid tensor: undefined or empty");        \
 	}
 
-VideoReader::VideoReader(const std::string& filePath, int numThreads,
-                         std::vector<std::shared_ptr<FilterBase>> filters, std::string tensorShape)
+VideoReader::VideoReader(const std::string& filePath, int numThreads)
     : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
-      start_time(-1.0), end_time(-1.0), filters_(filters)
+      start_time(-1.0), end_time(-1.0)
 {
     //set ffmpeg log level
     CELUX_INFO("VideoReader constructor called with filePath: {}", filePath);
@@ -32,7 +30,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
         CELUX_INFO("Creating VideoReader instance");
        
         decoder =
-            celux::Factory::createDecoder(torchDevice, filePath, numThreads, filters_);
+            celux::Factory::createDecoder(torchDevice, filePath, numThreads);
         CELUX_INFO("Decoder created successfully");
 
         audio = std::make_shared<Audio>(decoder); // Create audio object
@@ -43,16 +41,6 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
 
         // Retrieve video properties
         properties = decoder->getVideoProperties();
-        
-        for (auto& filter : filters_)
-        { // Iterate through filters_
-            // Use dynamic_cast to check if the filter is of type Scale
-            if (Scale* scaleFilter = dynamic_cast<Scale*>(filter.get()))
-            {
-                properties.width = std::stoi(scaleFilter->getWidth());
-                properties.height = std::stoi(scaleFilter->getHeight());
-            }
-        }
     
         CELUX_INFO("Video properties retrieved: width={}, height={}, fps={}, "
                    "duration={}, totalFrames={}, pixelFormat={}, hasAudio={}",
@@ -60,14 +48,11 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads,
                    properties.duration, properties.totalFrames,
                    av_get_pix_fmt_name(properties.pixelFormat), properties.hasAudio);
 
-        TensorBuilder builder(tensorShape);
-        builder.createTensor(properties.height, properties.width, torchDataType,
-                             torchDevice);
-        // Initialize tensor
-        tensor = builder.getTensor().contiguous().clone();
+        tensor = torch::empty(
+            {properties.height, properties.width, 3},
+            torch::TensorOptions().dtype(torchDataType).device(torchDevice));
         CHECK_TENSOR(tensor);
         
-  //  list_ffmpeg_filters("ffmpeg_filters.json");
     }
     catch (const std::exception& ex)
     {

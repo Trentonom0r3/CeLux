@@ -12,19 +12,13 @@
 
 The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (light), reflecting its commitment to speed and efficiency.
 
-# [Check out the latest changes](docs/CHANGELOG.md#version-061)
-  - **CeLux** now has basic audio support!
-    - Decode into tensor, or directly into file.
+# [Check out the latest changes](docs/CHANGELOG.md#version-062)
+  - **Reduced Complexity of API, Adjusted Color conversion to be more accurate(?)**
     
 ## 📚 Documentation
 
 - [📝 Changelog](docs/CHANGELOG.md)
-- [📦 Installation Instructions](docs/INSTALLATION.md)
-  - [🤖 PIP installation](docs/INSTALLATION.md#pip-installation)
-  - [🛠️ Building from Source](docs/INSTALLATION.md#building-from-source)
-- [🚀 Getting Started](docs/GETTINGSTARTED.md)
 - [📊 Benchmarks](docs/BENCHMARKS.md)
-- [🤝 Contributing Guide](docs/CONTRIBUTING.md)
 - [❓ FAQ](docs/FAQ.md)
 
 ## 🚀 Features
@@ -36,17 +30,14 @@ The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (li
 ## ⚡ Quick Start
 
 ```sh
-pip install celux  # cpu only version
+pip install celux 
 ```
 
 ```py
 from celux import VideoReader, Scale
 #import celux as cx
-filters = [Scale(width = 1920, height = 1080)]
 reader = VideoReader("/path/to/video.ext",
-                    #num_threads: int = os.cpu_count(),
-                    filters = filters,
-                    #tensor_shape: str = 'HWC'
+                    #num_threads: int = os.cpu_count()
                     )
 for frame in reader:
 # do something
