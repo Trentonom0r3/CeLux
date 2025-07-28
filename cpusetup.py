@@ -25,7 +25,7 @@ setup(
         "Operating System :: Microsoft :: Windows",
     ],
     license="AGPL-3.0",
-    python_requires=">=3.11",
+    python_requires=">=3.13",
     include_package_data=True,
     zip_safe=False,
 )

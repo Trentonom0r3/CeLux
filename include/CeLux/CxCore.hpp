@@ -589,6 +589,48 @@ using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDelet
     using AVFilterGraphPtr = std::unique_ptr<AVFilterGraph, AVFilterGraphDeleter>;
     using SwrContextPtr = std::unique_ptr<SwrContext, SwrContextDeleter>;
 
-} // namespace celux
+        inline void PrintSupportedVideoEncoders()
+    {
+        std::cout << "Supported video encoders (by your FFmpeg build):\n";
+        void* it = nullptr;
+        const AVCodec* codec = nullptr;
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        while ((codec = av_codec_iterate(&it)))
+        {
+#else
+        avcodec_register_all();
+        while ((codec = av_codec_next(codec)))
+        {
+#endif
+            if (av_codec_is_encoder(codec) && codec->type == AVMEDIA_TYPE_VIDEO)
+            {
+                std::cout << "  " << codec->name;
+                if (codec->long_name)
+                    std::cout << " (" << codec->long_name << ")";
+                std::cout << std::endl;
+            }
+        }
+    }
+
+    static std::string normalizePath(const std::string& raw)
+    {
+        try
+        {
+            std::string s = raw;
+            if (s.size() >= 2 && ((s.front() == '"' && s.back() == '"') ||
+                                  (s.front() == '\'' && s.back() == '\'')))
+                s = s.substr(1, s.size() - 2);
+            std::error_code ec;
+            auto abs = std::filesystem::absolute(s, ec);
+            return ec ? s : abs.string();
+        }
+        catch (...)
+        {
+            return raw;
+        }
+    }
+
+
+    } // namespace celux
 
 #endif // CX_CORE_HPP

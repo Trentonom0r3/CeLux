@@ -1,10 +1,10 @@
-#ifndef VIDEOREADER_HPP
+﻿#ifndef VIDEOREADER_HPP
 #define VIDEOREADER_HPP
 
 #include "Decoder.hpp" // Ensure this includes the Filter class
 #include "Factory.hpp"
 #include <pybind11/pybind11.h>
-
+#include <VideoEncoder.hpp>
 
 namespace py = pybind11;
 
@@ -25,6 +25,15 @@ class VideoReader
      * @brief Destructor for VideoReader.
      */
     ~VideoReader();
+
+    /**
+     * @brief Create a VideoEncoder configured to this reader's video & audio
+     * properties.
+     * @param outputPath Path where the new file will be saved.
+     * @return Shared pointer to a VideoEncoder pre-configured for resolution, fps, and
+     * audio.
+     */
+    std::shared_ptr<celux::VideoEncoder> createEncoder(const std::string& outputPath) const;
 
     /**
      * @brief Overloads the [] operator to access video properties by key.

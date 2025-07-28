@@ -1,5 +1,18 @@
 ## 📈 Changelog
 
+### **Version 0.6.3 (2025-07-28)**
+- 🎶 **Simplified Audio Encoding API**  
+  Added `VideoEncoder.encode_audio_tensor(torch::Tensor pcm)`, which accepts a full int16 PCM tensor and internally:
+  - Splits into 1024‑sample frames (last one may be shorter)  
+  - Converts to planar float  
+  - Assigns proper PTS/DTS for muxing  
+- **Adjusted API Usage for simpler setup**  
+  Tensors now **HWC** by default.  
+- **Removed Filters**  
+  All built‑in filter support has been removed due to instability.  
+- **Adjusted Color Conversion**  
+  More accurate `Auto→RGB24` conversion, streamlined for HWC workflows.
+
 ### **Version 0.6.2 (2025-07-26)**
 - **Adjusted API Usage for simpler setup**
   Tensors now ***HWC*** by default. 

@@ -5,58 +5,53 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/celux)](https://pypi.org/project/celux/)
 [![Discord](https://img.shields.io/discord/1041502781808328704.svg?label=Join%20Us%20on%20Discord&logo=discord&colorB=7289da)](https://discord.gg/hFSHjGyp4p)
 
-
 # CeLux
 
-**CeLux** is a high-performance Python library for video processing, leveraging the power of FFmpeg. It delivers some of the fastest decode times for full HD videos globally, enabling efficient and seamless video decoding directly into PyTorch tensors.
+**CeLux** is a high‑performance Python library for video processing, leveraging the power of FFmpeg. It delivers some of the fastest decode times for full‑HD videos globally, enabling efficient video decoding directly into PyTorch tensors—and now simplified, one‑call audio muxing straight from a tensor.
 
-The name **CeLux** is derived from the Latin words `celer` (speed) and `lux` (light), reflecting its commitment to speed and efficiency.
+The name **CeLux** comes from the Latin words _celer_ (speed) and _lux_ (light), reflecting its commitment to speed and efficiency.
 
-# [Check out the latest changes](docs/CHANGELOG.md#version-062)
-  - **Reduced Complexity of API, Adjusted Color conversion to be more accurate(?)**
-    
+# [Check out the latest changes](docs/CHANGELOG.md#version-063)
+- 🎶 **Simplified Audio Encoding**: Call `encode_audio_tensor()` with a full PCM tensor—CeLux handles chunking, float‑conversion, and PTS automatically.
+- **Reduced Complexity of API, Adjusted Color Conversion** for more accurate HWC workflows.
+
 ## 📚 Documentation
 
 - [📝 Changelog](docs/CHANGELOG.md)
+- [🍎 Audio & Muxing Guide](docs/FAQ.md#audio)
 - [📊 Benchmarks](https://github.com/NevermindNilas/python-decoders-benchmarks/blob/main/1280x720_diagram.png)
 - [❓ FAQ](docs/FAQ.md)
 
 ## 🚀 Features
 
-- **⚡ Ultra-Fast Video Decoding:** Achieve lightning-fast decode times for full HD videos using hardware acceleration.
-- **🔗 Direct Decoding to Tensors:** Decode video frames directly into PyTorch tensors for immediate processing.
-- **🔄 Easy Integration:** Seamlessly integrates with existing Python workflows, making it easy to incorporate into your projects.
+- ⚡ **Ultra‑Fast Video Decoding:** Lightning‑fast decode times for full‑HD videos using hardware acceleration.
+- 🔗 **Direct Decoding to Tensors:** Frames come out as PyTorch tensors (`HWC` layout by default).
+- 🔊 **Simplified Audio Encoding:** One call to `encode_audio_tensor()` streams your raw PCM into the encoder.
+- 🔄 **Easy Integration:** Drop‑in replacement for your existing Python + PyTorch workflows.
 
 ## ⚡ Quick Start
 
-```sh
-pip install celux 
+```bash
+pip install celux
 ```
 
-```py
-from celux import VideoReader, Scale
-#import celux as cx
-reader = VideoReader("/path/to/video.ext",
-                    #num_threads: int = os.cpu_count()
-                    )
-for frame in reader:
-# do something
+```python
+from celux import VideoReader
+import torch
+
+reader = VideoReader("/path/to/input.mp4")
+with reader.create_encoder("/path/to/output.mp4") as enc:
+    # 1) Re‑encode video frames
+    for frame in reader:
+        enc.encode_frame(frame)
+
+    # 2) If there’s audio, hand off the entire PCM in one go:
+    if reader.has_audio:
+        pcm = reader.audio.tensor().to(torch.int16)
+        enc.encode_audio_tensor(pcm)
+
+print("Done!")
 ```
-
-<!-- BENCHMARK_SUMMARY_START -->
-
-## 📊 Benchmark Summary
-
-| Library  | Device       | Frames per Second (FPS) |
-|----------|--------------|-------------------------|
-| Celux | CPU      | 1520.75                 |
-| PyAV | CPU      | 350.58                |
-| OpenCV | CPU      | 454.44                 |
-
-
-For more details, see [Benchmarks](docs/BENCHMARKS.md).
-
-<!-- BENCHMARK_SUMMARY_END -->
 
 ## 📄 License
 
@@ -66,7 +61,5 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 
 - **[FFmpeg](https://ffmpeg.org/):** The backbone of video processing in CeLux.
 - **[PyTorch](https://pytorch.org/):** For tensor operations and CUDA support.
-- **[Vcpkg](https://github.com/microsoft/vcpkg):** Simplifies cross-platform dependency management.
+- **[Vcpkg](https://github.com/microsoft/vcpkg):** Simplifies cross‑platform dependency management.
 - **[@NevermindNilas](https://github.com/NevermindNilas):** For assistance with testing, API suggestions, and more.
-
-

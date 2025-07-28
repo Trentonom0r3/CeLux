@@ -585,3 +585,34 @@ torch::ScalarType VideoReader::findTypeFromBitDepth()
     }
     return torchDataType;
 }
+
+
+std::shared_ptr<celux::VideoEncoder>
+VideoReader::createEncoder(const std::string& outputPath) const
+{
+    // Build optional audio parameters only if this reader has audio
+    std::optional<int> abr = properties.hasAudio
+                                 ? std::make_optional(properties.audioBitrate)
+                                 : std::nullopt;
+    std::optional<int> asr = properties.hasAudio
+                                 ? std::make_optional(properties.audioSampleRate)
+                                 : std::nullopt;
+    std::optional<int> ach = properties.hasAudio
+                                 ? std::make_optional(properties.audioChannels)
+                                 : std::nullopt;
+    std::optional<std::string> acodec =
+        properties.hasAudio ? std::make_optional(properties.audioCodec) : std::nullopt;
+
+    // Create and return the matching encoder
+    return std::make_shared<celux::VideoEncoder>(
+        outputPath,
+        /* codec          */ std::nullopt,
+        /* width          */ properties.width,
+        /* height         */ properties.height,
+        /* bitRate        */ std::nullopt,
+        /* fps            */ static_cast<float>(properties.fps),
+        /* audioBitRate   */ abr,
+        /* audioSampleRate*/ asr,
+        /* audioChannels  */ ach,
+        /* audioCodec     */ acodec);
+}

@@ -1,5 +1,4 @@
-﻿
-#pragma once
+﻿#pragma once
 
 extern "C"
 {
@@ -60,13 +59,6 @@ class AutoToRGB24Converter : public ConverterBase
         // Retrieve source color metadata
         AVFrame* av_frame = frame.get();
 
-        std::cout << "[AutoToRGB24Converter] ---" << std::endl;
-        std::cout << "  src_fmt = " << src_fmt << " (" << av_get_pix_fmt_name(src_fmt)
-                  << ")" << std::endl;
-        std::cout << "  width = " << width << ", height = " << height << std::endl;
-        std::cout << "  av_frame->colorspace = " << av_frame->colorspace
-                  << ", av_frame->color_range = " << av_frame->color_range << std::endl;
-
         // Choose colorspace and range with fallback
         AVColorSpace src_colorspace = av_frame->colorspace;
         if (src_colorspace == AVCOL_SPC_UNSPECIFIED)
@@ -75,9 +67,6 @@ class AutoToRGB24Converter : public ConverterBase
         AVColorRange src_color_range = av_frame->color_range;
         if (src_color_range == AVCOL_RANGE_UNSPECIFIED)
             src_color_range = AVCOL_RANGE_MPEG;
-
-        std::cout << "  [detected] src_colorspace: " << src_colorspace
-                  << ", src_color_range: " << src_color_range << std::endl;
 
         // Reinitialize SwsContext only if parameters have changed
         if (!sws_ctx || src_fmt != last_src_fmt ||
@@ -104,8 +93,7 @@ class AutoToRGB24Converter : public ConverterBase
             const int* dstCoeffs = sws_getCoefficients(AVCOL_SPC_BT709);
 
             int srcRange = (src_color_range == AVCOL_RANGE_JPEG) ? 1 : 0;
-            std::cout << "  [sws_setColorspaceDetails] srcRange: " << srcRange
-                      << " (0=limited,1=full), dstRange: 1 (full)" << std::endl;
+
 
             int ok = sws_setColorspaceDetails(sws_ctx, srcCoeffs, srcRange, dstCoeffs,
                                               1, // dstRange (always 1 for RGB24)
@@ -142,6 +130,7 @@ class AutoToRGB24Converter : public ConverterBase
         {
             throw std::runtime_error("sws_scale failed or incomplete");
         }
+
     }
 
   private:
