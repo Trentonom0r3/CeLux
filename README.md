@@ -4,6 +4,7 @@
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/celux)](https://pypi.org/project/celux/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/celux)](https://pypi.org/project/celux/)
 [![Discord](https://img.shields.io/discord/1041502781808328704.svg?label=Join%20Us%20on%20Discord&logo=discord&colorB=7289da)](https://discord.gg/hFSHjGyp4p)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-coff.ee%2Fspigonvidsu-yellow.svg?logo=buy-me-a-coffee&logoColor=white)](https://coff.ee/spigonvidsu)
 
 # CeLux
 
