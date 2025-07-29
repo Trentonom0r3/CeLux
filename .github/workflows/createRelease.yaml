@@ -47,13 +47,29 @@ jobs:
     - name: Download LibTorch (${{ matrix.config }})
       shell: powershell
       run: |
+        $ErrorActionPreference = "Stop"
         $url = if ('${{ matrix.config }}' -eq 'Debug') {
           'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-debug-2.7.1%2Bcu118.zip'
         } else {
           'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-2.7.1%2Bcu118.zip'
         }
-        Invoke-WebRequest $url -OutFile libtorch.zip
+        $retries = 5
+        $success = $false
+        for ($i = 1; $i -le $retries; $i++) {
+          try {
+            Invoke-WebRequest $url -OutFile libtorch.zip
+            $success = $true
+            break
+          } catch {
+            Write-Host "Download failed (attempt $i/$retries), retrying in 10 seconds..."
+            Start-Sleep -Seconds 10
+          }
+        }
+        if (-not $success) {
+          throw "Failed to download LibTorch after $retries attempts."
+        }
         Expand-Archive libtorch.zip -DestinationPath libtorch
+
 
     - name: Configure CMake
       shell: cmd
