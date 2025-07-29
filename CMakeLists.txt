@@ -213,6 +213,6 @@ endif()
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux)
 
 
