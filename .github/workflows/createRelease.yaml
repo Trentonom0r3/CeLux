@@ -25,12 +25,11 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
-    - name: Upgrade pip & install pybind11
+    - name: Upgrade pip & install deps
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        python -m pip install pybind11
+        python -m pip install pybind11 torch
 
-    # vcpkg cache based on the official MS docs (cache the downloads and built packages)
     - name: Restore vcpkg cache
       uses: actions/cache@v4
       with:
@@ -64,39 +63,15 @@ jobs:
         )
         exit /b 1
 
-    - name: Download LibTorch (Release)
-      shell: powershell
-      run: |
-        $ErrorActionPreference = "Stop"
-        $url = 'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-2.7.1%2Bcu118.zip'
-        $retries = 5
-        $success = $false
-        for ($i = 1; $i -le $retries; $i++) {
-          try {
-            Invoke-WebRequest $url -OutFile libtorch.zip
-            $success = $true
-            break
-          } catch {
-            Write-Host "Download failed (attempt $i/$retries), retrying in 10 seconds..."
-            Start-Sleep -Seconds 10
-          }
-        }
-        if (-not $success) {
-          throw "Failed to download LibTorch after $retries attempts."
-        }
-        Expand-Archive libtorch.zip -DestinationPath libtorch
-
     - name: Configure CMake (Release)
       shell: cmd
       run: |
         cmake -S . -B out\build\Release -G Ninja ^
           -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
-          -DTorch_DIR=%CD%\libtorch\share\cmake\Torch ^
           -DCMAKE_BUILD_TYPE=Release ^
           -DCELUX_BUILD_PYTHON=ON ^
           -DPython3_EXECUTABLE="${{ env.pythonLocation }}\python.exe" ^
           -DPython3_ROOT_DIR="${{ env.pythonLocation }}"
-  
 
     - name: Build all (Release)
       shell: cmd
