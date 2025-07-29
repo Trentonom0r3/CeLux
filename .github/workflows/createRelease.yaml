@@ -132,5 +132,5 @@ jobs:
           tag:   v${{ env.VERSION }}
           name:  Release v${{ env.VERSION }}
           body:  Automated Windows CI build & wheel
-          artifacts: |
-            dist/*.whl
+          artifacts: '**/dist/*.whl'
+
