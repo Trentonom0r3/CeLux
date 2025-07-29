@@ -2,6 +2,9 @@
 out/*
 ffmpy.egg-info/*
 build/*
+celux/*.dll
+celux/celux.pyd
+
 ffmpy.egg-info/*
 *.mp4
 *.mkv

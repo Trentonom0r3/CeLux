@@ -1,6 +1,12 @@
 ﻿{
   "version": 3,
 
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+
   "configurePresets": [
     {
       "name": "windows-base",
@@ -8,19 +14,14 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
+
+      "toolchainFile": "D:/dev/c++/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "D:/dev/c++/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-windows",
         "VCPKG_ROOT": "D:/dev/c++/vcpkg",
-        "Torch_DIR": "D:\\dev\\C++\\Libraries\\libtorch-cpu\\libtorch\\share\\cmake\\Torch",
-        "Python3_ROOT_DIR": "C:/Program Files/Python313",
-        "Python3_EXECUTABLE": "C:/Program Files/Python313/python.exe",
-        "PYTORCH_PYTHON_LIB_DIR": "C:/Program Files/Python313/Lib/site-packages/torch/lib"
+        "Torch_DIR": "D:/dev/C++/Libraries/libtorch-cpu/libtorch/share/cmake/Torch"
       },
+
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -30,7 +31,7 @@
 
     {
       "name": "x64-debug-cpu",
-      "displayName": "x64 Debug (CPU-only)",
+      "displayName": "x64 Debug (CPU)",
       "inherits": "windows-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -39,7 +40,7 @@
     },
     {
       "name": "x64-release-cpu",
-      "displayName": "x64 Release (CPU-only)",
+      "displayName": "x64 Release (CPU)",
       "inherits": "windows-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
