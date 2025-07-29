@@ -30,16 +30,39 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install pybind11
 
+    # vcpkg cache based on the official MS docs (cache the downloads and built packages)
+    - name: Restore vcpkg cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ runner.temp }}/vcpkg
+          ${{ runner.temp }}/vcpkg_installed
+          C:\Users\runneradmin\AppData\Local\vcpkg\archives
+        key: vcpkg-windows-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
+
     - name: Bootstrap vcpkg
       shell: powershell
       run: |
-        git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
+        if (-not (Test-Path "${{ runner.temp }}/vcpkg")) {
+          git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
+        }
         & "${{ runner.temp }}/vcpkg/bootstrap-vcpkg.bat" -disableMetrics
 
-    - name: Install C++ deps via vcpkg
+    - name: Update vcpkg ports
       shell: cmd
       run: |
-        "${{ runner.temp }}\vcpkg\vcpkg" install spdlog fmt ffmpeg --triplet x64-windows --recurse
+        cd "${{ runner.temp }}\vcpkg"
+        git pull
+
+    # Retry logic for rate-limited downloads
+    - name: Install C++ deps via vcpkg (retry on 429)
+      shell: cmd
+      run: |
+        for /L %%i in (1,1,3) do (
+            "${{ runner.temp }}\vcpkg\vcpkg" install spdlog fmt ffmpeg --triplet x64-windows --recurse && exit /b 0
+            timeout /t 30
+        )
+        exit /b 1
 
     - name: Download LibTorch (Release)
       shell: powershell
