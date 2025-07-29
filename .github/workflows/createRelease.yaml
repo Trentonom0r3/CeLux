@@ -9,10 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: '3.13'                   # version for your Python extension
-  VCPKG_ROOT:     '${{ runner.temp }}/vcpkg'
-  BUILD_DIR:      'out\\build\\${{ matrix.config }}'
-  DIST_DIR:       'dist'
+  PYTHON_VERSION: '3.13'
+  DIST_DIR: 'dist'
 
 jobs:
   build-windows:
@@ -20,12 +18,16 @@ jobs:
     strategy:
       matrix:
         config: [Debug, Release]
-
+    env:
+      VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+      BUILD_DIR: out\build\${{ matrix.config }}
+      DIST_DIR: dist
+      PYTHON_VERSION: ${{ env.PYTHON_VERSION }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Setup Python ${{ env.PYTHON_VERSION }}
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
