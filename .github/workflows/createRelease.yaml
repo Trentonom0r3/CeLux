@@ -15,9 +15,6 @@ env:
 jobs:
   build-windows:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        config: [Debug, Release]
 
     steps:
     - name: Checkout code
@@ -44,15 +41,11 @@ jobs:
       run: |
         "${{ runner.temp }}\vcpkg\vcpkg" install spdlog fmt ffmpeg --triplet x64-windows --recurse
 
-    - name: Download LibTorch (${{ matrix.config }})
+    - name: Download LibTorch (Release)
       shell: powershell
       run: |
         $ErrorActionPreference = "Stop"
-        $url = if ('${{ matrix.config }}' -eq 'Debug') {
-          'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-debug-2.7.1%2Bcu118.zip'
-        } else {
-          'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-2.7.1%2Bcu118.zip'
-        }
+        $url = 'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-2.7.1%2Bcu118.zip'
         $retries = 5
         $success = $false
         for ($i = 1; $i -le $retries; $i++) {
@@ -70,19 +63,20 @@ jobs:
         }
         Expand-Archive libtorch.zip -DestinationPath libtorch
 
-
-    - name: Configure CMake
+    - name: Configure CMake (Release)
       shell: cmd
       run: |
-        cmake -S . -B out\build\${{ matrix.config }} -G Ninja ^
+        cmake -S . -B out\build\Release -G Ninja ^
           -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
           -DTorch_DIR=%CD%\libtorch\share\cmake\Torch ^
-          -DCMAKE_BUILD_TYPE=${{ matrix.config }} ^
-          -DCELUX_BUILD_PYTHON=ON
+          -DCMAKE_BUILD_TYPE=Release ^
+          -DCELUX_BUILD_PYTHON=ON ^
+          -DPython3_EXECUTABLE="${{ env.pythonLocation }}\python.exe" ^
+          -DPython3_ROOT_DIR="${{ env.pythonLocation }}"
 
-    - name: Build all
+    - name: Build all (Release)
       shell: cmd
-      run: cmake --build out\build\${{ matrix.config }} --config ${{ matrix.config }}
+      run: cmake --build out\build\Release --config Release
 
     - name: Build Windows wheel
       shell: cmd
@@ -96,7 +90,7 @@ jobs:
     - name: Upload Windows wheel
       uses: actions/upload-artifact@v4
       with:
-        name: windows-wheel-${{ matrix.config }}
+        name: windows-wheel-Release
         path: dist\*.whl
 
   release:
