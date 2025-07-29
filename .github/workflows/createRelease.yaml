@@ -123,7 +123,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          VERSION="0.6.5"
+          VERSION="0.6.5.1"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
   
@@ -160,5 +160,5 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
           skip_existing: true
-          packages_dir: dist
+          packages_dir: dist/dist
 
