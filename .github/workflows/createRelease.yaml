@@ -107,17 +107,23 @@ jobs:
           name: windows-wheel-Release
           path: dist
   
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: List all files for debug
+        run: dir /s
+        shell: cmd
+  
+      - name: Move wheel(s) to root
+        shell: bash
+        run: |
+          find dist -name "*.whl" -exec mv {} . \;
   
       - name: Set version manually
         id: get_version
         shell: bash
         run: |
-          VERSION="0.6.4.2"  
+          VERSION="0.6.4.1"  
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
+  
       - name: Create tag for this version
         run: |
           git config --global user.email "actions@github.com"
@@ -132,5 +138,6 @@ jobs:
           tag:   v${{ env.VERSION }}
           name:  Release v${{ env.VERSION }}
           body:  Automated Windows CI build & wheel
-          artifacts: '**/dist/*.whl'
+          artifacts: '*.whl'
+
 
