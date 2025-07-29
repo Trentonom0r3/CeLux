@@ -62,6 +62,10 @@ jobs:
             timeout /t 30
         )
         exit /b 1
+        
+    - name: Set PYTHON_LOCATION env
+      run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
+      shell: bash
 
     - name: Configure CMake (Release)
       shell: cmd
