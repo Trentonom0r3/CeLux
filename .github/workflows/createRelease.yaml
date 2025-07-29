@@ -114,7 +114,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          VERSION="0.6.4.1"  
+          VERSION="0.6.4.2"  
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
