@@ -123,7 +123,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          VERSION="0.6.4.4"
+          VERSION="0.6.5"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
   
@@ -143,4 +143,11 @@ jobs:
           body:  Automated Windows CI build & wheel
           artifacts: '*.whl'
 
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.2
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          skip_existing: true
+          packages_dir: .
 
