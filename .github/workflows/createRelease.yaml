@@ -115,13 +115,14 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          python -c "import sys; 
-          try:
-              import tomllib
-              print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])
-          except ImportError:
-              import toml
-              print(toml.load(open('pyproject.toml', 'r'))['project']['version'])"
+          VERSION=$(python -c "try:
+       import tomllib
+       print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])
+      except ModuleNotFoundError:
+       import toml
+       print(toml.load(open('pyproject.toml', 'r'))['project']['version'])")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
 
   
       - name: Create tag for this version
