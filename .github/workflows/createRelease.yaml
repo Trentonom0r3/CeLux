@@ -96,6 +96,7 @@ jobs:
           -DCELUX_BUILD_PYTHON=ON ^
           -DPython3_EXECUTABLE="${{ env.pythonLocation }}\python.exe" ^
           -DPython3_ROOT_DIR="${{ env.pythonLocation }}"
+  
 
     - name: Build all (Release)
       shell: cmd
