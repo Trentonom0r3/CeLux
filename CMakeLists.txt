@@ -1,4 +1,6 @@
-﻿cmake_minimum_required(VERSION 3.23)
+
+cmake_minimum_required(VERSION 3.23)
+
 project(CeLux VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)       # for IDEs (e.g. clangd, VSCode)
@@ -212,4 +214,5 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
-)
+
+
