@@ -143,11 +143,22 @@ jobs:
           body:  Automated Windows CI build & wheel
           artifacts: '*.whl'
 
+  pypi-publish:
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Download Windows wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-wheel-Release
+          path: dist
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
           skip_existing: true
-          packages_dir: .
+          packages_dir: dist
 
