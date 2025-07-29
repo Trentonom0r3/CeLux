@@ -1,8 +1,8 @@
 ﻿#include "VideoEncoder.hpp"
 #include "VideoReader.hpp"
+#include <torch/extension.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <torch/extension.h>
 
 namespace py = pybind11;
 #define PYBIND11_DETAILED_ERROR_MESSAGES

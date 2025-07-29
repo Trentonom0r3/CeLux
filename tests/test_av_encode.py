@@ -2,11 +2,11 @@
 import sys, time, torch
 
 # Point at your built celux/python module
-sys.path.append(r"D:/dev/Projects/Repos/CeLux/python")
+sys.path.append(r"./celux")
 from celux import VideoReader
 
-VIDEO_PATH  = r"C:\Users\tjerf\Downloads\1080.mp4"
-OUTPUT_PATH = r"C:\Users\tjerf\Downloads\1080_celux_with_audio.mp4"
+VIDEO_PATH  = r"INPUT.mp4"
+OUTPUT_PATH = r"OUTPUT.mp4"
 
 def reencode_with_audio(in_path, out_path):
     reader = VideoReader(in_path)

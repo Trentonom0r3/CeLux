@@ -17,9 +17,7 @@
 
       "toolchainFile": "D:/dev/c++/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "x64-windows",
-        "VCPKG_ROOT": "D:/dev/c++/vcpkg",
-        "Torch_DIR": "D:/dev/C++/Libraries/libtorch-cpu/libtorch/share/cmake/Torch"
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
       },
 
       "condition": {

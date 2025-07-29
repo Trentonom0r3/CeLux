@@ -13,7 +13,6 @@ ffmpy.egg-info/*
 *.wav
 #s/dist
 #/build
-runTests.yaml
 # Byte-compiled / optimized / DLL files
 __pycache__/
 

@@ -5,11 +5,10 @@ import numpy as np
 import cv2
 import torch
 
-# Add your CeLux build to the path
-sys.path.append(r"D:/dev/Projects/Repos/CeLux/celux")
+sys.path.append(r"./celux")
 from celux import VideoReader
 
-VIDEO_PATH = r"C:\Users\tjerf\Downloads\1080.mp4"
+VIDEO_PATH = r"./tests/data/default/BigBuckBunny.mp4"
 MAX_W, MAX_H = 1920, 1080
 
 def ffmpeg_rgb24_pipe(path):

@@ -61,8 +61,7 @@ class Decoder
     virtual void findVideoStream();
     virtual void initCodecContext();
     virtual int64_t convertTimestamp(double timestamp) const;
-    void populateProperties();
-    void setFormatFromBitDepth();
+
     double getFrameTimestamp(AVFrame* frame);
 
 
@@ -74,18 +73,16 @@ class Decoder
     AVPacketPtr pkt;
     int videoStreamIndex;
     VideoProperties properties;
-    Frame frame;
+    Frame frame; // custom wrapper around AVframe, handles mem, most ops w/ it.
     std::unique_ptr<celux::conversion::IConverter> converter;
     int numThreads;
 
-    // Audio-specific members
     int audioStreamIndex = -1;
     AVCodecContextPtr audioCodecCtx;
     Frame audioFrame;
     AVPacketPtr audioPkt;
     SwrContextPtr swrCtx;
 
-    // Helper methods
     bool initializeAudio();
     void closeAudio();
 };
