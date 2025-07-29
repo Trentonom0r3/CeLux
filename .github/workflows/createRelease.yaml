@@ -1,79 +1,115 @@
-# .github/workflows/release_and_benchmark.yaml
-
-name: Release and Benchmark Tests
+name: Windows CI & Release
 
 on:
   push:
-    branches: [master]
-    paths:
-      - 'build.py'
-      - 'CMakeLists.txt'
-      - 'CMakePresets.json'
-      - 'cpusetup.py'
-      - 'gpusetup.py'
-      - 'README.md'
-      - 'LICENSE'
-      - 'tests/**'
-      - 'scripts/**'
-      - '.github/workflows/release_and_benchmark.yaml'
+    branches: [ master ]
+    tags:    [ 'v*.*.*' ]
+  pull_request:
+    branches: [ master ]
   workflow_dispatch:
 
+env:
+  PYTHON_VERSION: '3.13'                   # version for your Python extension
+  VCPKG_ROOT:     '${{ runner.temp }}/vcpkg'
+  BUILD_DIR:      'out\\build\\${{ matrix.config }}'
+  DIST_DIR:       'dist'
+
 jobs:
-  release:
-    runs-on: ubuntu-latest  # Changed to Ubuntu for better compatibility
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        config: [Debug, Release]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3  # Updated to the latest version
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4  # Updated to the latest version
-        with:
-          python-version: '3.12.7'
+    - name: Setup Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Build Dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
+    - name: Upgrade pip & install pybind11
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install pybind11
 
-      - name: Get version from build.py
-        id: get_version
-        run: |
-          VERSION=$(python -c "import build; print(build.VERSION)")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+    - name: Bootstrap vcpkg
+      shell: powershell
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git $Env:VCPKG_ROOT
+        & $Env:VCPKG_ROOT\bootstrap-vcpkg.bat -disableMetrics
 
-      - name: Build the Packages
-        run: |
-          python build.py 
+    - name: Install C++ deps via vcpkg
+      shell: cmd
+      run: |
+        %VCPKG_ROOT%\vcpkg install spdlog fmt ffmpeg --triplet x64-windows --recurse
 
-      - name: List dist contents
-        run: |
-          ls -la dist/
+    - name: Download LibTorch (${{ matrix.config }})
+      shell: powershell
+      run: |
+        $url = if ('${{ matrix.config }}' -eq 'Debug') {
+          'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-debug-2.7.1%2Bcu118.zip'
+        } else {
+          'https://download.pytorch.org/libtorch/cu118/libtorch-win-shared-with-deps-2.7.1%2Bcu118.zip'
+        }
+        Invoke-WebRequest $url -OutFile libtorch.zip
+        Expand-Archive libtorch.zip -DestinationPath libtorch
 
-      - name: Create GitHub Release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: v${{ env.VERSION }}
-          name: v${{ env.VERSION }}
-          body: "Automated release of version ${{ env.VERSION }}"
-          draft: false
-          prerelease: false
-          artifacts: |
-            dist/*.whl
-            dist/*.tar.gz
-        continue-on-error: true  # Retains the workflow even if this step fails
+    - name: Configure CMake
+      shell: cmd
+      run: |
+        cmake -S . -B %BUILD_DIR% -G Ninja ^
+          -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake ^
+          -DTorch_DIR=%CD%\libtorch\share\cmake\Torch ^
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }} ^
+          -DCELUX_BUILD_PYTHON=ON
 
-      - name: Publish to PyPI
-        if: success()
-        uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-          skip_existing: true  # Skip uploading if the package version already exists
-          packages_dir: dist  # Directory where the built packages are located
+    - name: Build all
+      shell: cmd
+      run: cmake --build %BUILD_DIR% --config ${{ matrix.config }}
 
-      - name: Handle Existing Tag (Optional)
-        if: failure()
-        run: |
-          echo "Release tag already exists or another error occurred. Skipping release creation."
+    - name: Build Windows wheel
+      shell: cmd
+      run: |
+        python -m pip wheel . --no-deps -w %DIST_DIR%
 
+    - name: List dist folder
+      shell: cmd
+      run: dir %DIST_DIR%
+
+    - name: Upload Windows wheel
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-wheel-${{ matrix.config }}
+        path: ${{ env.DIST_DIR }}\*.whl
+
+  release:
+    needs: build-windows
+    runs-on: windows-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Download Windows wheels
+      uses: actions/download-artifact@v3
+      with:
+        name: windows-wheel-Release
+        path: dist
+
+    - name: Create GitHub Release
+      uses: ncipollo/release-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag:   ${{ github.ref_name }}
+        name:  Release ${{ github.ref_name }}
+        body:  Automated Windows CI build & wheel
+        artifacts: |
+          dist/*.whl
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@v1.4.2
+      with:
+        user:     __token__
+        password: ${{ secrets.PYPI_TOKEN }}
+        skip_existing: true
+        packages_dir:  dist
