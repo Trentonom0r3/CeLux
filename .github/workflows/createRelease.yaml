@@ -66,12 +66,12 @@ jobs:
     - name: Configure CMake (Release)
       shell: cmd
       run: |
-        cmake -S . -B out\build\Release -G Ninja ^
-          -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
+        cmake -S . -B out\build\Release -G "Visual Studio 17 2022" -A x64 ^
           -DCMAKE_BUILD_TYPE=Release ^
+          -DCMAKE_TOOLCHAIN_FILE="%RUNNER_TEMP%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
           -DCELUX_BUILD_PYTHON=ON ^
-          -DPython3_EXECUTABLE="${{ env.pythonLocation }}\python.exe" ^
-          -DPython3_ROOT_DIR="${{ env.pythonLocation }}"
+          -DPython3_EXECUTABLE="%PYTHON_LOCATION%\python.exe" ^
+          -DPython3_ROOT_DIR="%PYTHON_LOCATION%"
 
     - name: Build all (Release)
       shell: cmd
@@ -92,31 +92,43 @@ jobs:
         name: windows-wheel-Release
         path: dist\*.whl
 
+ 
   release:
     needs: build-windows
     runs-on: windows-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/master'
     steps:
-    - name: Download Windows wheels
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-wheel-Release
-        path: dist
+      - name: Download Windows wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-wheel-Release
+          path: dist
+  
+      - name: Checkout code
+        uses: actions/checkout@v4
+  
+      - name: Extract version from pyproject.toml
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
+  
+      - name: Create tag for this version
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git tag v${{ env.VERSION }}
+          git push origin v${{ env.VERSION }}
+  
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag:   v${{ env.VERSION }}
+          name:  Release v${{ env.VERSION }}
+          body:  Automated Windows CI build & wheel
+          artifacts: |
+            dist/*.whl
 
-    - name: Create GitHub Release
-      uses: ncipollo/release-action@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag:   ${{ github.ref_name }}
-        name:  Release ${{ github.ref_name }}
-        body:  Automated Windows CI build & wheel
-        artifacts: |
-          dist/*.whl
-
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.4.2
-      with:
-        user:     __token__
-        password: ${{ secrets.PYPI_TOKEN }}
-        skip_existing: true
-        packages_dir:  dist
