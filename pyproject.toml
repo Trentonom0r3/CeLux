@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "celux"
-version = "0.6.4.1"
+version = "0.6.5"
 readme = "README.md"
 authors = [
     {name = "Trenton Flanagan", email = "spigonvids@gmail.com"},
