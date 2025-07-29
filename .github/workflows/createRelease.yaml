@@ -18,11 +18,7 @@ jobs:
     strategy:
       matrix:
         config: [Debug, Release]
-    env:
-      VCPKG_ROOT: ${{ runner.temp }}/vcpkg
-      BUILD_DIR: out\build\${{ matrix.config }}
-      DIST_DIR: dist
-      PYTHON_VERSION: ${{ env.PYTHON_VERSION }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -40,13 +36,13 @@ jobs:
     - name: Bootstrap vcpkg
       shell: powershell
       run: |
-        git clone https://github.com/microsoft/vcpkg.git $Env:VCPKG_ROOT
-        & $Env:VCPKG_ROOT\bootstrap-vcpkg.bat -disableMetrics
+        git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
+        & "${{ runner.temp }}/vcpkg/bootstrap-vcpkg.bat" -disableMetrics
 
     - name: Install C++ deps via vcpkg
       shell: cmd
       run: |
-        %VCPKG_ROOT%\vcpkg install spdlog fmt ffmpeg --triplet x64-windows --recurse
+        "${{ runner.temp }}\vcpkg\vcpkg" install spdlog fmt ffmpeg --triplet x64-windows --recurse
 
     - name: Download LibTorch (${{ matrix.config }})
       shell: powershell
@@ -62,30 +58,30 @@ jobs:
     - name: Configure CMake
       shell: cmd
       run: |
-        cmake -S . -B %BUILD_DIR% -G Ninja ^
-          -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake ^
+        cmake -S . -B out\build\${{ matrix.config }} -G Ninja ^
+          -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
           -DTorch_DIR=%CD%\libtorch\share\cmake\Torch ^
           -DCMAKE_BUILD_TYPE=${{ matrix.config }} ^
           -DCELUX_BUILD_PYTHON=ON
 
     - name: Build all
       shell: cmd
-      run: cmake --build %BUILD_DIR% --config ${{ matrix.config }}
+      run: cmake --build out\build\${{ matrix.config }} --config ${{ matrix.config }}
 
     - name: Build Windows wheel
       shell: cmd
       run: |
-        python -m pip wheel . --no-deps -w %DIST_DIR%
+        python -m pip wheel . --no-deps -w dist
 
     - name: List dist folder
       shell: cmd
-      run: dir %DIST_DIR%
+      run: dir dist
 
     - name: Upload Windows wheel
       uses: actions/upload-artifact@v3
       with:
         name: windows-wheel-${{ matrix.config }}
-        path: ${{ env.DIST_DIR }}\*.whl
+        path: dist\*.whl
 
   release:
     needs: build-windows
