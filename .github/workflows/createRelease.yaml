@@ -119,13 +119,21 @@ jobs:
         run: |
           find dist -name "*.whl" -exec mv {} . \;
   
-      - name: Set version manually
+      - name: Install toml
+        run: python -m pip install toml
+
+      - name: Extract version from pyproject.toml
         id: get_version
-        shell: bash
+        shell: python
         run: |
-          VERSION="0.6.4.1"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          import os
+          import toml
+          with open("pyproject.toml", "r") as f:
+              data = toml.load(f)
+              version = data["project"]["version"]
+          print(f"::set-output name=version::{version}")
+          with open(os.environ["GITHUB_ENV"], "a") as env_file:
+              env_file.write(f"VERSION={version}\n")
   
       - name: Create tag for this version
         run: |
