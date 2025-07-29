@@ -101,6 +101,9 @@ jobs:
     runs-on: windows-latest
     if: github.ref == 'refs/heads/master'
     steps:
+      - name: Checkout code           # <<== ALWAYS FIRST!
+        uses: actions/checkout@v4
+  
       - name: Download Windows wheels
         uses: actions/download-artifact@v4
         with:
@@ -120,7 +123,7 @@ jobs:
         id: get_version
         shell: bash
         run: |
-          VERSION="0.6.4.3"  
+          VERSION="0.6.4.3"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
   
