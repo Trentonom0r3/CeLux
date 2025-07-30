@@ -141,7 +141,7 @@ jobs:
         - name: Install C++ deps via vcpkg (retry on 429)
           run: |
             for i in 1 2 3; do
-              "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,libx264,libx265] --triplet x64-linux --recurse && break || sleep 30
+              "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux --recurse && break || sleep 30
             done
 
         - name: Set PYTHON_LOCATION env
