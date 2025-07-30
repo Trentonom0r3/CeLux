@@ -1,6 +1,7 @@
 // src/logger.cpp
 
-#include "logger.hpp"
+
+#include "Logger.hpp"
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace celux
