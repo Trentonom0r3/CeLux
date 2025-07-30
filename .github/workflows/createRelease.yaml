@@ -14,6 +14,7 @@ on:
 env:
   PYTHON_VERSION: '3.13'
   DIST_DIR: 'dist'
+  VCPKG_LIBRARY_LINKAGE: dynamic   # <-- Force vcpkg to build shared libs!
 
 jobs:
   build-windows:
@@ -100,77 +101,83 @@ jobs:
         path: '**/dist/*.whl'
   
   build-linux:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
-  
-        - name: Install build essentials
-          run: sudo apt-get update && sudo apt-get install -y nasm
-  
-        - name: Setup Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: ${{ env.PYTHON_VERSION }}
-  
-        - name: Upgrade pip & install deps
-          run: |
-            python -m pip install --upgrade pip setuptools wheel
-            python -m pip install pybind11 torch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Restore vcpkg cache
-          uses: actions/cache@v4
-          with:
-            path: |
-              ${{ runner.temp }}/vcpkg
-              ${{ runner.temp }}/vcpkg_installed
-            key: vcpkg-linux-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
+      - name: Install build essentials
+        run: sudo apt-get update && sudo apt-get install -y nasm
 
-        - name: Bootstrap vcpkg
-          run: |
-            if [ ! -d "${{ runner.temp }}/vcpkg" ]; then
-              git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
-            fi
-            "${{ runner.temp }}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+      - name: **Purge vcpkg to force clean shared build**
+        run: rm -rf ${{ runner.temp }}/vcpkg
 
-        - name: Update vcpkg ports
-          run: |
-            cd "${{ runner.temp }}/vcpkg"
-            git pull
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-        - name: Install C++ deps via vcpkg (retry on 429)
-          run: |
-            for i in 1 2 3; do
-              "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux --recurse && break || sleep 30
-            done
+      - name: Upgrade pip & install deps
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install pybind11 torch
 
-        - name: Set PYTHON_LOCATION env
-          run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/vcpkg
+            ${{ runner.temp }}/vcpkg_installed
+          key: vcpkg-linux-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
 
-        - name: Configure CMake (Release)
-          run: |
-            cmake -S . -B out/build/Release \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=ON \
-              -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-              -DCELUX_BUILD_PYTHON=ON \
-              -DPython3_EXECUTABLE="${{ env.PYTHON_LOCATION }}/bin/python3" \
-              -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}"
+      - name: Bootstrap vcpkg
+        run: |
+          if [ ! -d "${{ runner.temp }}/vcpkg" ]; then
+            git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
+          fi
+          "${{ runner.temp }}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
 
-        - name: Build all (Release)
-          run: cmake --build out/build/Release --config Release
+      - name: Update vcpkg ports
+        run: |
+          cd "${{ runner.temp }}/vcpkg"
+          git pull
 
-        - name: Build Linux wheel
-          run: python -m pip wheel . --no-deps -w dist
+      - name: Install C++ deps via vcpkg (retry on 429)
+        run: |
+          for i in 1 2 3; do
+            "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux --recurse && break || sleep 30
+          done
 
-        - name: List dist folder
-          run: ls -l dist
+      - name: Set PYTHON_LOCATION env
+        run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
 
-        - name: Upload Linux wheel
-          uses: actions/upload-artifact@v4
-          with:
-            name: linux-wheel-Release
-            path: '**/dist/*.whl'
+      - name: List vcpkg FFMPEG libs for debug
+        run: ls -l ${{ runner.temp }}/vcpkg/installed/x64-linux/lib/
+
+      - name: Configure CMake (Release)
+        run: |
+          cmake -S . -B out/build/Release \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+            -DCELUX_BUILD_PYTHON=ON \
+            -DPython3_EXECUTABLE="${{ env.PYTHON_LOCATION }}/bin/python3" \
+            -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}"
+
+      - name: Build all (Release)
+        run: cmake --build out/build/Release --config Release
+
+      - name: Build Linux wheel
+        run: python -m pip wheel . --no-deps -w dist
+
+      - name: List dist folder
+        run: ls -l dist
+
+      - name: Upload Linux wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-wheel-Release
+          path: '**/dist/*.whl'
 
   release:
     needs: [build-windows, build-linux]
