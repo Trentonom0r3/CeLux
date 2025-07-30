@@ -154,10 +154,11 @@ jobs:
           echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg" >> $GITHUB_ENV
           echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
           echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic" >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-linux-dynamic" >> $GITHUB_ENV
-          echo "CMAKE_MODULE_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg" >> $GITHUB_ENV
-
-
+  
+          PREFIX_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-linux-dynamic
+  
+          echo "CMAKE_PREFIX_PATH=${PREFIX_PATH}:${PREFIX_PATH}/share/ffmpeg" >> $GITHUB_ENV
+      
       - name: Install C++ deps via vcpkg (retry on 429)
         run: |
           for i in 1 2 3; do
