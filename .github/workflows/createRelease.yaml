@@ -148,16 +148,14 @@ jobs:
           cd "${{ runner.temp }}/vcpkg"
           git pull
 
-      # Set VCPKG env vars for all next steps
       - name: Set VCPKG env vars
         shell: bash
         run: |
-          echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg"     >> $GITHUB_ENV
-          echo "VCPKG_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-          echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic"                     >> $GITHUB_ENV
-          echo "CMAKE_PREFIX_PATH=$VCPKG_ROOT/installed/$VCPKG_TARGET_TRIPLET/share" >> $GITHUB_ENV
+          echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg" >> $GITHUB_ENV
+          echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+          echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic" >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-linux-dynamic" >> $GITHUB_ENV
 
-          
       - name: Install C++ deps via vcpkg (retry on 429)
         run: |
           for i in 1 2 3; do
