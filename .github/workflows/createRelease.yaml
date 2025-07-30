@@ -1,4 +1,7 @@
-name: Windows CI & Release
+name: Windows & Linux CI Release
+
+permissions:
+  contents: write
 
 on:
   push:
@@ -95,78 +98,145 @@ jobs:
       with:
         name: windows-wheel-Release
         path: '**/dist/*.whl'
- 
+  
+  build-linux:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+
+        - name: Setup Python
+          uses: actions/setup-python@v4
+          with:
+            python-version: ${{ env.PYTHON_VERSION }}
+
+        - name: Upgrade pip & install deps
+          run: |
+            python -m pip install --upgrade pip setuptools wheel
+            python -m pip install pybind11 torch
+
+        - name: Restore vcpkg cache
+          uses: actions/cache@v4
+          with:
+            path: |
+              ${{ runner.temp }}/vcpkg
+              ${{ runner.temp }}/vcpkg_installed
+            key: vcpkg-linux-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
+
+        - name: Bootstrap vcpkg
+          run: |
+            if [ ! -d "${{ runner.temp }}/vcpkg" ]; then
+              git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
+            fi
+            "${{ runner.temp }}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+
+        - name: Update vcpkg ports
+          run: |
+            cd "${{ runner.temp }}/vcpkg"
+            git pull
+
+        - name: Install C++ deps via vcpkg (retry on 429)
+          run: |
+            for i in 1 2 3; do
+              "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg --triplet x64-linux --recurse && break || sleep 30
+            done
+
+        - name: Set PYTHON_LOCATION env
+          run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
+
+        - name: Configure CMake (Release)
+          run: |
+            cmake -S . -B out/build/Release \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
+              -DCELUX_BUILD_PYTHON=ON \
+              -DPython3_EXECUTABLE="${{ env.PYTHON_LOCATION }}/bin/python3" \
+              -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}"
+
+        - name: Build all (Release)
+          run: cmake --build out/build/Release --config Release
+
+        - name: Build Linux wheel
+          run: python -m pip wheel . --no-deps -w dist
+
+        - name: List dist folder
+          run: ls -l dist
+
+        - name: Upload Linux wheel
+          uses: actions/upload-artifact@v4
+          with:
+            name: linux-wheel-Release
+            path: '**/dist/*.whl'
+
   release:
-    needs: build-windows
-    runs-on: windows-latest
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:
-      - name: Checkout code           # <<== ALWAYS FIRST!
+      - name: Checkout code
         uses: actions/checkout@v4
-  
+
       - name: Download Windows wheels
         uses: actions/download-artifact@v4
         with:
           name: windows-wheel-Release
           path: dist
-  
+
+      - name: Download Linux wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-wheel-Release
+          path: dist
+
       - name: List all files for debug
-        run: dir /s
-        shell: cmd
-  
-      - name: Move wheel(s) to root
-        shell: bash
-        run: |
-          find dist -name "*.whl" -exec mv {} . \;
-  
-      - name: Install toml
-        run: python -m pip install toml
+        run: ls -lR dist
+
+      - name: Install tomllib (if needed)
+        run: python3 -m pip install toml  # needed only if you want to support Python <3.11
 
       - name: Extract version from pyproject.toml
         id: get_version
-        shell: python
+        shell: bash
         run: |
-          import os
-          import toml
-          with open("pyproject.toml", "r") as f:
-              data = toml.load(f)
-              version = data["project"]["version"]
-          print(f"::set-output name=version::{version}")
-          with open(os.environ["GITHUB_ENV"], "a") as env_file:
-              env_file.write(f"VERSION={version}\n")
-  
+          VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Create tag for this version
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           git tag v${{ env.VERSION }}
           git push origin v${{ env.VERSION }}
-  
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag:   v${{ env.VERSION }}
           name:  Release v${{ env.VERSION }}
-          body:  Automated Windows CI build & wheel
-          artifacts: '*.whl'
+          body:  Automated CI build & wheel
+          artifacts: 'dist/*.whl'
 
   pypi-publish:
     needs: release
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:
-      - name: Download Windows wheels
+      - name: Download Wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-wheel-Release
+          path: dist
+      - name: Download Windows Wheels
         uses: actions/download-artifact@v4
         with:
           name: windows-wheel-Release
           path: dist
-
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
           skip_existing: true
-          packages_dir: dist/dist
-
+          packages_dir: dist
