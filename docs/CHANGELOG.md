@@ -1,4 +1,7 @@
 ## 📈 Changelog
+### **Version 0.6.5.1 (2025-07-28)**
+- Removed DLLS, Adjusted CI/CD
+- Added linux build
 
 ### **Version 0.6.3 (2025-07-28)**
 - 🎶 **Simplified Audio Encoding API**  

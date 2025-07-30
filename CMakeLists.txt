@@ -128,7 +128,7 @@ endif()
 #endif()
 
 if(CELUX_BUILD_PYTHON)
-  add_library(celux MODULE src/CeLux/Python/Bindings.cpp)
+  add_library(celux MODULE src/CeLux/python/Bindings.cpp)
 
   target_include_directories(celux PRIVATE
     ${CEFLUX_PYBIND11_INCS}
