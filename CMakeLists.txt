@@ -1,7 +1,7 @@
 ﻿cmake_minimum_required(VERSION 3.23)
 project(CeLux VERSION 1.0 LANGUAGES CXX)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)       # for IDEs (e.g. clangd, VSCode)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD        17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -9,7 +9,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(CELUX_ENABLE_CUDA   "Enable CUDA support in CeLux" OFF)
 option(CELUX_BUILD_PYTHON "Build Python bindings"     ON)
 
-
+# --- Compiler cache (ccache) ---
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
   message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
@@ -20,9 +20,7 @@ if(CCACHE_PROGRAM)
   endif()
 endif()
 
-
-# Dependencies
-
+# --- Dependencies ---
 find_package(spdlog CONFIG REQUIRED)
 find_package(fmt    CONFIG REQUIRED)
 if(NOT TARGET fmt::fmt-header_only AND TARGET fmt::fmt)
@@ -40,7 +38,7 @@ if(CELUX_BUILD_PYTHON)
   message(STATUS "Python3: ${Python3_EXECUTABLE}")
   message(STATUS "Python3 includes: ${Python3_INCLUDE_DIRS}")
 
-  # Try the CMake pybind11 port first
+  # -- Find pybind11 --
   find_package(pybind11 CONFIG)
   if(pybind11_FOUND)
     message(STATUS "pybind11 (CMake): ${pybind11_VERSION}")
@@ -55,36 +53,41 @@ if(CELUX_BUILD_PYTHON)
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     message(STATUS "Python site-packages: ${Python3_SITE_PACKAGES}")
-    set(CEFLUX_PYBIND11_INCS
-        "${Python3_SITE_PACKAGES}/Lib/site-packages/pybind11/include"
-    )
+
+    if(WIN32)
+      set(CEFLUX_PYBIND11_INCS
+          "${Python3_SITE_PACKAGES}/Lib/site-packages/pybind11/include")
+    else()
+      set(CEFLUX_PYBIND11_INCS
+          "${Python3_SITE_PACKAGES}/pybind11/include")
+    endif()
     set(CEFLUX_PYBIND11_LIBS "")
     if(NOT EXISTS "${CEFLUX_PYBIND11_INCS}/pybind11/pybind11.h")
       message(FATAL_ERROR "pybind11 headers missing; run: pip install pybind11")
     endif()
   endif()
 
-# Point to the torch libs and headers from the installed Python torch package
-set(CEFLUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/lib")
-set(CEFLUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/include")
+  # -- PyTorch paths (platform-specific) --
+  if(WIN32)
+    set(CEFLUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/lib")
+    set(CEFLUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/include")
+  else()
+    set(CEFLUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/torch/lib")
+    set(CEFLUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/torch/include")
+  endif()
 
-# The main headers are in "torch/include" and "torch/include/torch/csrc/api/include"
-include_directories(
+  # Main headers: torch/include and torch/include/torch/csrc/api/include
+  include_directories(
     ${CEFLUX_PYTORCH_INCLUDEDIR}
     ${CEFLUX_PYTORCH_INCLUDEDIR}/torch/csrc/api/include
-        ${CEFLUX_PYTORCH_INCLUDEDIR}
-)
+    ${CEFLUX_PYTORCH_INCLUDEDIR}
+  )
+  # Add the lib directory to the linker
+  link_directories(${CEFLUX_PYTORCH_LIBDIR})
 
-# Add the lib directory to the linker
-link_directories(${CEFLUX_PYTORCH_LIBDIR})
-
-# (Optional: print debug info)
-message(STATUS "Using Python site-packages torch headers: ${CEFLUX_PYTORCH_INCLUDEDIR}")
-message(STATUS "Using Python site-packages torch libs:    ${CEFLUX_PYTORCH_LIBDIR}")
-
+  message(STATUS "Using Python site-packages torch headers: ${CEFLUX_PYTORCH_INCLUDEDIR}")
+  message(STATUS "Using Python site-packages torch libs:    ${CEFLUX_PYTORCH_LIBDIR}")
 endif()
-
-
 
 file(GLOB_RECURSE CEFLUX_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/*.cpp
@@ -93,7 +96,6 @@ file(GLOB_RECURSE CEFLUX_SOURCES
 )
 
 add_library(CeLuxLib STATIC ${CEFLUX_SOURCES})
-
 
 target_include_directories(CeLuxLib
   PUBLIC
@@ -115,12 +117,15 @@ target_link_libraries(CeLuxLib PUBLIC
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:c10>
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch>
-    $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_python>
+  $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_python>
 )
 if(WIN32)
   target_link_libraries(CeLuxLib PUBLIC ws2_32 bcrypt)
 endif()
-
+# If you want to add Linux-specific libs:
+#if(UNIX AND NOT APPLE)
+#  target_link_libraries(CeLuxLib PUBLIC pthread dl rt)
+#endif()
 
 if(CELUX_BUILD_PYTHON)
   add_library(celux MODULE src/CeLux/Python/Bindings.cpp)
@@ -131,35 +136,44 @@ if(CELUX_BUILD_PYTHON)
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/python
   )
 
-
   target_link_libraries(celux PRIVATE
     CeLuxLib
     Python3::Python
     ${CEFLUX_PYBIND11_LIBS}
-  $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
-  $<$<BOOL:${CELUX_BUILD_PYTHON}>:c10>
-  $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch>
-      $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_python>
+    $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
+    $<$<BOOL:${CELUX_BUILD_PYTHON}>:c10>
+    $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch>
+    $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_python>
   )
 
   set_target_properties(celux PROPERTIES
     PREFIX ""
-    SUFFIX ".pyd"
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/celux
     OUTPUT_NAME "celux"
   )
+  if(WIN32)
+    set_target_properties(celux PROPERTIES SUFFIX ".pyd")
+  else()
+    set_target_properties(celux PROPERTIES SUFFIX ".so")
+  endif()
+
+  # RPATH for Linux (optional, to run .so without LD_LIBRARY_PATH)
+  if(UNIX AND NOT APPLE)
+    set_target_properties(celux PROPERTIES
+      INSTALL_RPATH "$ORIGIN"
+      BUILD_WITH_INSTALL_RPATH TRUE
+    )
+  endif()
 endif()
 
 if(WIN32 AND CELUX_BUILD_PYTHON)
-  # Determine vcpkg bin dir (try VCPKG_ROOT, fallback to runner.temp in CI)
+  # DLL copy logic for Windows only
   if(DEFINED ENV{VCPKG_ROOT})
     set(VCPKG_BIN "$ENV{VCPKG_ROOT}/installed/x64-windows/bin")
   else()
     set(VCPKG_BIN "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/bin")
   endif()
-
   set(CEFLUX_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/celux")
-
   file(GLOB CEFLUX_DLLS
     "${VCPKG_BIN}/av*.dll"
     "${VCPKG_BIN}/sw*.dll"
@@ -167,7 +181,6 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
     "${VCPKG_BIN}/libx264*.dll"
     "${VCPKG_BIN}/fmt.dll"
   )
-
   foreach(dll ${CEFLUX_DLLS})
     add_custom_command(TARGET celux POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" "${CEFLUX_DLL_DIR}"
@@ -176,9 +189,7 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
   endforeach()
 endif()
 
-
 include(GNUInstallDirs)
-
 install(TARGETS CeLuxLib EXPORT CeLuxTargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -196,7 +207,6 @@ write_basic_package_version_file(
   VERSION     ${PROJECT_VERSION}
   COMPATIBILITY SameMajorVersion
 )
-
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/cmake/CeLuxConfig.cmake.in")
   configure_package_config_file(
     "${CMAKE_CURRENT_LIST_DIR}/cmake/CeLuxConfig.cmake.in"
@@ -207,9 +217,7 @@ else()
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake"
 "@PACKAGE_INIT@\ninclude(\"${CMAKE_CURRENT_LIST_DIR}/CeLuxTargets.cmake\")\n")
 endif()
-
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
-)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux)
