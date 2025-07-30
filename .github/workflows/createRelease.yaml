@@ -109,7 +109,7 @@ jobs:
       - name: Install build essentials
         run: sudo apt-get update && sudo apt-get install -y nasm
 
-      - name: **Purge vcpkg to force clean shared build**
+      - name: Purge vcpkg to force clean shared build
         run: rm -rf ${{ runner.temp }}/vcpkg
 
       - name: Setup Python
