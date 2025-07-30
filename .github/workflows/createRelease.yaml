@@ -181,6 +181,9 @@ jobs:
         run: cmake --build out/build/Release --config Release
 
       - name: Build Linux wheel
+        env:
+          CMAKE_TOOLCHAIN_FILE: ${{ env.VCPKG_TOOLCHAIN_FILE }}
+          VCPKG_ROOT: ${{ runner.temp }}/vcpkg
         run: python -m pip wheel . --no-deps -w dist
 
       - name: List dist folder
