@@ -27,9 +27,16 @@ if(NOT TARGET fmt::fmt-header_only AND TARGET fmt::fmt)
   add_library(fmt::fmt-header_only ALIAS fmt::fmt)
 endif()
 
-find_package(FFMPEG REQUIRED
-  COMPONENTS avcodec avformat avutil swscale swresample
-)
+if(DEFINED ENV{VCPKG_ROOT} AND DEFINED VCPKG_TARGET_TRIPLET)
+  set(_vcpkg_ffmpeg_mod
+      "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/share/ffmpeg")
+  message(STATUS "Appending vcpkg FFmpeg module path: ${_vcpkg_ffmpeg_mod}")
+  list(APPEND CMAKE_MODULE_PATH "${_vcpkg_ffmpeg_mod}")
+endif()
+
+find_package(FFMPEG REQUIRED COMPONENTS avcodec avformat avutil avfilter
+                                  swscale swresample avdevice)
+
 set(CEFLUX_FFMPEG_LIBS ${FFMPEG_LIBRARIES})
 set(CEFLUX_FFMPEG_INCS ${FFMPEG_INCLUDE_DIRS})
 
