@@ -145,14 +145,14 @@ jobs:
       - name: Install C++ deps via vcpkg (retry on 429)
         run: |
           for i in 1 2 3; do
-            "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux --recurse && break || sleep 30
+            "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse && break || sleep 30
           done
 
       - name: Set PYTHON_LOCATION env
         run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
 
       - name: List vcpkg FFMPEG libs for debug
-        run: ls -l ${{ runner.temp }}/vcpkg/installed/x64-linux/lib/
+        run: ls -l ${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/lib/
 
       - name: Configure CMake (Release)
         run: |
@@ -162,7 +162,8 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
             -DCELUX_BUILD_PYTHON=ON \
             -DPython3_EXECUTABLE="${{ env.PYTHON_LOCATION }}/bin/python3" \
-            -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}"
+            -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}" \
+            -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
 
       - name: Build all (Release)
         run: cmake --build out/build/Release --config Release
@@ -178,6 +179,7 @@ jobs:
         with:
           name: linux-wheel-Release
           path: '**/dist/*.whl'
+
 
   release:
     needs: [build-windows, build-linux]
