@@ -150,9 +150,13 @@ jobs:
 
       # Set VCPKG env vars for all next steps
       - name: Set VCPKG env vars
+        shell: bash
         run: |
-          echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-          echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic" >> $GITHUB_ENV
+          echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg"     >> $GITHUB_ENV
+          echo "VCPKG_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+          echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic"                     >> $GITHUB_ENV
+          echo "CMAKE_PREFIX_PATH=$VCPKG_ROOT/installed/$VCPKG_TARGET_TRIPLET/share" >> $GITHUB_ENV
+
           
       - name: Install C++ deps via vcpkg (retry on 429)
         run: |
@@ -182,9 +186,10 @@ jobs:
 
       - name: Build Linux wheel
         env:
-          VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-          VCPKG_TARGET_TRIPLET: x64-linux-dynamic
-          CMAKE_PREFIX_PATH: ${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share
+          VCPKG_ROOT:          ${{ env.VCPKG_ROOT }}
+          VCPKG_TOOLCHAIN_FILE: ${{ env.VCPKG_TOOLCHAIN_FILE }}
+          VCPKG_TARGET_TRIPLET: ${{ env.VCPKG_TARGET_TRIPLET }}
+          CMAKE_PREFIX_PATH:    ${{ env.CMAKE_PREFIX_PATH }}
         run: python -m pip wheel . --no-deps -w dist
 
       - name: List dist folder
