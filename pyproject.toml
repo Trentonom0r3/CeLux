@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core", "pybind11", "wheel"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "celux"
-version = "0.6.5.1"
+version = "0.6.5.2"
 readme = "README.md"
 authors = [
     {name = "Trenton Flanagan", email = "spigonvids@gmail.com"},
@@ -26,15 +26,3 @@ Repository = "https://github.com/Trentonom0r3/celux"
 Documentation = "https://github.com/Trentonom0r3/celux/blob/master/README.md"
 Changelog = "https://github.com/Trentonom0r3/celux/blob/master/docs/CHANGELOG.md"
 Issues = "https://github.com/Trentonom0r3/celux/issues"
-
-# dependencies = [
-#     "torch>=2.7",
-# ]
-
-[tool.setuptools.packages.find]
-include = [
-    "celux",
-]
-
-[tool.setuptools.package-data]
-celux = ["*.pyd", "*.dll", "*.pyi", "*.py", "py.typed"]

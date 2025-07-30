@@ -217,7 +217,13 @@ else()
   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake"
 "@PACKAGE_INIT@\ninclude(\"${CMAKE_CURRENT_LIST_DIR}/CeLuxTargets.cmake\")\n")
 endif()
+
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux)
+     ${CMAKE_CURRENT_SOURCE_DIR}/celux/__init__.py
+        ${CMAKE_CURRENT_SOURCE_DIR}/celux/py.typed
+        # ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi   # If you have a .pyi file!
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
+  )
+
