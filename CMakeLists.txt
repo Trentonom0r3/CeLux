@@ -226,4 +226,14 @@ install(FILES
         # ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi   # If you have a .pyi file!
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
   )
+# debug dump of the variables we care about
+message(STATUS "---- CMake Debug Dump ----")
+message(STATUS "  CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE}")
+message(STATUS "  VCPKG_ROOT (env)       = $ENV{VCPKG_ROOT}")
+message(STATUS "  VCPKG_TARGET_TRIPLET   = $ENV{VCPKG_TARGET_TRIPLET}")
+message(STATUS "  CMAKE_PREFIX_PATH      = ${CMAKE_PREFIX_PATH}")
+message(STATUS "  CMAKE_MODULE_PATH      = ${CMAKE_MODULE_PATH}")
+message(STATUS "  Python3_EXECUTABLE     = ${Python3_EXECUTABLE}")
+message(STATUS "  Python3_ROOT_DIR       = ${Python3_ROOT_DIR}")
+message(STATUS "----------------------------")
 
