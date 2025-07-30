@@ -182,8 +182,9 @@ jobs:
 
       - name: Build Linux wheel
         env:
-          CMAKE_TOOLCHAIN_FILE: ${{ env.VCPKG_TOOLCHAIN_FILE }}
-          VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+          VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          VCPKG_TARGET_TRIPLET: x64-linux-dynamic
+          CMAKE_PREFIX_PATH: ${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share
         run: python -m pip wheel . --no-deps -w dist
 
       - name: List dist folder
