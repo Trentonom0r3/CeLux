@@ -19,9 +19,7 @@ env:
 jobs:
   build-windows:
     runs-on: windows-latest
-    env:
-      VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
-      VCPKG_TARGET_TRIPLET: x64-windows
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -59,6 +57,13 @@ jobs:
         cd "${{ runner.temp }}\vcpkg"
         git pull
 
+    # Set VCPKG env vars for all next steps
+    - name: Set VCPKG env vars
+      shell: bash
+      run: |
+        echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+        echo "VCPKG_TARGET_TRIPLET=x64-windows" >> $GITHUB_ENV
+        
     - name: Install C++ deps via vcpkg (retry on 429)
       shell: cmd
       run: |
@@ -103,9 +108,6 @@ jobs:
   
   build-linux:
     runs-on: ubuntu-latest
-    env:
-      VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-      VCPKG_TARGET_TRIPLET: x64-linux-dynamic
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -146,6 +148,12 @@ jobs:
           cd "${{ runner.temp }}/vcpkg"
           git pull
 
+      # Set VCPKG env vars for all next steps
+      - name: Set VCPKG env vars
+        run: |
+          echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+          echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic" >> $GITHUB_ENV
+          
       - name: Install C++ deps via vcpkg (retry on 429)
         run: |
           for i in 1 2 3; do
@@ -209,7 +217,7 @@ jobs:
         run: ls -lR dist
 
       - name: Install tomllib (if needed)
-        run: python3 -m pip install toml Z
+        run: python3 -m pip install toml 
 
       - name: Extract version from pyproject.toml
         id: get_version
