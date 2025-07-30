@@ -42,7 +42,8 @@ class Encoder
     // Deleted copy constructor and assignment operator
     Encoder(const Encoder&) = delete;
     Encoder& operator=(const Encoder&) = delete;
-    EncodingProperties Properties()
+    
+    EncodingProperties& Properties()
     {
         return properties;
     }
