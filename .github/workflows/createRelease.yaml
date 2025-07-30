@@ -14,7 +14,7 @@ on:
 env:
   PYTHON_VERSION: '3.13'
   DIST_DIR: 'dist'
-  VCPKG_LIBRARY_LINKAGE: dynamic   # <-- Force vcpkg to build shared libs!
+  VCPKG_LIBRARY_LINKAGE: dynamic
 
 jobs:
   build-windows:
@@ -57,7 +57,6 @@ jobs:
         cd "${{ runner.temp }}\vcpkg"
         git pull
 
-    # Retry logic for rate-limited downloads
     - name: Install C++ deps via vcpkg (retry on 429)
       shell: cmd
       run: |
@@ -205,7 +204,7 @@ jobs:
         run: ls -lR dist
 
       - name: Install tomllib (if needed)
-        run: python3 -m pip install toml  # needed only if you want to support Python <3.11
+        run: python3 -m pip install toml 
 
       - name: Extract version from pyproject.toml
         id: get_version
@@ -222,6 +221,10 @@ jobs:
           git tag v${{ env.VERSION }}
           git push origin v${{ env.VERSION }}
 
+      - name: Flatten wheel artifacts to top-level dist/
+        run: |
+          find dist -name '*.whl' -exec mv {} dist/ \;
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -230,6 +233,7 @@ jobs:
           name:  Release v${{ env.VERSION }}
           body:  Automated CI build & wheel
           artifacts: 'dist/*.whl'
+
 
   pypi-publish:
     needs: release
