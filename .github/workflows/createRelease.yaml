@@ -190,7 +190,7 @@ jobs:
           VCPKG_TOOLCHAIN_FILE: ${{ env.VCPKG_TOOLCHAIN_FILE }}
           VCPKG_TARGET_TRIPLET: ${{ env.VCPKG_TARGET_TRIPLET }}
           CMAKE_PREFIX_PATH:    ${{ env.CMAKE_PREFIX_PATH }}
-        run: python -m pip wheel . --no-deps -w dist
+        run: python -m pip wheel . --no-deps -w dist -v
 
       - name: List dist folder
         run: ls -l dist
