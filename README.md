@@ -13,10 +13,10 @@
 The name **CeLux** comes from the Latin words _celer_ (speed) and _lux_ (light), reflecting its commitment to speed and efficiency.
 
 
-# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-063)
+# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-0651)
 
-- 🎶 **Simplified Audio Encoding**: Call `encode_audio_tensor()` with a full PCM tensor—CeLux handles chunking, float‑conversion, and PTS automatically.
-- **Reduced Complexity of API, Adjusted Color Conversion** for more accurate HWC workflows.
+- Removed DLLS, Adjusted CI/CD
+- Added linux build
 
 ## 📚 Documentation
 
