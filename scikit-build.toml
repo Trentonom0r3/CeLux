@@ -1,0 +1,9 @@
+[build]
+cmake.minimum-version = "3.23"
+
+# Pass the toolchain and triplet from environment variables set by CI
+cmake.args = [
+  "-DCMAKE_TOOLCHAIN_FILE=$VCPKG_TOOLCHAIN_FILE",
+  "-DVCPKG_TARGET_TRIPLET=$VCPKG_TARGET_TRIPLET",
+  "-DCELUX_BUILD_PYTHON=ON"
+]

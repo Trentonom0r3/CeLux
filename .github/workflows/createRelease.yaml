@@ -19,7 +19,9 @@ env:
 jobs:
   build-windows:
     runs-on: windows-latest
-
+    env:
+      VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
+      VCPKG_TARGET_TRIPLET: x64-windows
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -101,6 +103,9 @@ jobs:
   
   build-linux:
     runs-on: ubuntu-latest
+    env:
+      VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+      VCPKG_TARGET_TRIPLET: x64-linux-dynamic
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -204,7 +209,7 @@ jobs:
         run: ls -lR dist
 
       - name: Install tomllib (if needed)
-        run: python3 -m pip install toml 
+        run: python3 -m pip install toml Z
 
       - name: Extract version from pyproject.toml
         id: get_version
