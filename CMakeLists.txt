@@ -196,6 +196,40 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
   endforeach()
 endif()
 
+if(UNIX AND NOT APPLE AND CELUX_BUILD_PYTHON)
+  # -- where vcpkg puts its .so’s for x64-linux-dynamic
+  if(DEFINED ENV{VCPKG_ROOT})
+    set(VCPKG_LIB "$ENV{VCPKG_ROOT}/installed/x64-linux-dynamic/lib")
+  else()
+    set(VCPKG_LIB "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-linux-dynamic/lib")
+  endif()
+
+  set(CEFLUX_SO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/celux")
+
+  # glob all the .so files we depend on
+  file(GLOB CEFLUX_SOS
+    "${VCPKG_LIB}/libavcodec.so*"
+    "${VCPKG_LIB}/libavformat.so*"
+    "${VCPKG_LIB}/libavutil.so*"
+    "${VCPKG_LIB}/libswscale.so*"
+    "${VCPKG_LIB}/libswresample.so*"
+    "${VCPKG_LIB}/libx264.so*"
+    "${VCPKG_LIB}/libx265.so*"
+    "${VCPKG_LIB}/libfmt.so*"
+    "${VCPKG_LIB}/libspdlog.so*"
+  )
+
+  foreach(sofile ${CEFLUX_SOS})
+    add_custom_command(TARGET celux POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${sofile}"
+        "${CEFLUX_SO_DIR}"
+      COMMENT "Copying dependency .so: ${sofile} → ${CEFLUX_SO_DIR}"
+    )
+  endforeach()
+endif()
+
+
 include(GNUInstallDirs)
 install(TARGETS CeLuxLib EXPORT CeLuxTargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -102,15 +102,10 @@ jobs:
         VCPKG_ROOT: ${{ runner.temp }}\vcpkg
         VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
         VCPKG_TARGET_TRIPLET: x64-windows
-        CMAKE_ARGS: >-
-          -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
-          -DVCPKG_TARGET_TRIPLET=x64-windows
-          -DCMAKE_BUILD_TYPE=Release
-          -DPython3_EXECUTABLE=${{ env.PYTHON_LOCATION }}\python.exe
-          -DPython3_ROOT_DIR=${{ env.PYTHON_LOCATION }}
-      run: |
-        python -m pip wheel . --no-deps -w dist -v
-
+        CMAKE_PREFIX_PATH: ${{ runner.temp }}\vcpkg\installed\x64-windows
+        CMAKE_MODULE_PATH: ${{ runner.temp }}\vcpkg\installed\x64-windows\share\ffmpeg
+        PYTHON_LOCATION: ${{ env.pythonLocation }}
+      run: python -m pip wheel . --no-deps -w dist -v
 
     - name: List dist folder
       shell: cmd
@@ -212,7 +207,6 @@ jobs:
             -DCMAKE_PREFIX_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic
             -DCMAKE_MODULE_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
         run: python -m pip wheel . --no-deps -w dist -v
-
 
       - name: List dist folder
         run: ls -l dist
