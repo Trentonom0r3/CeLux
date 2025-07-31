@@ -97,20 +97,18 @@ jobs:
       run: cmake --build out\build\Release --config Release
 
     - name: Build Windows wheel
-      shell: cmd
+      shell: bash            # ← use bash on windows
       env:
-        VCPKG_ROOT: ${{ runner.temp }}\vcpkg
-        VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
-        VCPKG_TARGET_TRIPLET: x64-windows
+        VCPKG_ROOT:          ${{ runner.temp }}/vcpkg
+        VCPKG_TOOLCHAIN_FILE:${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        VCPKG_TARGET_TRIPLET:x64-windows
 
-        # now feed scikit-build the actual, expanded flags
-        CMAKE_ARGS: >-
-          -DCMAKE_TOOLCHAIN_FILE=%VCPKG_TOOLCHAIN_FILE%
-          -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET%
-          -DCMAKE_PREFIX_PATH=%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%
-          -DCMAKE_MODULE_PATH=%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%\share\ffmpeg
-
-        PYTHON_LOCATION: ${{ env.pythonLocation }}
+        # this is what scikit-build-core actually reads
+        SKBUILD_CMAKE_ARGS: >-
+          -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/vcpkg/installed/x64-windows
+          -DCMAKE_MODULE_PATH=${{ runner.temp }}/vcpkg/installed/x64-windows/share/ffmpeg
 
       run: python -m pip wheel . --no-deps -w dist -v
 
