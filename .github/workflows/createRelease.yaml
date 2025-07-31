@@ -187,12 +187,13 @@ jobs:
 
       - name: Build Linux wheel
         env:
-          VCPKG_ROOT:          ${{ env.VCPKG_ROOT }}
+          VCPKG_ROOT:           ${{ env.VCPKG_ROOT }}
           VCPKG_TOOLCHAIN_FILE: ${{ env.VCPKG_TOOLCHAIN_FILE }}
           VCPKG_TARGET_TRIPLET: ${{ env.VCPKG_TARGET_TRIPLET }}
-          CMAKE_PREFIX_PATH:    ${{ env.CMAKE_PREFIX_PATH }}:${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
+          CMAKE_ARGS: >-
+            -DCMAKE_PREFIX_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic
+            -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_TOOLCHAIN_FILE }}
         run: python -m pip wheel . --no-deps -w dist -v
-
 
       - name: List dist folder
         run: ls -l dist
