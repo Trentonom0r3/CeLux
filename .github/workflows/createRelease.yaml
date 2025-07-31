@@ -190,8 +190,9 @@ jobs:
           VCPKG_ROOT:          ${{ env.VCPKG_ROOT }}
           VCPKG_TOOLCHAIN_FILE: ${{ env.VCPKG_TOOLCHAIN_FILE }}
           VCPKG_TARGET_TRIPLET: ${{ env.VCPKG_TARGET_TRIPLET }}
-          CMAKE_PREFIX_PATH:    ${{ env.CMAKE_PREFIX_PATH }}
+          CMAKE_PREFIX_PATH:    ${{ env.CMAKE_PREFIX_PATH }}:${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
         run: python -m pip wheel . --no-deps -w dist -v
+
 
       - name: List dist folder
         run: ls -l dist
