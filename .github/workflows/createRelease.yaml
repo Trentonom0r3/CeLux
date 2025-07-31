@@ -57,12 +57,17 @@ jobs:
         cd "${{ runner.temp }}\vcpkg"
         git pull
 
-    # Set VCPKG env vars for all next steps
     - name: Set VCPKG env vars
       shell: bash
       run: |
+        echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg"                          >> $GITHUB_ENV
         echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-        echo "VCPKG_TARGET_TRIPLET=x64-windows" >> $GITHUB_ENV
+        echo "VCPKG_TARGET_TRIPLET=x64-windows"                        >> $GITHUB_ENV
+
+        # mirror your Linux CMAKE_PREFIX_PATH / MODULE_PATH so FFmpeg etc are found
+        echo "CMAKE_PREFIX_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-windows"                       >> $GITHUB_ENV
+        echo "CMAKE_MODULE_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-windows/share/ffmpeg"          >> $GITHUB_ENV
+
         
     - name: Install C++ deps via vcpkg (retry on 429)
       shell: cmd
@@ -93,6 +98,7 @@ jobs:
 
     - name: Build Windows wheel
       shell: cmd
+
       run: |
         python -m pip wheel . --no-deps -w dist
 
