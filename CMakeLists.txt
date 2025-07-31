@@ -236,7 +236,7 @@ install(FILES
 
 if(CELUX_BUILD_PYTHON)
   install(TARGETS celux
-          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/celux)
+          LIBRARY DESTINATION celux)
 endif()
 
 # debug dump of the variables we care about
