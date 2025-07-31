@@ -233,6 +233,12 @@ install(FILES
         # ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi   # If you have a .pyi file!
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
   )
+
+if(CELUX_BUILD_PYTHON)
+  install(TARGETS celux
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/celux)
+endif()
+
 # debug dump of the variables we care about
 message(STATUS "---- CMake Debug Dump ----")
 message(STATUS "  CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE}")
