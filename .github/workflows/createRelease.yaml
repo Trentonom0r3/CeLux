@@ -98,9 +98,19 @@ jobs:
 
     - name: Build Windows wheel
       shell: cmd
-
+      env:
+        VCPKG_ROOT: ${{ runner.temp }}\vcpkg
+        VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
+        VCPKG_TARGET_TRIPLET: x64-windows
+        CMAKE_ARGS: >-
+          -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}\vcpkg\scripts\buildsystems\vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DCMAKE_BUILD_TYPE=Release
+          -DPython3_EXECUTABLE=${{ env.PYTHON_LOCATION }}\python.exe
+          -DPython3_ROOT_DIR=${{ env.PYTHON_LOCATION }}
       run: |
-        python -m pip wheel . --no-deps -w dist
+        python -m pip wheel . --no-deps -w dist -v
+
 
     - name: List dist folder
       shell: cmd
