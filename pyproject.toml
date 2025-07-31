@@ -1,13 +1,3 @@
-# Tell scikit‐build how to invoke CMake
-[build]
-cmake.minimum-version = "3.23"
-cmake.args = [
-  "-DCMAKE_TOOLCHAIN_FILE=$VCPKG_TOOLCHAIN_FILE",
-  "-DVCPKG_TARGET_TRIPLET=$VCPKG_TARGET_TRIPLET",
-  "-DCMAKE_PREFIX_PATH=$VCPKG_ROOT/installed/$VCPKG_TARGET_TRIPLET",
-  "-DCMAKE_MODULE_PATH=$VCPKG_ROOT/installed/$VCPKG_TARGET_TRIPLET/share/ffmpeg",
-  "-DCELUX_BUILD_PYTHON=ON",
-]
 [build-system]
 requires = ["scikit-build-core", "pybind11", "wheel"]
 build-backend = "scikit_build_core.build"
@@ -36,3 +26,11 @@ Repository = "https://github.com/Trentonom0r3/celux"
 Documentation = "https://github.com/Trentonom0r3/celux/blob/master/README.md"
 Changelog = "https://github.com/Trentonom0r3/celux/blob/master/docs/CHANGELOG.md"
 Issues = "https://github.com/Trentonom0r3/celux/issues"
+
+[tool.scikit-build]
+cmake.args = [
+  "-DCMAKE_TOOLCHAIN_FILE=$ENV{VCPKG_TOOLCHAIN_FILE}",
+  "-DVCPKG_TARGET_TRIPLET=$ENV{VCPKG_TARGET_TRIPLET}",
+  "-DCMAKE_PREFIX_PATH=$ENV{VCPKG_ROOT}/installed/$ENV{VCPKG_TARGET_TRIPLET}",
+  "-DCMAKE_MODULE_PATH=$ENV{VCPKG_ROOT}/installed/$ENV{VCPKG_TARGET_TRIPLET}/share/ffmpeg"
+]
