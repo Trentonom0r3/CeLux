@@ -133,23 +133,13 @@ jobs:
             -v "${{ github.workspace }}":/io \
             -w /io \
             quay.io/pypa/manylinux2014_x86_64 \
-            bash -l -c "\
-              # 1) Use the CPython 3.13 already in the manylinux image
-              export PATH=/opt/python/cp313-cp313/bin:\$PATH && \
+            bash -lc '\
+              export PATH=/opt/python/cp313-cp313/bin:$PATH && \
               ln -sf /opt/python/cp313-cp313/bin/python3 /usr/bin/python3 && \
-              \
-              # 2) Install system deps (zip/unzip/tar for vcpkg) \
               yum install -y which git gcc gcc-c++ make nasm curl zip unzip tar && \
-              \
-              # 3) Bootstrap & install your C++ libs via vcpkg \
               git clone https://github.com/microsoft/vcpkg.git /io/vcpkg && \
               /io/vcpkg/bootstrap-vcpkg.sh -disableMetrics && \
-              /io/vcpkg/vcpkg install \
-                spdlog fmt \
-                ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] \
-                --triplet x64-linux-dynamic --recurse && \
-              \
-              # 4) Configure & build your project \
+              /io/vcpkg/vcpkg install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse && \
               mkdir build && cd build && \
               cmake .. \
                 -DCMAKE_BUILD_TYPE=Release \
@@ -158,11 +148,9 @@ jobs:
                 -DPython3_EXECUTABLE=$(which python3) \
                 -DPython3_ROOT_DIR=$(dirname $(dirname $(which python3))) && \
               cmake --build . --config Release && \
-              \
-              # 5) Wheel & repair it to manylinux2014 \
               python3 -m pip wheel /io -w /io/wheelhouse && \
               pip install auditwheel && \
-              auditwheel repair /io/wheelhouse/*.whl -w /io/dist"
+              auditwheel repair /io/wheelhouse/*.whl -w /io/dist'
 
       - name: Upload Linux wheel
         uses: actions/upload-artifact@v4
