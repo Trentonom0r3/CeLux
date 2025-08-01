@@ -97,7 +97,7 @@ jobs:
       run: cmake --build out\build\Release --config Release
 
     - name: Build Windows wheel
-      shell: cmd
+      shell: bash
       env:
         # point everything at the runner.temp/vcpkg tree…
         VCPKG_ROOT:            ${{ runner.temp }}/vcpkg
