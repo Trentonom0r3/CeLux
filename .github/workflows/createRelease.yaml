@@ -129,104 +129,46 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install build essentials
-        run: sudo apt-get update && sudo apt-get install -y nasm
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - name: Purge vcpkg to force clean shared build
-        run: rm -rf ${{ runner.temp }}/vcpkg
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Upgrade pip & install deps
+      - name: Build & repair wheel in manylinux2014 container
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install pybind11 torch
-
-      - name: Restore vcpkg cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ runner.temp }}/vcpkg
-            ${{ runner.temp }}/vcpkg_installed
-          key: vcpkg-linux-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
-
-      - name: Bootstrap vcpkg
-        run: |
-          if [ ! -d "${{ runner.temp }}/vcpkg" ]; then
-            git clone https://github.com/microsoft/vcpkg.git "${{ runner.temp }}/vcpkg"
-          fi
-          "${{ runner.temp }}/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-
-      - name: Update vcpkg ports
-        run: |
-          cd "${{ runner.temp }}/vcpkg"
-          git pull
-
-      - name: Set VCPKG env vars
-        shell: bash
-        run: |
-          echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg" >> $GITHUB_ENV
-          echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-          echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic" >> $GITHUB_ENV
-          PREFIX_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-linux-dynamic
-          echo "CMAKE_PREFIX_PATH=${PREFIX_PATH}:${PREFIX_PATH}/share/ffmpeg" >> $GITHUB_ENV
-      
-      - name: Install C++ deps via vcpkg (retry on 429)
-        run: |
-          for i in 1 2 3; do
-            "${{ runner.temp }}/vcpkg/vcpkg" install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse && break || sleep 30
-          done
-
-      - name: Set PYTHON_LOCATION env
-        run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
-
-      - name: Configure CMake (Release)
-        run: |
-          cmake -S . -B out/build/Release \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=ON \
-            -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-            -DCELUX_BUILD_PYTHON=ON \
-            -DPython3_EXECUTABLE="${{ env.PYTHON_LOCATION }}/bin/python3" \
-            -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}" \
-            -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
-
-      - name: Build all (Release)
-        run: cmake --build out/build/Release --config Release
-
-      - name: Build Linux wheel
-        env:
-          VCPKG_ROOT: ${{ runner.temp }}/vcpkg
-          VCPKG_TOOLCHAIN_FILE: ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-          VCPKG_TARGET_TRIPLET: x64-linux-dynamic
-          CMAKE_ARGS: >-
-            -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-            -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
-            -DCMAKE_PREFIX_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic
-            -DCMAKE_MODULE_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
-        run: python -m pip wheel . --no-deps -w dist -v
-
-      - name: Install auditwheel & repair to manylinux
-        run: |
-          python -m pip install auditwheel
-          auditwheel repair dist/*.whl \
-            --plat manylinux2014_x86_64 \
-            --exclude libtorch_cpu.so \
-            --exclude libc10.so \
-            --exclude libtorch_python.so \
-            -w dist/dist
-
-      - name: List repaired wheels
-        run: ls -l dist/dist
+          # mount the source and build dependencies into the container
+          docker run --rm \
+            -v "${{ github.workspace }}":/io \
+            -w /io \
+            quay.io/pypa/manylinux2014_x86_64 \
+            bash -l -c "\
+              # inside container: install system deps, vcpkg, etc.
+              yum install -y which git gcc gcc-c++ make nasm && \
+              git clone https://github.com/microsoft/vcpkg.git /io/vcpkg && \
+              /io/vcpkg/bootstrap-vcpkg.sh -disableMetrics && \
+              # install your ffmpeg, spdlog, fmt via vcpkg
+              /io/vcpkg/vcpkg install \
+                spdlog fmt \
+                ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] \
+                --triplet x64-linux-dynamic --recurse && \
+              # configure & build
+              mkdir build && cd build && \
+              cmake .. \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_TOOLCHAIN_FILE=/io/vcpkg/scripts/buildsystems/vcpkg.cmake \
+                -DCELUX_BUILD_PYTHON=ON \
+                -DPython3_EXECUTABLE=$(which python3) \
+                -DPython3_ROOT_DIR=$(dirname $(dirname $(which python3))) && \
+              cmake --build . --config Release && \
+              # build wheel
+              python3 -m pip wheel /io -w /io/wheelhouse && \
+              # repair it so it’s manylinux2014 compliant
+              pip install auditwheel && \
+              auditwheel repair /io/wheelhouse/*.whl -w /io/dist"
 
       - name: Upload Linux wheel
         uses: actions/upload-artifact@v4
         with:
           name: linux-wheel-Release
-          path: 'dist/dist/*.whl'
+          path: dist/*.whl
 
 
   release:
