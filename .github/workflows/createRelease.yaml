@@ -126,7 +126,19 @@ jobs:
           -DCMAKE_MODULE_PATH=D:/a/_temp/vcpkg/installed/x64-windows/share/ffmpeg
 
       run: python -m pip wheel . --no-deps -w dist -v
-
+  
+    - name: Repack wheel with DLLs
+      shell: bash
+      run: |
+        WHL=$(ls dist/*.whl)
+        unzip "$WHL" -d tmp_wheel
+        cp celux/*.dll tmp_wheel/celux/    # copy your DLLs
+        (cd tmp_wheel && zip -r "../repacked-${WHL##*/}" .)
+        mv "dist/repacked-${WHL##*/}" dist/
+    
+    - name: List final wheel contents
+      run: unzip -l dist/*.whl | grep celux/
+      
     - name: List dist folder
       shell: cmd
       run: dir dist
