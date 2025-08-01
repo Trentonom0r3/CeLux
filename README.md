@@ -43,6 +43,13 @@ The name **CeLux** comes from the Latin words _celer_ (speed) and _lux_ (light),
 pip install celux
 ```
 
+**FOR LINUX**
+- Download the most recent release (.whl)
+
+```bash
+pip install ./*.whl
+```
+
 ```python
 from celux import VideoReader
 import torch
