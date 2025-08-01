@@ -13,10 +13,10 @@
 The name **CeLux** comes from the Latin words _celer_ (speed) and _lux_ (light), reflecting its commitment to speed and efficiency.
 
 
-# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-0651)
+# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-066)
 
-- Removed DLLS, Adjusted CI/CD
-- Added linux build
+- Having issues with Linux push to Pypi, must get from releases to work.
+- Fixed dll issues with windows version
 
 ## 📚 Documentation
 
@@ -56,7 +56,7 @@ with reader.create_encoder("/path/to/output.mp4") as enc:
     # 2) If there’s audio, hand off the entire PCM in one go:
     if reader.has_audio:
         pcm = reader.audio.tensor().to(torch.int16)
-        enc.encode_audio_tensor(pcm)
+        enc.encode_audio_frame(pcm)
 
 print("Done!")
 ```
