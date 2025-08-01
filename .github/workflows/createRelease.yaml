@@ -106,10 +106,10 @@ jobs:
 
         # now supply _concrete_ CMake args (no %…% or $ENV{…})
         CMAKE_ARGS: >-
-          -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DCMAKE_TOOLCHAIN_FILE=D:/a/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake
           -DVCPKG_TARGET_TRIPLET=x64-windows
-          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/vcpkg/installed/x64-windows
-          -DCMAKE_MODULE_PATH=${{ runner.temp }}/vcpkg/installed/x64-windows/share/ffmpeg
+          -DCMAKE_PREFIX_PATH=D:/a/_temp/vcpkg/installed/x64-windows
+          -DCMAKE_MODULE_PATH=D:/a/_temp/vcpkg/installed/x64-windows/share/ffmpeg
 
       run: python -m pip wheel . --no-deps -w dist -v
 
