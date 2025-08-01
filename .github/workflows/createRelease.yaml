@@ -302,31 +302,31 @@ jobs:
           body:  Automated CI build & wheel
           artifacts: 'dist/*.whl'
 
-pypi-publish:
-  needs: release
-  runs-on: ubuntu-latest
-  if: github.ref == 'refs/heads/master'
-  steps:
-    - name: Download Wheels
-      uses: actions/download-artifact@v4
-      with:
-        name: linux-wheel-Release
-        path: dist
-    - name: Download Windows Wheels
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-wheel-Release
-        path: dist
+  pypi-publish:
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Download Wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-wheel-Release
+          path: dist
+      - name: Download Windows Wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-wheel-Release
+          path: dist
 
-    - name: Remove Linux wheels before PyPI upload
-      run: |
-        echo "Removing Linux wheels from dist before PyPI upload..."
-        find dist -name '*linux*.whl' -exec rm {} +
+      - name: Remove Linux wheels before PyPI upload
+        run: |
+          echo "Removing Linux wheels from dist before PyPI upload..."
+          find dist -name '*linux*.whl' -exec rm {} +
 
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@v1.4.2
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_TOKEN }}
-        skip_existing: true
-        packages_dir: dist/dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.2
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          skip_existing: true
+          packages_dir: dist/dist
