@@ -122,7 +122,7 @@ jobs:
       with:
         name: windows-wheel-Release
         path: '**/dist/*.whl'
-  
+        
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -171,9 +171,7 @@ jobs:
           echo "VCPKG_ROOT=${RUNNER_TEMP}/vcpkg" >> $GITHUB_ENV
           echo "VCPKG_TOOLCHAIN_FILE=${RUNNER_TEMP}/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
           echo "VCPKG_TARGET_TRIPLET=x64-linux-dynamic" >> $GITHUB_ENV
-  
           PREFIX_PATH=${RUNNER_TEMP}/vcpkg/installed/x64-linux-dynamic
-  
           echo "CMAKE_PREFIX_PATH=${PREFIX_PATH}:${PREFIX_PATH}/share/ffmpeg" >> $GITHUB_ENV
       
       - name: Install C++ deps via vcpkg (retry on 429)
@@ -184,9 +182,6 @@ jobs:
 
       - name: Set PYTHON_LOCATION env
         run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
-
-      - name: List vcpkg FFMPEG libs for debug
-        run: ls -l ${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/lib/
 
       - name: Configure CMake (Release)
         run: |
@@ -214,19 +209,25 @@ jobs:
             -DCMAKE_MODULE_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
         run: python -m pip wheel . --no-deps -w dist -v
 
-      - name: List dist folder
-        run: ls -l dist
+      - name: Install auditwheel & repair to manylinux
+        run: |
+          python -m pip install auditwheel
+          auditwheel repair dist/*.whl \
+            --plat manylinux2014_x86_64 \
+            --exclude libtorch_cpu.so \
+            --exclude libc10.so \
+            --exclude libtorch_python.so \
+            -w dist/dist
+
+      - name: List repaired wheels
+        run: ls -l dist/dist
 
       - name: Upload Linux wheel
         uses: actions/upload-artifact@v4
         with:
           name: linux-wheel-Release
-          path: '**/dist/*.whl'
-          
-      - name: Install auditwheel and repair
-        run: |
-          python -m pip install auditwheel
-          auditwheel repair dist/*.whl -w dist/dist
+          path: 'dist/dist/*.whl'
+
 
   release:
     needs: [build-windows, build-linux]
