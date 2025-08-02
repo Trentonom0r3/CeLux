@@ -19,7 +19,8 @@ env:
 jobs:
   build-windows:
     runs-on: windows-latest
-
+    env:
+      VCPKG_TARGET_TRIPLET: x64-windows       # ← define this here so cache key sees it
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -34,14 +35,16 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install pybind11 torch
 
-    - name: Restore vcpkg cache
+    - name: Cache vcpkg build & installs
       uses: actions/cache@v4
       with:
         path: |
           ${{ runner.temp }}/vcpkg
-          ${{ runner.temp }}/vcpkg_installed
-          C:\Users\runneradmin\AppData\Local\vcpkg\archives
-        key: vcpkg-windows-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
+          ${{ runner.temp }}/vcpkg/installed
+          ${{ runner.temp }}/vcpkg/archives
+        key: vcpkg-${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-${{ hashFiles('vcpkg.json','vcpkg-lock.json') }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-
 
     - name: Bootstrap vcpkg
       shell: powershell
@@ -82,33 +85,16 @@ jobs:
       run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
       shell: bash
 
-    - name: Configure CMake (Release)
-      shell: cmd
-      run: |
-        cmake -S . -B out\build\Release -G "Visual Studio 17 2022" -A x64 ^
-          -DCMAKE_BUILD_TYPE=Release ^
-          -DCMAKE_TOOLCHAIN_FILE="%RUNNER_TEMP%\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
-          -DCELUX_BUILD_PYTHON=ON ^
-          -DPython3_EXECUTABLE="%PYTHON_LOCATION%\python.exe" ^
-          -DPython3_ROOT_DIR="%PYTHON_LOCATION%"
-
-    - name: Build all (Release)
-      shell: cmd
-      run: cmake --build out\build\Release --config Release
 
     - name: Build Windows wheel
       shell: bash
       env:
-        # force scikit-build to use a single‐config generator so installs go
-        # straight into celux/ (no Release/ subfolder)
         SKBUILD_GENERATOR: Ninja
     
-        # point at your vcpkg tree
         VCPKG_ROOT:            ${{ runner.temp }}/vcpkg
         VCPKG_TOOLCHAIN_FILE:  ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
         VCPKG_TARGET_TRIPLET:  x64-windows
     
-        # any extra CMake args you still need
         CMAKE_ARGS: >-
           -DCMAKE_TOOLCHAIN_FILE=D:/a/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake
           -DVCPKG_TARGET_TRIPLET=x64-windows
@@ -117,7 +103,15 @@ jobs:
     
       run: python -m pip wheel . --no-deps -w dist -v
 
-    
+    - name: Smoke-test wheel in current env
+      shell: bash
+      run: |
+        # reinstall into the same env (which already has torch)
+        python -m pip install --upgrade --force-reinstall dist/*.whl
+
+        # quick import check
+        python -c "import torch, celux; print(f'✅ torch {torch.__version__}, celux {celux.__version__}')"
+
     - name: List final wheel contents
       run: unzip -l dist/*.whl | grep celux/
       
@@ -133,6 +127,8 @@ jobs:
   
   build-linux:
     runs-on: ubuntu-latest
+    env:
+      VCPKG_TARGET_TRIPLET: x64-linux-dynamic 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -153,13 +149,16 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install pybind11 torch
 
-      - name: Restore vcpkg cache
+      - name: Cache vcpkg build & installs
         uses: actions/cache@v4
         with:
           path: |
             ${{ runner.temp }}/vcpkg
-            ${{ runner.temp }}/vcpkg_installed
-          key: vcpkg-linux-${{ runner.os }}-${{ hashFiles('**/vcpkg.json') }}
+            ${{ runner.temp }}/vcpkg/installed
+            ${{ runner.temp }}/vcpkg/archives
+          key: vcpkg-${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-${{ hashFiles('vcpkg.json','vcpkg-lock.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-
 
       - name: Bootstrap vcpkg
         run: |
@@ -193,23 +192,6 @@ jobs:
       - name: Set PYTHON_LOCATION env
         run: echo "PYTHON_LOCATION=${{ env.pythonLocation }}" >> $GITHUB_ENV
 
-      - name: List vcpkg FFMPEG libs for debug
-        run: ls -l ${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/lib/
-
-      - name: Configure CMake (Release)
-        run: |
-          cmake -S . -B out/build/Release \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=ON \
-            -DCMAKE_TOOLCHAIN_FILE="${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake" \
-            -DCELUX_BUILD_PYTHON=ON \
-            -DPython3_EXECUTABLE="${{ env.PYTHON_LOCATION }}/bin/python3" \
-            -DPython3_ROOT_DIR="${{ env.PYTHON_LOCATION }}" \
-            -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
-
-      - name: Build all (Release)
-        run: cmake --build out/build/Release --config Release
-
       - name: Build Linux wheel
         env:
           VCPKG_ROOT: ${{ runner.temp }}/vcpkg
@@ -221,6 +203,15 @@ jobs:
             -DCMAKE_PREFIX_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic
             -DCMAKE_MODULE_PATH=${{ runner.temp }}/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
         run: python -m pip wheel . --no-deps -w dist -v
+
+      - name: Smoke-test wheel in current env
+        shell: bash
+        run: |
+          # reinstall into the same env (torch is already present)
+          python -m pip install --upgrade --force-reinstall dist/*.whl
+
+          # quick import check
+          python -c "import torch, celux; print(f'✅ torch {torch.__version__}, celux {celux.__version__}')"
 
       - name: List dist folder
         run: ls -l dist

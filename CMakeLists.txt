@@ -37,8 +37,8 @@ endif()
 find_package(FFMPEG REQUIRED COMPONENTS avcodec avformat avutil avfilter
                                   swscale swresample avdevice)
 
-set(CEFLUX_FFMPEG_LIBS ${FFMPEG_LIBRARIES})
-set(CEFLUX_FFMPEG_INCS ${FFMPEG_INCLUDE_DIRS})
+set(CELUX_FFMPEG_LIBS ${FFMPEG_LIBRARIES})
+set(CELUX_FFMPEG_INCS ${FFMPEG_INCLUDE_DIRS})
 
 if(CELUX_BUILD_PYTHON)
   find_package(Python3 3.13 REQUIRED COMPONENTS Interpreter Development)
@@ -49,8 +49,8 @@ if(CELUX_BUILD_PYTHON)
   find_package(pybind11 CONFIG)
   if(pybind11_FOUND)
     message(STATUS "pybind11 (CMake): ${pybind11_VERSION}")
-    set(CEFLUX_PYBIND11_INCS ${pybind11_INCLUDE_DIRS})
-    set(CEFLUX_PYBIND11_LIBS pybind11::module)
+    set(CELUX_PYBIND11_INCS ${pybind11_INCLUDE_DIRS})
+    set(CELUX_PYBIND11_LIBS pybind11::module)
   else()
     message(STATUS "pybind11 not found via CMake; falling back to pip headers")
     execute_process(
@@ -62,47 +62,47 @@ if(CELUX_BUILD_PYTHON)
     message(STATUS "Python site-packages: ${Python3_SITE_PACKAGES}")
 
     if(WIN32)
-      set(CEFLUX_PYBIND11_INCS
+      set(CELUX_PYBIND11_INCS
           "${Python3_SITE_PACKAGES}/Lib/site-packages/pybind11/include")
     else()
-      set(CEFLUX_PYBIND11_INCS
+      set(CELUX_PYBIND11_INCS
           "${Python3_SITE_PACKAGES}/pybind11/include")
     endif()
-    set(CEFLUX_PYBIND11_LIBS "")
-    if(NOT EXISTS "${CEFLUX_PYBIND11_INCS}/pybind11/pybind11.h")
+    set(CELUX_PYBIND11_LIBS "")
+    if(NOT EXISTS "${CELUX_PYBIND11_INCS}/pybind11/pybind11.h")
       message(FATAL_ERROR "pybind11 headers missing; run: pip install pybind11")
     endif()
   endif()
 
   # -- PyTorch paths (platform-specific) --
   if(WIN32)
-    set(CEFLUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/lib")
-    set(CEFLUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/include")
+    set(CELUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/lib")
+    set(CELUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/Lib/site-packages/torch/include")
   else()
-    set(CEFLUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/torch/lib")
-    set(CEFLUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/torch/include")
+    set(CELUX_PYTORCH_LIBDIR "${Python3_SITE_PACKAGES}/torch/lib")
+    set(CELUX_PYTORCH_INCLUDEDIR "${Python3_SITE_PACKAGES}/torch/include")
   endif()
 
   # Main headers: torch/include and torch/include/torch/csrc/api/include
   include_directories(
-    ${CEFLUX_PYTORCH_INCLUDEDIR}
-    ${CEFLUX_PYTORCH_INCLUDEDIR}/torch/csrc/api/include
-    ${CEFLUX_PYTORCH_INCLUDEDIR}
+    ${CELUX_PYTORCH_INCLUDEDIR}
+    ${CELUX_PYTORCH_INCLUDEDIR}/torch/csrc/api/include
+    ${CELUX_PYTORCH_INCLUDEDIR}
   )
   # Add the lib directory to the linker
-  link_directories(${CEFLUX_PYTORCH_LIBDIR})
+  link_directories(${CELUX_PYTORCH_LIBDIR})
 
-  message(STATUS "Using Python site-packages torch headers: ${CEFLUX_PYTORCH_INCLUDEDIR}")
-  message(STATUS "Using Python site-packages torch libs:    ${CEFLUX_PYTORCH_LIBDIR}")
+  message(STATUS "Using Python site-packages torch headers: ${CELUX_PYTORCH_INCLUDEDIR}")
+  message(STATUS "Using Python site-packages torch libs:    ${CELUX_PYTORCH_LIBDIR}")
 endif()
 
-file(GLOB_RECURSE CEFLUX_SOURCES
+file(GLOB_RECURSE CELUX_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/*.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/conversion/*.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/CeLux/backends/*.cpp
 )
 
-add_library(CeLuxLib STATIC ${CEFLUX_SOURCES})
+add_library(CeLuxLib STATIC ${CELUX_SOURCES})
 
 target_include_directories(CeLuxLib
   PUBLIC
@@ -113,12 +113,12 @@ target_include_directories(CeLuxLib
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/conversion>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/conversion/cpu>
     $<INSTALL_INTERFACE:include>
-    ${CEFLUX_FFMPEG_INCS}
+    ${CELUX_FFMPEG_INCS}
     $<$<BOOL:${CELUX_BUILD_PYTHON}>:${Python3_INCLUDE_DIRS}>
 )
 
 target_link_libraries(CeLuxLib PUBLIC
-  ${CEFLUX_FFMPEG_LIBS}
+  ${CELUX_FFMPEG_LIBS}
   spdlog::spdlog_header_only
   fmt::fmt-header_only
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
@@ -138,7 +138,7 @@ if(CELUX_BUILD_PYTHON)
   add_library(celux MODULE src/CeLux/python/Bindings.cpp)
 
   target_include_directories(celux PRIVATE
-    ${CEFLUX_PYBIND11_INCS}
+    ${CELUX_PYBIND11_INCS}
     ${Python3_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/include/CeLux/python
   )
@@ -146,7 +146,7 @@ if(CELUX_BUILD_PYTHON)
   target_link_libraries(celux PRIVATE
     CeLuxLib
     Python3::Python
-    ${CEFLUX_PYBIND11_LIBS}
+    ${CELUX_PYBIND11_LIBS}
     $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
     $<$<BOOL:${CELUX_BUILD_PYTHON}>:c10>
     $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch>
@@ -180,18 +180,18 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
   else()
     set(VCPKG_BIN "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-windows/bin")
   endif()
-  set(CEFLUX_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/celux")
-  file(GLOB CEFLUX_DLLS
+  set(CELUX_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/celux")
+  file(GLOB CELUX_DLLS
     "${VCPKG_BIN}/av*.dll"
     "${VCPKG_BIN}/sw*.dll"
     "${VCPKG_BIN}/ffmpeg*.dll"
     "${VCPKG_BIN}/libx264*.dll"
     "${VCPKG_BIN}/fmt.dll"
   )
-  foreach(dll ${CEFLUX_DLLS})
+  foreach(dll ${CELUX_DLLS})
     add_custom_command(TARGET celux POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" "${CEFLUX_DLL_DIR}"
-      COMMENT "Copying dependency DLL: ${dll} → ${CEFLUX_DLL_DIR}"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" "${CELUX_DLL_DIR}"
+      COMMENT "Copying dependency DLL: ${dll} → ${CELUX_DLL_DIR}"
     )
   endforeach()
 endif()
@@ -204,10 +204,10 @@ if(UNIX AND NOT APPLE AND CELUX_BUILD_PYTHON)
     set(VCPKG_LIB "${CMAKE_SOURCE_DIR}/vcpkg/installed/x64-linux-dynamic/lib")
   endif()
 
-  set(CEFLUX_SO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/celux")
+  set(CELUX_SO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/celux")
 
   # glob all the .so files we depend on
-  file(GLOB CEFLUX_SOS
+  file(GLOB CELUX_SOS
     "${VCPKG_LIB}/libavcodec.so*"
     "${VCPKG_LIB}/libavformat.so*"
     "${VCPKG_LIB}/libavutil.so*"
@@ -219,12 +219,12 @@ if(UNIX AND NOT APPLE AND CELUX_BUILD_PYTHON)
     "${VCPKG_LIB}/libspdlog.so*"
   )
 
-  foreach(sofile ${CEFLUX_SOS})
+  foreach(sofile ${CELUX_SOS})
     add_custom_command(TARGET celux POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${sofile}"
-        "${CEFLUX_SO_DIR}"
-      COMMENT "Copying dependency .so: ${sofile} → ${CEFLUX_SO_DIR}"
+        "${CELUX_SO_DIR}"
+      COMMENT "Copying dependency .so: ${sofile} → ${CELUX_SO_DIR}"
     )
   endforeach()
 endif()
@@ -264,22 +264,29 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
      ${CMAKE_CURRENT_SOURCE_DIR}/celux/__init__.py
         ${CMAKE_CURRENT_SOURCE_DIR}/celux/py.typed
-        # ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi   # If you have a .pyi file!
+        ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi   # If you have a .pyi file!
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
   )
 
+# ----------------------------------------------------------------------------------------------------------------------
+#— Python extension install rules (for scikit-build / pip wheel)
+# ----------------------------------------------------------------------------------------------------------------------
 if(CELUX_BUILD_PYTHON)
-  install(TARGETS celux
-          RUNTIME DESTINATION celux)
+  # 1) Install the Python module itself:
+  install(
+    TARGETS celux
+    RUNTIME  DESTINATION celux            # on Windows, .pyd + .dll are "runtime" artifacts
+    LIBRARY  DESTINATION celux            # on *nix, the .so is a "library" artifact
+    ARCHIVE  DESTINATION celux OPTIONAL   # (not used here, but harmless)
+  )
+
+  # 2) Install all the FFmpeg / fmt / x264 / x265 DLLs that you globbed earlier:
+  install(
+    FILES ${CELUX_DLLS}
+    DESTINATION celux
+  )
 endif()
 
-if(WIN32 AND CELUX_BUILD_PYTHON)
-  install(TARGETS celux
-          RUNTIME DESTINATION celux)
-
-  install(FILES ${CEFLUX_DLLS}
-          RUNTIME DESTINATION celux)
-endif()
 
 # debug dump of the variables we care about
 message(STATUS "---- CMake Debug Dump ----")
