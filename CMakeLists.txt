@@ -270,15 +270,15 @@ install(FILES
 
 if(CELUX_BUILD_PYTHON)
   install(TARGETS celux
-          LIBRARY DESTINATION celux)
+          RUNTIME DESTINATION celux)
 endif()
 
 if(WIN32 AND CELUX_BUILD_PYTHON)
   install(TARGETS celux
-          LIBRARY DESTINATION celux)
+          RUNTIME DESTINATION celux)
 
   install(FILES ${CEFLUX_DLLS}
-          DESTINATION celux)
+          RUNTIME DESTINATION celux)
 endif()
 
 # debug dump of the variables we care about
