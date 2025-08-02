@@ -196,7 +196,7 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
   endforeach()
 endif()
 
-if(UNIX AND NOT APPLE AND CELUX_BUILD_PYTHON)
+if(UNIX AND CELUX_BUILD_PYTHON)
   # -- where vcpkg puts its .so’s for x64-linux-dynamic
   if(DEFINED ENV{VCPKG_ROOT})
     set(VCPKG_LIB "$ENV{VCPKG_ROOT}/installed/x64-linux-dynamic/lib")
@@ -227,64 +227,6 @@ if(UNIX AND NOT APPLE AND CELUX_BUILD_PYTHON)
       COMMENT "Copying dependency .so: ${sofile} → ${CELUX_SO_DIR}"
     )
   endforeach()
-endif()
-
-
-include(GNUInstallDirs)
-install(TARGETS CeLuxLib EXPORT CeLuxTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(EXPORT CeLuxTargets NAMESPACE CeLux::
-  FILE CeLuxTargets.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
-)
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
-  VERSION     ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
-)
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/cmake/CeLuxConfig.cmake.in")
-  configure_package_config_file(
-    "${CMAKE_CURRENT_LIST_DIR}/cmake/CeLuxConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
-  )
-else()
-  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake"
-"@PACKAGE_INIT@\ninclude(\"${CMAKE_CURRENT_LIST_DIR}/CeLuxTargets.cmake\")\n")
-endif()
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfig.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/CeLuxConfigVersion.cmake
-     ${CMAKE_CURRENT_SOURCE_DIR}/celux/__init__.py
-        ${CMAKE_CURRENT_SOURCE_DIR}/celux/py.typed
-        ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi   # If you have a .pyi file!
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CeLux
-  )
-
-# ----------------------------------------------------------------------------------------------------------------------
-#— Python extension install rules (for scikit-build / pip wheel)
-# ----------------------------------------------------------------------------------------------------------------------
-if(CELUX_BUILD_PYTHON)
-  # 1) Install the Python module itself:
-  install(
-    TARGETS celux
-    RUNTIME  DESTINATION celux            # on Windows, .pyd + .dll are "runtime" artifacts
-    LIBRARY  DESTINATION celux            # on *nix, the .so is a "library" artifact
-    ARCHIVE  DESTINATION celux OPTIONAL   # (not used here, but harmless)
-  )
-
-  # 2) Install all the FFmpeg / fmt / x264 / x265 DLLs that you globbed earlier:
-  install(
-    FILES ${CELUX_DLLS}
-    DESTINATION celux
-  )
 endif()
 
 
