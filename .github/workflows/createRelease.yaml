@@ -96,45 +96,27 @@ jobs:
       shell: cmd
       run: cmake --build out\build\Release --config Release
 
-    - name: Flatten celux/Release → celux/ before wheel
-      shell: bash
-      run: |
-        echo "Checking for celux/Release DLLs to flatten..."
-        if [ -d "celux/Release" ]; then
-          shopt -s nullglob
-          for dll in celux/Release/*.dll; do
-            echo "Moving $dll → celux/"
-            cp -v "$dll" celux/
-          done
-        else
-          echo "No celux/Release folder found. Skipping flattening."
-        fi
-
     - name: Build Windows wheel
       shell: bash
       env:
-        # point everything at the runner.temp/vcpkg tree…
+        # force scikit-build to use a single‐config generator so installs go
+        # straight into celux/ (no Release/ subfolder)
+        SKBUILD_GENERATOR: Ninja
+    
+        # point at your vcpkg tree
         VCPKG_ROOT:            ${{ runner.temp }}/vcpkg
         VCPKG_TOOLCHAIN_FILE:  ${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
         VCPKG_TARGET_TRIPLET:  x64-windows
-
-        # now supply _concrete_ CMake args (no %…% or $ENV{…})
+    
+        # any extra CMake args you still need
         CMAKE_ARGS: >-
           -DCMAKE_TOOLCHAIN_FILE=D:/a/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake
           -DVCPKG_TARGET_TRIPLET=x64-windows
           -DCMAKE_PREFIX_PATH=D:/a/_temp/vcpkg/installed/x64-windows
           -DCMAKE_MODULE_PATH=D:/a/_temp/vcpkg/installed/x64-windows/share/ffmpeg
-
+    
       run: python -m pip wheel . --no-deps -w dist -v
-  
-    - name: Repack wheel with DLLs
-      shell: bash
-      run: |
-        WHL=$(ls dist/*.whl)
-        unzip "$WHL" -d tmp_wheel
-        cp celux/*.dll tmp_wheel/celux/    # copy your DLLs
-        (cd tmp_wheel && zip -r "../repacked-${WHL##*/}" .)
-        mv "dist/repacked-${WHL##*/}" dist/
+
     
     - name: List final wheel contents
       run: unzip -l dist/*.whl | grep celux/
