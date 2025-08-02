@@ -273,6 +273,14 @@ if(CELUX_BUILD_PYTHON)
           LIBRARY DESTINATION celux)
 endif()
 
+if(WIN32 AND CELUX_BUILD_PYTHON)
+  install(TARGETS celux
+          LIBRARY DESTINATION celux)
+
+  install(FILES ${CEFLUX_DLLS}
+          DESTINATION celux)
+endif()
+
 # debug dump of the variables we care about
 message(STATUS "---- CMake Debug Dump ----")
 message(STATUS "  CMAKE_TOOLCHAIN_FILE = ${CMAKE_TOOLCHAIN_FILE}")
