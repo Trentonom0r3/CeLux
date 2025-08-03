@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "celux"
-version = "0.6.6.4"
+version = "0.6.6.6"
 readme = "README.md"
 authors = [
     {name = "Trenton Flanagan", email = "spigonvids@gmail.com"},
