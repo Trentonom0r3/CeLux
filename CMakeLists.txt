@@ -155,8 +155,17 @@ if(CELUX_BUILD_PYTHON)
 
   set_target_properties(celux PROPERTIES
     PREFIX ""
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/celux
     OUTPUT_NAME "celux"
+
+    # single-config fallback
+    LIBRARY_OUTPUT_DIRECTORY        ${CMAKE_CURRENT_SOURCE_DIR}/celux
+    RUNTIME_OUTPUT_DIRECTORY        ${CMAKE_CURRENT_SOURCE_DIR}/celux
+
+    # multi-config overrides:
+    LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/celux
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/celux
+    LIBRARY_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_CURRENT_SOURCE_DIR}/celux
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_CURRENT_SOURCE_DIR}/celux
   )
   if(WIN32)
     set_target_properties(celux PROPERTIES SUFFIX ".pyd")
@@ -217,6 +226,7 @@ if(UNIX AND CELUX_BUILD_PYTHON)
     "${VCPKG_LIB}/libx265.so*"
     "${VCPKG_LIB}/libfmt.so*"
     "${VCPKG_LIB}/libspdlog.so*"
+    "${VCPKG_LIB}/libavfilter.so*"
   )
 
   foreach(sofile ${CELUX_SOS})
