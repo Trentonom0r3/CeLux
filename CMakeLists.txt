@@ -155,7 +155,7 @@ if(CELUX_BUILD_PYTHON)
 
   set_target_properties(celux PROPERTIES
     PREFIX ""
-    OUTPUT_NAME "celux"
+    OUTPUT_NAME "_celux"
 
     # single-config fallback
     LIBRARY_OUTPUT_DIRECTORY        ${CMAKE_CURRENT_SOURCE_DIR}/celux

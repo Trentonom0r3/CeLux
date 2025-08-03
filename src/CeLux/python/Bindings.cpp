@@ -7,10 +7,28 @@
 namespace py = pybind11;
 #define PYBIND11_DETAILED_ERROR_MESSAGES
 
-PYBIND11_MODULE(celux, m)
+PYBIND11_MODULE(_celux, m)
 {
     m.doc() = "celux – lightspeed video decoding into tensors";
-    m.attr("__version__") = "0.6.6.4";
+     m.attr("__version__") = "0.6.6.4";
+    m.attr("__all__") = py::make_tuple(
+        "__version__",
+        "VideoReader",
+        "VideoEncoder",
+        "Audio", "set_log_level", "LogLevel"
+    );
+        py::enum_<spdlog::level::level_enum>(m, "LogLevel")
+        .value("trace", spdlog::level::trace)
+        .value("debug", spdlog::level::debug)
+        .value("info", spdlog::level::info)
+        .value("warn", spdlog::level::warn)
+        .value("error", spdlog::level::err)
+        .value("critical", spdlog::level::critical)
+        .value("off", spdlog::level::off)
+        .export_values();
+
+    m.def("set_log_level", &celux::Logger::set_level, "Set the logging level for CeLux",
+          py::arg("level"));
     // ---------- VideoReader -----------
     py::class_<VideoReader, std::shared_ptr<VideoReader>>(m, "VideoReader")
         .def(py::init<const std::string&, int>(), py::arg("input_path"),
