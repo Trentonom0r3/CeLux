@@ -229,6 +229,17 @@ if(UNIX AND CELUX_BUILD_PYTHON)
   endforeach()
 endif()
 
+install(TARGETS celux
+  LIBRARY   DESTINATION celux   # for .so on Linux
+  RUNTIME   DESTINATION celux   # for .pyd on Windows
+)
+
+install(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/celux/__init__.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/celux/py.typed
+  ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi
+  DESTINATION celux
+)
 
 # debug dump of the variables we care about
 message(STATUS "---- CMake Debug Dump ----")
