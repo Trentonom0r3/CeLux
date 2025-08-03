@@ -108,7 +108,6 @@ jobs:
         VCPKG_TARGET_TRIPLET:  x64-windows
     
         CMAKE_ARGS: >-
-          -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_TOOLCHAIN_FILE=D:/a/_temp/vcpkg/scripts/buildsystems/vcpkg.cmake
           -DVCPKG_TARGET_TRIPLET=x64-windows
