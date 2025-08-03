@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.23)
 project(CeLux VERSION 1.0 LANGUAGES CXX)
 
+# Force only Release config for multi-config generators
+if(CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
+endif()
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD        17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
