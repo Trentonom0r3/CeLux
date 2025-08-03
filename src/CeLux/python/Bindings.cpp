@@ -9,6 +9,8 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(celux, m)
 {
+    m.doc() = "celux – lightspeed video decoding into tensors";
+    m.attr("__version__") = "0.6.6.3";
     // ---------- VideoReader -----------
     py::class_<VideoReader, std::shared_ptr<VideoReader>>(m, "VideoReader")
         .def(py::init<const std::string&, int>(), py::arg("input_path"),
