@@ -1,7 +1,10 @@
-import celux as cx
+import sys
+sys.path.append(r"D:\dev\Projects\Repos\CeLux")  # Adjust path to import celux from parent directory
+
+import celux
 import torch
 
-reader = cx.VideoReader(r"./tests/data/default/BigBuckBunny.mp4")
+reader = celux.VideoReader(r"./tests/data/default/BigBuckBunny.mp4")
 with reader.create_encoder(r"./tests/data/default/demo_output.mp4") as enc:
     # 1) Re‑encode video frames
     for frame in reader:

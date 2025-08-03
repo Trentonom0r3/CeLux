@@ -22,6 +22,11 @@ jobs:
     env:
       VCPKG_TARGET_TRIPLET: x64-windows       # ← define this here so cache key sees it
     steps:
+    - name: Purge vcpkg to force clean build (avoid old DLLs)
+      shell: cmd
+      run: |
+        if exist "%RUNNER_TEMP%\vcpkg" rmdir /s /q "%RUNNER_TEMP%\vcpkg"
+        
     - name: Checkout code
       uses: actions/checkout@v4
 
