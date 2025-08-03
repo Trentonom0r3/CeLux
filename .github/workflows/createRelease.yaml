@@ -117,14 +117,13 @@ jobs:
       run: python -m pip wheel . --no-deps -w dist -v
 
     - name: Smoke-test wheel in current env
-      continue-on-error: true
       shell: bash
       run: |
         # reinstall into the same env (which already has torch)
         python -m pip install --upgrade --force-reinstall dist/*.whl
 
         # quick import check
-        python -c "import torch, celux; print(f'✅ torch {torch.__version__}, celux {celux.__version__}')"
+        python -c "import torch, celux; print(f'torch {torch.__version__}, celux {celux.__version__}')"
 
     - name: List final wheel contents
       run: unzip -l dist/*.whl | grep celux/
@@ -134,7 +133,6 @@ jobs:
       run: dir dist
 
     - name: Upload Windows wheel
-      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: windows-wheel-Release
@@ -234,20 +232,18 @@ jobs:
         run: python -m pip wheel . --no-deps -w dist -v
 
       - name: Smoke-test wheel in current env
-        continue-on-error: true
         shell: bash
         run: |
           # reinstall into the same env (torch is already present)
           python -m pip install --upgrade --force-reinstall dist/*.whl
 
           # quick import check
-          python -c "import torch, celux; print(f'✅ torch {torch.__version__}, celux {celux.__version__}')"
+          python -c "import torch, celux; print(f'torch {torch.__version__}, celux {celux.__version__}')"
 
       - name: List dist folder
         run: ls -l dist
 
       - name: Upload Linux wheel
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: linux-wheel-Release

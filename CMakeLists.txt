@@ -197,12 +197,18 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
     "${VCPKG_BIN}/libx264*.dll"
     "${VCPKG_BIN}/fmt.dll"
   )
+  
   foreach(dll ${CELUX_DLLS})
     add_custom_command(TARGET celux POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${dll}" "${CELUX_DLL_DIR}"
       COMMENT "Copying dependency DLL: ${dll} → ${CELUX_DLL_DIR}"
     )
   endforeach()
+
+    # <-- install those same DLLs into the celux package!
+  install(FILES ${CELUX_DLLS}
+          DESTINATION celux
+          OPTIONAL)   # OPTIONAL just suppresses warnings if any DLL wasn’t globbed
 endif()
 
 if(UNIX AND CELUX_BUILD_PYTHON)
