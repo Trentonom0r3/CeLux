@@ -201,6 +201,7 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
     "${VCPKG_BIN}/sw*.dll"
     "${VCPKG_BIN}/ffmpeg*.dll"
     "${VCPKG_BIN}/libx264*.dll"
+    "${VCPKG_BIN}/libx265*.dll"
     "${VCPKG_BIN}/fmt.dll"
   )
   
