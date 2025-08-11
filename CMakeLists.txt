@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.23)
 project(CeLux VERSION 1.0 LANGUAGES CXX)
+# ─── MSVC: enforce UTF-8, suppress size_t→int & illegal-char warnings, silence external headers ───
+if (MSVC)
+  add_compile_options(
+    /utf-8                   # treat all .cpp/.hpp as UTF-8 (kills C4828)
+    /wd4267                  # disable C4267: conversion from 'size_t' to 'int'
+    /wd4828                  # disable C4828: illegal character in source
+    /external:anglebrackets  # mark <> includes as “external”
+    /external:W0             # suppress all warnings in external headers
+  )
+endif()
 
 # Force only Release config for multi-config generators
 if(CMAKE_CONFIGURATION_TYPES)

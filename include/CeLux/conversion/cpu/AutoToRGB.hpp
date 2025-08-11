@@ -33,7 +33,7 @@ class AutoToRGB24Converter : public ConverterBase
           last_src_colorspace(AVCOL_SPC_UNSPECIFIED),
           last_src_color_range(AVCOL_RANGE_UNSPECIFIED), last_width(0), last_height(0)
     {
-        std::cout << "AutoToRGB24Converter initialized" << std::endl;
+        CELUX_DEBUG("AutoToRGB24Converter initialized");
     }
 
     ~AutoToRGB24Converter() override

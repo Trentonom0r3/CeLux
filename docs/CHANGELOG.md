@@ -1,5 +1,10 @@
 ## 📈 Changelog
 
+### **Version 0.7.1 (2025-08-10)**
+- Re-added frame range support in `VideoReader`.
+- Fixed issue with API missing certain properties.
+- Updated for Torch 2.8 compatibility.
+
 ### **Version 0.6.6 (2025-08-01)**
 - Having issues with Linux push to Pypi, must get from releases to work.
 - Fixed dll issues with windows version

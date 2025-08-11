@@ -64,10 +64,6 @@ class Decoder
 
     double getFrameTimestamp(AVFrame* frame);
 
-
-    AVFilterGraphPtr filter_graph_;
-    AVFilterContext* buffersrc_ctx_;
-    AVFilterContext* buffersink_ctx_;
     AVFormatContextPtr formatCtx;
     AVCodecContextPtr codecCtx;
     AVPacketPtr pkt;

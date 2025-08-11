@@ -5,10 +5,10 @@ import numpy as np
 import cv2
 import torch
 
-sys.path.append(r"./celux")
 from celux import VideoReader
+from utils.video_downloader import get_video  # utility to download open source test clips
 
-VIDEO_PATH = r"./tests/data/default/BigBuckBunny.mp4"
+VIDEO_PATH = get_video("full")  # default to full video, change to "lite" for shorter video.
 MAX_W, MAX_H = 1920, 1080
 
 def ffmpeg_rgb24_pipe(path):

@@ -3,7 +3,7 @@ out/*
 ffmpy.egg-info/*
 build/*
 celux/*.dll
-celux/celux.pyd
+celux/_celux.pyd
 
 ffmpy.egg-info/*
 *.mp4

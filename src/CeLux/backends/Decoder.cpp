@@ -146,14 +146,16 @@ void Decoder::initialize(const std::string& filePath)
     findVideoStream();
     initCodecContext();
     setProperties();
-///celux::conversion::cpu::AutoToRGB24Converter
+
     converter = std::make_unique<celux::conversion::cpu::AutoToRGB24Converter>();
     const AVCodecParameters* params = formatCtx->streams[videoStreamIndex]->codecpar;
     AVColorSpace color_space = params->color_space;         // matrix_coefficients
     AVColorPrimaries colorprim = params->color_primaries;  // color primaries
     AVColorTransferCharacteristic trc = params->color_trc; // transfer curve
     AVColorRange colorrange = params->color_range;         // AVCOL_RANGE_MPEG/JPEG
+
     CELUX_DEBUG("BASE DECODER: Decoder initialization completed");
+
     frame.get()->color_range = colorrange;
     frame.get()->color_primaries = colorprim;
     frame.get()->colorspace = color_space;
@@ -265,8 +267,6 @@ bool Decoder::decodeNextFrame(void* buffer, double* frame_timestamp)
         if (ret == AVERROR(EAGAIN))
         {
             CELUX_DEBUG("Decoder needs more packets, reading next packet");
-            // Need to feed more packets
-            // Proceed to read the next packet
         }
         else if (ret == AVERROR_EOF)
         {
@@ -293,7 +293,6 @@ bool Decoder::decodeNextFrame(void* buffer, double* frame_timestamp)
                 CELUX_DEBUG("Frame timestamp retrieved: {}", *frame_timestamp);
             }
 
-            // Pass the (possibly filtered) frame to the converter
             converter->convert(frame, buffer);
             CELUX_DEBUG("Frame converted");
 
