@@ -13,14 +13,30 @@
 The name **CeLux** comes from the Latin words _celer_ (speed) and _lux_ (light), reflecting its commitment to speed and efficiency.
 
 
-# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-072)
-### **Version 0.7.2 (2025-08-17)**
-- Adjusted output of `read_frame` to be `uint8` for `8-bit` video, and `uint16` for anything higher.
-  - Shape `HWC` remains the same. 
-  - To normalize `uint16`:
-  ```py
-  arr8 = (tensor16 / 257).to(torch.uint8)
-  ```
+# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-073)
+## [0.7.3] - 2025-08-17
+### Added
+- New `VideoReader.frame_at(pos)` method for random access:
+  - Pass a **float** for timestamp in seconds.
+  - Pass an **int** for frame index (0-based).
+- Uses a separate decoder internally, so sequential iteration (`read_frame`, `__iter__`) isn’t interrupted.
+- Returns HWC tensors with the same dtype rules as 0.7.2:
+  - `uint8` for 8-bit sources
+  - `uint16` for 10-bit and higher
+
+### Example
+```python
+from celux import VideoReader
+
+vr = VideoReader("input.mp4")
+
+frame_ts = vr.frame_at(12.34)   # by timestamp
+frame_idx = vr.frame_at(1000)   # by frame index
+
+print(frame_ts.shape, frame_ts.dtype)
+print(frame_idx.shape, frame_idx.dtype)
+```
+
 
 ## 📚 Documentation
 

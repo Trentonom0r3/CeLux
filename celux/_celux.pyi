@@ -179,6 +179,16 @@ class VideoReader:
         Returns:
             VideoEncoder: Configured encoder instance.
         """
+    def frame_at(self, pos: Union[int, float]) -> torch.Tensor:
+        """
+        Retrieves a frame at the given frame idx or timestamp without affecting the main decoder loop.
+
+        Args:
+            pos (int|float): Frame index or timestamp (s).
+
+        Returns:
+            torch.Tensor : The decoded video frame.
+        """
         ...
 
 

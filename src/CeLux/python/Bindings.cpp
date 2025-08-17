@@ -10,7 +10,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(_celux, m)
 {
     m.doc() = "celux – lightspeed video decoding into tensors";
-     m.attr("__version__") = "0.7.2"; 
+     m.attr("__version__") = "0.7.3"; 
     m.attr("__all__") = py::make_tuple(
         "__version__",
         "VideoReader",
@@ -97,6 +97,13 @@ PYBIND11_MODULE(_celux, m)
             "__iter__", [](VideoReader& self) -> VideoReader& { return self.iter(); },
             py::return_value_policy::reference_internal)
         .def("__next__", &VideoReader::next)
+        .def("frame_at", py::overload_cast<double>(&VideoReader::frameAt),
+             R"doc(Return the frame at or after the given timestamp (seconds).
+Uses the secondary decoder; does not disturb iteration.)doc")
+        .def("frame_at", py::overload_cast<int>(&VideoReader::frameAt),
+             R"doc(Return the frame at or after the given frame index.
+Uses the secondary decoder; does not disturb iteration.)doc")
+
         .def(
             "__enter__",
             [](VideoReader& self) -> VideoReader&

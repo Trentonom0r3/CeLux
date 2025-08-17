@@ -205,11 +205,38 @@ class VideoReader
      * @return A reference to the Audio class.
      */
     std::shared_ptr<Audio> getAudio();
+    /**
+     * @brief Get the frame at (or immediately after) a timestamp, in seconds.
+     *        SIDE EFFECT: This will seek the main decoder (disturbs sequential
+     * iteration).
+     * @param timestamp_seconds Timestamp in seconds (0 <= t <= duration).
+     * @return torch::Tensor HWC tensor (dtype matches bit depth). Returns an owned
+     * clone.
+     * @throws std::out_of_range on invalid timestamp, std::runtime_error on failure.
+     */
+    torch::Tensor frameAt(double timestamp_seconds);
+
+    /**
+     * @brief Get the frame at (or immediately after) a frame index.
+     *        SIDE EFFECT: This will seek the main decoder (disturbs sequential
+     * iteration).
+     * @param frame_index 0-based frame index (0 <= idx < total_frames).
+     * @return torch::Tensor HWC tensor (dtype matches bit depth). Returns an owned
+     * clone.
+     * @throws std::out_of_range on invalid index, std::runtime_error on failure.
+     */
+    torch::Tensor frameAt(int frame_index);
 
   private:
     bool seekToFrame(int frame_number);
     torch::ScalarType findTypeFromBitDepth();
+    double frameDuration() const
+    {
+        return (properties.fps > 0.0) ? 1.0 / properties.fps : 0.0;
+    }
+    std::shared_ptr<celux::Decoder> rand_decoder;
 
+    torch::Tensor makeLikeOutputTensor() const;
     /**
      * @brief Close the video reader and release resources.
      */

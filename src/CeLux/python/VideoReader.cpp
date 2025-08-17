@@ -12,54 +12,60 @@ namespace py = pybind11;
 	}
 
 VideoReader::VideoReader(const std::string& filePath, int numThreads)
-    : decoder(nullptr), currentIndex(0), start_frame(0), end_frame(-1),
-      start_time(-1.0), end_time(-1.0)
+    : decoder(nullptr), rand_decoder(nullptr), currentIndex(0), start_frame(0),
+      end_frame(-1), start_time(-1.0), end_time(-1.0)
 {
-    //set ffmpeg log level
     CELUX_INFO("VideoReader constructor called with filePath: {}", filePath);
 
     if (numThreads > std::thread::hardware_concurrency())
-    {
-        throw std::invalid_argument("Number of threads cannot exceed hardware concurrency");
-	}
+        throw std::invalid_argument(
+            "Number of threads cannot exceed hardware concurrency");
 
     try
     {
-
         torch::Device torchDevice = torch::Device(torch::kCPU);
-        CELUX_INFO("Creating VideoReader instance");
-       
-        decoder =
-            celux::Factory::createDecoder(torchDevice, filePath, numThreads);
-        CELUX_INFO("Decoder created successfully");
 
-        audio = std::make_shared<Audio>(decoder); // Create audio object
+        // Main sequential decoder
+        decoder = celux::Factory::createDecoder(torchDevice, filePath, numThreads);
+        CELUX_INFO("Main decoder created successfully");
 
-        torch::Dtype torchDataType;
+        // Random-access decoder
+        rand_decoder = celux::Factory::createDecoder(torchDevice, filePath, numThreads);
+        CELUX_INFO("Random-access decoder created successfully");
 
-        torchDataType = findTypeFromBitDepth();
+        audio = std::make_shared<Audio>(decoder);
 
-        // Retrieve video properties
         properties = decoder->getVideoProperties();
-    
-        CELUX_INFO("Video properties retrieved: width={}, height={}, fps={}, "
-                   "duration={}, totalFrames={}, pixelFormat={}, hasAudio={}",
-                   properties.width, properties.height, properties.fps,
-                   properties.duration, properties.totalFrames,
-                   av_get_pix_fmt_name(properties.pixelFormat), properties.hasAudio);
 
+        torch::Dtype torchDataType = findTypeFromBitDepth();
         tensor = torch::empty(
             {properties.height, properties.width, 3},
             torch::TensorOptions().dtype(torchDataType).device(torchDevice));
         CHECK_TENSOR(tensor);
-        
     }
     catch (const std::exception& ex)
     {
         CELUX_ERROR("Exception in VideoReader constructor: {}", ex.what());
-        throw; // Re-throw exception after logging
+        throw;
     }
 }
+
+void VideoReader::close()
+{
+    CELUX_INFO("Closing VideoReader");
+    if (decoder)
+    {
+        decoder->close();
+        decoder.reset();
+    }
+    if (rand_decoder)
+    {
+        rand_decoder->close();
+        rand_decoder.reset();
+    }
+    CELUX_INFO("All decoders closed");
+}
+
 
 std::shared_ptr<VideoReader::Audio> VideoReader::getAudio()
 {
@@ -216,22 +222,13 @@ torch::Tensor VideoReader::readFrame()
     return tensor;
 }
 
-void VideoReader::close()
+torch::Tensor VideoReader::makeLikeOutputTensor() const
 {
-    CELUX_INFO("Closing VideoReader");
-    // Clean up decoder and other resources
-    if (decoder)
-    {
-        CELUX_INFO("Closing decoder");
-        decoder->close();
-        decoder.reset();
-        CELUX_INFO("Decoder closed and reset successfully");
-    }
-    else
-    {
-        CELUX_INFO("Decoder already closed or was never initialized");
-    }
+    return torch::empty(
+        {properties.height, properties.width, 3},
+        torch::TensorOptions().dtype(tensor.dtype()).device(tensor.device()));
 }
+
 
 bool VideoReader::seek(double timestamp)
 {
@@ -358,6 +355,84 @@ void VideoReader::reset()
         CELUX_WARN("Failed to reset VideoReader to the beginning");
     }
 }
+
+torch::Tensor VideoReader::frameAt(double timestamp_seconds)
+{
+    CELUX_TRACE("frameAt(ts={}) using rand_decoder", timestamp_seconds);
+
+    if (timestamp_seconds < 0.0 || timestamp_seconds > properties.duration)
+        throw std::out_of_range("Timestamp out of range");
+
+    if (!rand_decoder)
+        throw std::runtime_error("Random-access decoder not initialized");
+
+    // 1. Seek to nearest keyframe before/at target
+    {
+        py::gil_scoped_release release;
+        if (!rand_decoder->seekToNearestKeyframe(timestamp_seconds))
+        {
+            double backoff = std::max(0.0, timestamp_seconds - 2.0);
+            CELUX_WARN("seekToNearestKeyframe({}) failed; retrying with {}",
+                       timestamp_seconds, backoff);
+            if (!rand_decoder->seekToNearestKeyframe(backoff))
+            {
+                throw std::runtime_error("Failed to seek in random decoder");
+            }
+        }
+    }
+
+    // 2. Decode forward until we reach the requested timestamp
+    torch::Tensor out_frame;
+    double hit_ts = -1.0;
+    const double half = 0.5 * ((properties.fps > 0) ? 1.0 / properties.fps : 0.0);
+    int safety = 0, cap = static_cast<int>(properties.fps * 3) + 16;
+
+    while (true)
+    {
+        double ts = 0.0;
+        torch::Tensor buf = makeLikeOutputTensor();
+
+        bool ok;
+        {
+            py::gil_scoped_release release;
+            ok = rand_decoder->decodeNextFrame(buf.data_ptr(), &ts);
+        }
+        if (!ok)
+            break;
+
+        if (ts + 1e-9 >= timestamp_seconds - half)
+        {
+            out_frame = buf.clone(); // clone to detach from temp buffer
+            hit_ts = ts;
+            break;
+        }
+        if (++safety > cap)
+        {
+            CELUX_WARN("frameAt(): safety cap hit while advancing to ts={}",
+                       timestamp_seconds);
+            break;
+        }
+    }
+
+    if (!out_frame.defined() || out_frame.numel() == 0)
+        throw std::runtime_error("Failed to decode frame at requested timestamp");
+
+    CELUX_DEBUG("frameAt(): hit ts={}", hit_ts);
+    return out_frame;
+}
+
+torch::Tensor VideoReader::frameAt(int frame_index)
+{
+    CELUX_TRACE("frameAt(index={}) using rand_decoder", frame_index);
+
+    if (frame_index < 0 || frame_index >= properties.totalFrames)
+        throw std::out_of_range("Frame index out of range");
+
+    double t = static_cast<double>(frame_index) / std::max(1.0, properties.fps);
+    return frameAt(t);
+}
+
+
 
 bool VideoReader::seekToFrame(int frame_number)
 {
