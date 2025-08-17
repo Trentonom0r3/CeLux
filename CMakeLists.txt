@@ -275,7 +275,7 @@ install(TARGETS celux
 install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/celux/__init__.py
   ${CMAKE_CURRENT_SOURCE_DIR}/celux/py.typed
-  ${CMAKE_CURRENT_SOURCE_DIR}/celux/celux.pyi
+  ${CMAKE_CURRENT_SOURCE_DIR}/celux/_celux.pyi
   DESTINATION celux
 )
 
