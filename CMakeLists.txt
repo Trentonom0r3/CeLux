@@ -38,9 +38,15 @@ endif()
 
 # --- Dependencies ---
 find_package(spdlog CONFIG REQUIRED)
-find_package(fmt    CONFIG REQUIRED)
-if(NOT TARGET fmt::fmt-header_only AND TARGET fmt::fmt)
-  add_library(fmt::fmt-header_only ALIAS fmt::fmt)
+find_package(fmt CONFIG REQUIRED)
+
+# Support both exported names (fmt changed the hyphen/underscore in some builds)
+if(TARGET fmt::fmt-header-only)
+  set(FMT_HO_TARGET fmt::fmt-header-only)
+elseif(TARGET fmt::fmt-header_only)
+  set(FMT_HO_TARGET fmt::fmt-header_only)
+else()
+  message(FATAL_ERROR "fmt header-only target not found. Install a package that exports fmt::fmt-header-only.")
 endif()
 
 if(DEFINED ENV{VCPKG_ROOT} AND DEFINED VCPKG_TARGET_TRIPLET)
@@ -136,7 +142,7 @@ target_include_directories(CeLuxLib
 target_link_libraries(CeLuxLib PUBLIC
   ${CELUX_FFMPEG_LIBS}
   spdlog::spdlog_header_only
-  fmt::fmt-header_only
+  ${FMT_HO_TARGET}
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:c10>
   $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch>
@@ -212,7 +218,7 @@ if(WIN32 AND CELUX_BUILD_PYTHON)
     "${VCPKG_BIN}/ffmpeg*.dll"
     "${VCPKG_BIN}/libx264*.dll"
     "${VCPKG_BIN}/libx265*.dll"
-    "${VCPKG_BIN}/fmt.dll"
+
   )
   
   foreach(dll ${CELUX_DLLS})
@@ -247,7 +253,6 @@ if(UNIX AND CELUX_BUILD_PYTHON)
     "${VCPKG_LIB}/libswresample.so*"
     "${VCPKG_LIB}/libx264.so*"
     "${VCPKG_LIB}/libx265.so*"
-    "${VCPKG_LIB}/libfmt.so*"
     "${VCPKG_LIB}/libspdlog.so*"
     "${VCPKG_LIB}/libavfilter.so*"
   )

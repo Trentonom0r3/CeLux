@@ -1,5 +1,13 @@
 ## 📈 Changelog
 
+### **Version 0.7.2 (2025-08-17)**
+- Adjusted output of `read_frame` to be `uint8` for `8-bit` video, and `uint16` for anything higher.
+  - Shape `HWC` remains the same. 
+  - To normalize `uint16`:
+  ```py
+  arr8 = (tensor16 / 257).to(torch.uint8)
+  ```
+
 ### **Version 0.7.1 (2025-08-10)**
 - Re-added frame range support in `VideoReader`.
 - Fixed issue with API missing certain properties.

@@ -122,7 +122,7 @@ class VideoReader:
 
     def read_frame(self) -> torch.Tensor:
         """
-        Decode and return the next frame as an H×W×3 uint8 tensor.
+        Decode and return the next frame as a 3-channel, HWC uint8 tensor.
         """
         ...
 
@@ -206,7 +206,7 @@ class VideoEncoder:
 
     def encode_frame(self, frame: torch.Tensor) -> None:
         """
-        Encode one video frame (H×W×3 uint8 tensor).
+        Encode one video frame HWC, 3-channel, uint8 tensor).
         """
         ...
 

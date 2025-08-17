@@ -68,18 +68,9 @@ def download_video(url, output_path):
         logging.error(f"Failed to download video: {e}")
         raise
 
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Download test videos for CeLux.")
-    parser.add_argument(
-        "--mode",
-        type=str,
-        default="full",
-        choices=["lite", "full"],
-        help="Choose 'lite' for a small test video or 'full' for a larger test video."
-    )
-    args = parser.parse_args()
-
-    video_path = get_video(args.mode)
-    logging.info(f"Test video available at: {video_path}")
+def main():
+    #downloads both videos for testing
+    get_video("lite")   
+    get_video("full")
+    logging.info("Both test videos are available.")
+    

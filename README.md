@@ -13,12 +13,14 @@
 The name **CeLux** comes from the Latin words _celer_ (speed) and _lux_ (light), reflecting its commitment to speed and efficiency.
 
 
-# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-070)
-- **v0.7.0**
-- Finally stable on release. Added `__version__` to module. 
-- Added tests to CI build to make sure it works before pushing further. 
-- Having issues with Linux push to Pypi, must get from releases to work.
-- Fixed dll issues with windows version
+# [Check out the latest changes](https://github.com/Trentonom0r3/CeLux/blob/master/docs/CHANGELOG.md#version-072)
+### **Version 0.7.2 (2025-08-17)**
+- Adjusted output of `read_frame` to be `uint8` for `8-bit` video, and `uint16` for anything higher.
+  - Shape `HWC` remains the same. 
+  - To normalize `uint16`:
+  ```py
+  arr8 = (tensor16 / 257).to(torch.uint8)
+  ```
 
 ## 📚 Documentation
 

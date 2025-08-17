@@ -115,7 +115,24 @@ struct SwrContextDeleter
 		swr_free(&ctx);
 	}
 };
+inline int effective_bit_depth_from_frame(const AVFrame* f)
+{
+    const AVPixFmtDescriptor* d =
+        av_pix_fmt_desc_get(static_cast<AVPixelFormat>(f->format));
+    if (!d)
+        return 8; // sensible fallback
+    int depth = 0;
+    for (int i = 0; i < d->nb_components; ++i)
+        depth = std::max(depth, d->comp[i].depth);
+    return depth; // e.g., P010 -> 10, RGB24 -> 8, RGB48 -> 16
+}
 
+inline bool has_alpha_from_frame(const AVFrame* f)
+{
+    const AVPixFmtDescriptor* d =
+        av_pix_fmt_desc_get(static_cast<AVPixelFormat>(f->format));
+    return d && (d->flags & AV_PIX_FMT_FLAG_ALPHA);
+}
 using AVFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
     using AVCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
     using AVBufferRefPtr = std::unique_ptr<AVBufferRef, AVBufferRefDeleter>;

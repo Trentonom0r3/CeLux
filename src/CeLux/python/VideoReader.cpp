@@ -37,7 +37,7 @@ VideoReader::VideoReader(const std::string& filePath, int numThreads)
 
         torch::Dtype torchDataType;
 
-        torchDataType = torch::kUInt8;
+        torchDataType = findTypeFromBitDepth();
 
         // Retrieve video properties
         properties = decoder->getVideoProperties();
