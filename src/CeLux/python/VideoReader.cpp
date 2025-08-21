@@ -1,4 +1,4 @@
-// Python/VideoReader.cpp
+﻿// Python/VideoReader.cpp
 #include <torch/extension.h>
 #include "python/VideoReader.hpp"
 #include <pybind11/pybind11.h>
@@ -297,48 +297,131 @@ py::dict VideoReader::getProperties() const
 
 py::object VideoReader::operator[](py::object key)
 {
+    const double dt = frameDuration();              // seconds per frame
+    const double tol = (dt > 0.0) ? dt * 1.1 : 0.0; // ~1 frame tolerance
+    const double half = (dt > 0.0) ? 0.5 * dt : 0.0;
 
+    auto clamp_ts = [&](double ts) -> double
+    {
+        if (ts < 0.0)
+            ts = 0.0;
+        const double eps = std::max(1e-3, half); // guard near tail
+        if (properties.duration > 0.0)
+            ts = std::min(ts, std::max(0.0, properties.duration - eps));
+        return ts;
+    };
+
+    auto norm_idx = [&](long long idx) -> long long
+    {
+        if (idx < 0)
+            idx = static_cast<long long>(properties.totalFrames) +
+                  idx; // Pythonic negatives
+        return idx;
+    };
+
+    auto check_idx_range = [&](long long idx)
+    {
+        if (idx < 0 || idx >= properties.totalFrames)
+        {
+            throw py::index_error("Frame index out of range: " + std::to_string(idx));
+        }
+    };
+
+    auto check_ts_range = [&](double ts)
+    {
+        if (ts < 0.0 || (properties.duration > 0.0 && ts > properties.duration))
+        {
+            throw py::value_error("Timestamp out of range: " + std::to_string(ts));
+        }
+    };
+
+    auto is_tail = [&](double ts) -> bool
+    {
+        const double eps = std::max(1e-3, half);
+        return (properties.duration > 0.0) && (ts >= properties.duration - eps);
+    };
+
+    auto advance_until_timestamp = [&](double target_ts) -> torch::Tensor
+    {
+        const int cap =
+            (properties.fps > 0.0) ? static_cast<int>(properties.fps) + 8 : 8;
+        torch::Tensor f;
+        for (int i = 0; i < cap; ++i)
+        {
+            f = readFrame();
+            if (!f.defined() || f.numel() == 0)
+            {
+                // Try random-access fallback at a safe ts
+                try
+                {
+                    return frameAt(clamp_ts(target_ts));
+                }
+                catch (...)
+                {
+                    return torch::Tensor();
+                }
+            }
+            if (current_timestamp + 1e-9 >= target_ts - half)
+                return f;
+        }
+        // Safety cap hit → try random-access
+        try
+        {
+            return frameAt(clamp_ts(target_ts));
+        }
+        catch (...)
+        {
+            return torch::Tensor();
+        }
+    };
+
+    // ----- int index -----
     if (py::isinstance<py::int_>(key))
     {
-        int frame_number = key.cast<int>();
-        if (frame_number < 0 || frame_number >= properties.totalFrames)
-        {
-            throw std::out_of_range("Frame index out of range: " +
-                                    std::to_string(frame_number));
-        }
+        long long req = norm_idx(key.cast<long long>());
+        check_idx_range(req); // do NOT silently clamp; be Pythonic
 
-        bool success = seekToFrame(frame_number);
-        if (!success)
-        {
-            throw std::runtime_error("Failed to seek to frame: " +
-                                     std::to_string(frame_number));
-        }
+        const double target_ts =
+            (properties.fps > 0.0) ? (static_cast<double>(req) / properties.fps) : 0.0;
 
-        return py::cast(readFrame());
+        const double diff = std::abs(target_ts - current_timestamp);
+        if (diff <= tol)
+        {
+            torch::Tensor f = advance_until_timestamp(target_ts);
+            if (!f.defined() || f.numel() == 0)
+            {
+                // Optional: treat tail as iteration end (not recommended for
+                // __getitem__) if (is_tail(target_ts)) throw py::stop_iteration();
+                throw std::runtime_error("Failed to decode frame near requested index");
+            }
+            return py::cast(f);
+        }
+        return py::cast(frameAt(static_cast<int>(req)));
     }
-    else if (py::isinstance<py::float_>(key))
+
+    // ----- float timestamp -----
+    if (py::isinstance<py::float_>(key))
     {
-        double timestamp = key.cast<double>();
-        if (timestamp < 0 || timestamp > properties.duration)
-        {
-            throw std::out_of_range("Timestamp out of range: " +
-                                    std::to_string(timestamp));
-        }
+        double ts = key.cast<double>();
+        check_ts_range(ts);
+        ts = clamp_ts(ts); // keep away from the ambiguous very last timestamp
 
-        bool success = seek(timestamp);
-        if (!success)
+        const double diff = std::abs(ts - current_timestamp);
+        if (diff <= tol)
         {
-            throw std::runtime_error("Failed to seek to timestamp: " +
-                                     std::to_string(timestamp));
+            torch::Tensor f = advance_until_timestamp(ts);
+            if (!f.defined() || f.numel() == 0)
+            {
+                throw std::runtime_error(
+                    "Failed to decode frame near requested timestamp");
+            }
+            return py::cast(f);
         }
+        return py::cast(frameAt(ts));
+    }
 
-        return py::cast(readFrame());
-    }
-    else
-    {
-        throw std::invalid_argument("__getitem__ must be called with an int (frame "
-                                    "index) or float (timestamp).");
-    }
+    throw std::invalid_argument(
+        "__getitem__ expects int (frame index) or float (timestamp seconds).");
 }
 
 void VideoReader::reset()

@@ -327,11 +327,6 @@ jobs:
           name: windows-wheel-Release
           path: dist
 
-      - name: Remove Linux wheels before PyPI upload
-        run: |
-          echo "Removing Linux wheels from dist before PyPI upload..."
-          find dist -name '*linux*.whl' -exec rm {} +
-
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:

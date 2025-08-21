@@ -1,5 +1,32 @@
 ## 📈 Changelog
 
+### **Version 0.7.4 (2025-08-20)**
+- Adjusted `__getitem__` to use proper decoder dynamically. Should make it easier to use in pipelines.
+- Installed and tests `wsl` and linux version of `CeLux`, worked for me. Hopefully Updates properly.
+
+### **Version 0.7.3 (2025-08-17)**
+### Added
+- New `VideoReader.frame_at(pos)` method for random access:
+  - Pass a **float** for timestamp (seconds).
+  - Pass an **int** for frame index (0-based).
+- Uses a separate decoder internally, so sequential iteration (`read_frame`, `__iter__`) isn’t interrupted.
+- Returns HWC tensors with the same dtype rules as 0.7.2:
+  - `uint8` for 8-bit sources
+  - `uint16` for 10-bit and higher
+
+### Example
+```python
+from celux import VideoReader
+
+vr = VideoReader("input.mp4")
+
+frame_ts = vr.frame_at(12.34)   # by timestamp
+frame_idx = vr.frame_at(1000)   # by frame index
+
+print(frame_ts.shape, frame_ts.dtype)
+print(frame_idx.shape, frame_idx.dtype)
+```
+
 ### **Version 0.7.2 (2025-08-17)**
 - Adjusted output of `read_frame` to be `uint8` for `8-bit` video, and `uint16` for anything higher.
   - Shape `HWC` remains the same. 
