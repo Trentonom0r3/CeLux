@@ -119,21 +119,21 @@ jobs:
         name: windows-wheel-Release
         path: '**/dist/*.whl'
 
-  # ---- REPLACED LINUX JOB: build manylinux wheel with cibuildwheel ----
+# ---- REPLACED LINUX JOB: build manylinux wheel with cibuildwheel ----
   build-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+  
       - name: Set up Python (host only, cibuildwheel uses Docker for Linux)
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
+  
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.20.0
-
+  
       # Build inside manylinux_2_28 image so the wheel gets a manylinux tag
       - name: Build Linux wheel (manylinux)
         env:
@@ -148,7 +148,7 @@ jobs:
                         -DCMAKE_PREFIX_PATH=/opt/vcpkg/installed/x64-linux-dynamic
                         -DCMAKE_MODULE_PATH=/opt/vcpkg/installed/x64-linux-dynamic/share/ffmpeg"
           CIBW_BEFORE_ALL_LINUX: |
-            yum -y install git pkgconfig nasm
+            microdnf -y install git pkgconf nasm && microdnf clean all
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
             /opt/vcpkg/vcpkg install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse
@@ -157,15 +157,16 @@ jobs:
           CIBW_TEST_REQUIRES: "torch"
           CIBW_OUTPUT_DIR: dist
         run: python -m cibuildwheel --platform linux
-
+  
       - name: List dist folder
         run: ls -l dist
-
+  
       - name: Upload Linux wheel
         uses: actions/upload-artifact@v4
         with:
           name: linux-wheel-Release
           path: 'dist/*.whl'
+
 
   release:
     needs: [build-windows, build-linux]
