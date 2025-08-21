@@ -138,35 +138,31 @@ jobs:
         env:
           CIBW_BUILD: "cp313-manylinux*_x86_64"
           CIBW_ARCHS_LINUX: "x86_64"
-          # Use the manylinux_2_28 image
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
-  
-          # Environment inside the container for your build
           CIBW_ENVIRONMENT_LINUX: >-
             SKBUILD_CONFIG=Release
             VCPKG_TARGET_TRIPLET=x64-linux-dynamic
             VCPKG_FORCE_SYSTEM_BINARIES=1
+            CC=gcc
+            CXX=g++
             CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
                         -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
                         -DCMAKE_PREFIX_PATH=/opt/vcpkg/installed/x64-linux-dynamic
                         -DCMAKE_MODULE_PATH=/opt/vcpkg/installed/x64-linux-dynamic/share/ffmpeg"
-  
-          # Install build tools inside the manylinux container (dnf OR yum),
-          # then bootstrap vcpkg and install your C++ deps.
           CIBW_BEFORE_ALL_LINUX: |
-            (command -v dnf >/dev/null 2>&1 && dnf -y install git pkgconf nasm zip unzip curl tar || \
-             command -v yum >/dev/null 2>&1 && yum -y install git pkgconf nasm zip unzip curl tar)
+            (command -v dnf >/dev/null 2>&1 && dnf -y install \
+               git pkgconf nasm zip unzip curl tar \
+               gcc gcc-c++ make ninja-build cmake || \
+             command -v yum >/dev/null 2>&1 && yum -y install \
+               git pkgconf nasm zip unzip curl tar \
+               gcc gcc-c++ make ninja-build cmake)
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
             /opt/vcpkg/vcpkg install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse
-  
-          # Quick import smoke-test inside the built wheel env
           CIBW_TEST_REQUIRES: "torch"
           CIBW_TEST_COMMAND: >
             python -c "import celux, torch; print('celux', celux.__version__, 'torch', torch.__version__)"
-  
           CIBW_OUTPUT_DIR: dist
-  
         run: python -m cibuildwheel --platform linux
   
       - name: List dist folder
