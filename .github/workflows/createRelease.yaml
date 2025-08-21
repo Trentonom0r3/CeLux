@@ -141,11 +141,12 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_28"
           CIBW_ENVIRONMENT_LINUX: >-
             SKBUILD_CONFIG=Release
+            SKBUILD_GENERATOR=Ninja
             VCPKG_TARGET_TRIPLET=x64-linux-dynamic
+            VCPKG_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
             VCPKG_FORCE_SYSTEM_BINARIES=1
             CC=gcc
             CXX=g++
-          
             CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
                         -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
                         -DCMAKE_PREFIX_PATH=/opt/vcpkg/installed/x64-linux-dynamic
