@@ -150,10 +150,7 @@ jobs:
             CMAKE_ARGS="-DCMAKE_TOOLCHAIN_FILE=/opt/vcpkg/scripts/buildsystems/vcpkg.cmake
                         -DVCPKG_TARGET_TRIPLET=x64-linux-dynamic
                         -DCMAKE_PREFIX_PATH=/opt/vcpkg/installed/x64-linux-dynamic
-                        -DCMAKE_MODULE_PATH=/opt/vcpkg/installed/x64-linux-dynamic/share/ffmpeg
-                        -DPython3_ROOT_DIR=/opt/python/cp313-cp313
-                        -DPython3_EXECUTABLE=/opt/python/cp313-cp313/bin/python3
-                        -DPython3_INCLUDE_DIR=/opt/python/cp313-cp313/include/python3.13"
+                        -DCMAKE_MODULE_PATH=/opt/vcpkg/installed/x64-linux-dynamic/share/ffmpeg"
           CIBW_BEFORE_ALL_LINUX: |
             (command -v dnf >/dev/null 2>&1 && dnf -y install \
                git pkgconf nasm zip unzip curl tar \
@@ -201,7 +198,7 @@ jobs:
       - name: List all files for debug
         run: ls -lR dist
       - name: Install tomllib (if needed)
-        run: python3 -m pip install toml
+        run: python3 -m pip install toml pybind11
       - name: Extract version from pyproject.toml
         id: get_version
         shell: bash
