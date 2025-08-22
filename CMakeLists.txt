@@ -63,7 +63,7 @@ set(CELUX_FFMPEG_LIBS ${FFMPEG_LIBRARIES})
 set(CELUX_FFMPEG_INCS ${FFMPEG_INCLUDE_DIRS})
 
 if(CELUX_BUILD_PYTHON)
-  find_package(Python3 3.13 REQUIRED COMPONENTS Interpreter Development)
+  find_package(Python3 3.13 REQUIRED COMPONENTS Interpreter Development.Module)
   message(STATUS "Python3: ${Python3_EXECUTABLE}")
   message(STATUS "Python3 includes: ${Python3_INCLUDE_DIRS}")
 
@@ -167,7 +167,7 @@ if(CELUX_BUILD_PYTHON)
 
   target_link_libraries(celux PRIVATE
     CeLuxLib
-    Python3::Python
+    Python3::Module
     ${CELUX_PYBIND11_LIBS}
     $<$<BOOL:${CELUX_BUILD_PYTHON}>:torch_cpu>
     $<$<BOOL:${CELUX_BUILD_PYTHON}>:c10>
