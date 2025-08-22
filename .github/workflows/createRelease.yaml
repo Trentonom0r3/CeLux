@@ -160,7 +160,7 @@ jobs:
                gcc gcc-c++ make ninja-build cmake)
             git clone https://github.com/microsoft/vcpkg /opt/vcpkg
             /opt/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-            /opt/vcpkg/vcpkg install spdlog fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse
+            /opt/vcpkg/vcpkg install spdlog pybind11 fmt ffmpeg[avcodec,avdevice,avfilter,avformat,core,swresample,swscale,x264,x265] --triplet x64-linux-dynamic --recurse
           CIBW_TEST_REQUIRES: "torch"
           CIBW_TEST_COMMAND: >
             python -c "import celux, torch; print('celux', celux.__version__, 'torch', torch.__version__)"
