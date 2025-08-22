@@ -167,12 +167,9 @@ jobs:
             python -m pip install --only-binary=:all: "pybind11>=2.11"
             python -m pip install --only-binary=:all: torch || python -m pip install --only-binary=:all: --index-url https://download.pytorch.org/whl/cpu torch
 
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            TORCH_LIBDIR=$(python -c "import os, torch; print(os.path.join(os.path.dirname(torch.__file__), 'lib'))")
-            FFMPEG_LIBDIR=/opt/vcpkg/installed/x64-linux-dynamic/lib
-            echo "auditwheel will search TORCH_LIBDIR=$TORCH_LIBDIR"
-            echo "auditwheel will search FFMPEG_LIBDIR=$FFMPEG_LIBDIR"
-            LD_LIBRARY_PATH="$TORCH_LIBDIR:$FFMPEG_LIBDIR:$LD_LIBRARY_PATH" auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            bash -lc "auditwheel show {wheel}; cp -p {wheel} {dest_dir}"
+          
 
           CIBW_TEST_REQUIRES: "torch"
           CIBW_OUTPUT_DIR: dist
