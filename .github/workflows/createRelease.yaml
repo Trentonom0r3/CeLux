@@ -166,9 +166,6 @@ jobs:
             python -m pip install -U pip wheel setuptools
             python -m pip install --only-binary=:all: "pybind11>=2.11"
             python -m pip install --only-binary=:all: torch || python -m pip install --only-binary=:all: --index-url https://download.pytorch.org/whl/cpu torch
-
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
-            bash -lc "auditwheel show {wheel}; cp -p {wheel} {dest_dir}"
           
 
           CIBW_TEST_REQUIRES: "torch"
