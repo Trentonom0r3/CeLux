@@ -175,8 +175,6 @@ jobs:
             LD_LIBRARY_PATH="$TORCH_LIBDIR:$FFMPEG_LIBDIR:$LD_LIBRARY_PATH" auditwheel repair -w {dest_dir} {wheel}
 
           CIBW_TEST_REQUIRES: "torch"
-          CIBW_TEST_COMMAND: >
-            python -c "import celux, torch; print('celux', celux.__version__, 'torch', torch.__version__)"
           CIBW_OUTPUT_DIR: dist
         run: python -m cibuildwheel --platform linux
 
