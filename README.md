@@ -9,7 +9,7 @@
 
 **NeLux** is a high-performance Python library for video processing, leveraging the power of FFmpeg with hardware acceleration (NVDEC/NVENC). It delivers some of the fastest decode times globally, enabling efficient video decoding directly into ML-ready PyTorch tensors.
 
-Originall created by [Trentonom0r3](https://github.com/Trentonom0r3)
+Originally created by [Trentonom0r3](https://github.com/Trentonom0r3)
 
 ---
 
@@ -52,11 +52,11 @@ installed at `nelux/ffmpeg-licenses/` inside the package.
 PyTorch must be importable **before** `nelux` — the package uses torch's C++ runtime. For CUDA builds, install the matching CUDA torch wheel:
 
 ```bash
-# Linux CUDA
-pip install torch==2.14.0 torchvision==0.29.0 --index-url https://download.pytorch.org/whl/cu132
+# Windows / Linux CUDA
+pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cu132
 
 # macOS / Linux CPU
-pip install torch==2.14.0 torchvision==0.29.0
+pip install torch==2.14.1 torchvision==0.29.1
 ```
 
 ---
@@ -72,7 +72,7 @@ from nelux import VideoReader
 # Open video with hardware acceleration (CPU path also supported)
 reader = VideoReader("input.mp4", decode_accelerator="nvdec")
 
-# Iterate frames — HWC uint8 by default (matches torchcodec convention)
+# Iterate frames — HWC uint8 by default (dimension_order="CHW" gives CHW views)
 for frame in reader:
     print(frame.shape)   # torch.Size([1080, 1920, 3]) — HWC
     print(frame.dtype)   # torch.uint8 for 8-bit sources; torch.uint16 for >8-bit
@@ -87,10 +87,10 @@ for frame in reader:
 
 Frame indices follow decoded presentation order, including VFR. Batches support
 resize and CPU gray/RGBA output. [Presentation-aware video APIs](docs/indexed-video.md)
-and [media APIs](docs/media-apis.md) cover display orientation, audio tensors,
-image codecs, and encoded-memory/file-like destinations.
 cover exact/approximate startup tradeoffs, timing, clip samplers, CHW views,
-input adapters, stream selection, and owned CUDA frames.
+input adapters, stream selection, and owned CUDA frames. [Media APIs](docs/media-apis.md)
+cover display orientation, audio tensors, image codecs, and encoded-memory and
+file-like destinations.
 
 ```python
 import torch
@@ -156,7 +156,7 @@ and codec-level diagnostics.
 > **CPU decode only.** `decode_accelerator="nvdec"` does not surface side-data,
 > so both methods below require `decode_accelerator="cpu"`. NVDEC/CUVID strips
 > motion-vector export in exchange for the GPU throughput shown in the
-> benchmarks above.
+> benchmarks below.
 
 ![Motion vectors decoded from a P-frame of an H.264 encode of the open movie
 *Big Buck Bunny* (© Blender Foundation, CC BY 3.0) — left: source frame, right:
@@ -244,6 +244,23 @@ with reader.create_encoder("clip.mp4") as enc:
 `allow_transcode=True` (default) re-encodes streams the output container can't
 stream-copy (e.g. AAC→WebM or Opus/FLAC/TrueHD→MOV) instead of dropping them. One
 passthrough source per encoder; a second call raises.
+
+### Images and Audio
+
+```python
+import torch
+import nelux
+
+image = nelux.decode_image("photo.jpg")            # [H, W, 3] uint8; bytes work too
+batch = nelux.decode_images(["a.jpg", "b.jpg"], device="cuda")  # nvJPEG on CUDA
+png = nelux.encode_image(image, format="png")      # encoded bytes as a uint8 tensor
+
+with nelux.AudioReader("movie.mp4", sample_rate=16000, num_channels=1) as audio:
+    clip = audio.get_samples_played_in_range(10.0, 20.0)   # clip.data: [1, 160000] float32
+```
+
+Still images decode once, in memory, on the CPU path. Audio ranges are exact,
+sample-aligned slices of the whole decoded stream. See [media APIs](docs/media-apis.md).
 
 ---
 
@@ -352,7 +369,9 @@ Across 14 (pix_fmt × colorspace) combos: **12 / 14 PSNR = ∞, SSIM = 1.000** �
 
 ```python
 VideoReader(
-    input_path: str,
+    input_path,                                    # path/URL, PathLike, encoded bytes,
+                                                   #   a binary file object, or a 1-D
+                                                   #   uint8 tensor/array
     num_threads: int = 0,                          # 0 = ffmpeg auto-detect
     force_8bit: bool = False,                      # cast >8-bit YUV down to uint8
     backend: Literal["pytorch", "numpy"] = "pytorch",
@@ -366,6 +385,14 @@ VideoReader(
                                                    #   (both CPU decode only)
     resize_filter: str = "bilinear",               # sws kernel for resize, CPU only
     motion_vectors: bool = False,                  # opt-in MV export (costs decode time)
+    stream_index: int | None = None,               # absolute container stream index
+    *,
+    dimension_order: Literal["HWC", "CHW"] = "HWC",  # "CHW" returns CHW/NCHW views
+    copy_frames: bool = False,                     # clone shared CUDA output buffers
+    seek_mode: Literal["exact", "approximate"] = "exact",
+    frame_index: FrameIndex | None = None,         # reuse another reader's exact index
+    async_frames: bool = False,                    # NVDEC: release surfaces asynchronously
+    apply_rotation: bool = True,                   # honour display-matrix rotation/flip
 )
 ```
 
@@ -382,6 +409,9 @@ VideoReader(
 - `__getitem__(int | float | slice | list | range)` → single frame OR `[B, H, W, C]` batch
   - slices follow Python container rules: `vr[:0]` is empty, `vr[:-1]` drops the last frame, `vr[-10:]` is the last ten, `vr[::-1]` is reversed. A bound past the end raises `IndexError` rather than clamping
 - `decode_batch(indices: list[int])` → C++ batch path; called by `get_batch` after validation
+- `get_frame_at(index)` / `get_frames_at(indices)` → `Frame` / `FrameBatch` with pixels plus PTS and duration
+- `get_frame_played_at(seconds)` / `get_frames_played_at(seconds)` → the frame displayed at a time
+- `metadata` → typed `VideoMetadata`; `frame_index` → reusable exact index for this file
 - `get_batch(indices)` / `get_batch_range(start, end, step)` → batch decode with seek minimization
 - `set_range(start, end)` / `reset()` → bound iteration (`int` frames, `float` seconds, or `"H:MM:SS"` timecode)
 - `set_ranges([(in, out), ...])` / `clear_ranges()` / `ranges` → several in/out segments in one pass

@@ -68,7 +68,17 @@ except Exception as e:
     print(f"torchcodec unavailable: {e}")
     TORCHCODEC_AVAILABLE = False
 
-FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
+# Prefer the bundled TAS-FFMPEG so every arm decodes with the same FFmpeg build;
+# a system ffmpeg on PATH may be a different version.
+FFMPEG = (str(FFBIN / "ffmpeg.exe") if (FFBIN / "ffmpeg.exe").exists()
+          else str(FFBIN / "ffmpeg") if (FFBIN / "ffmpeg").exists()
+          else shutil.which("ffmpeg") or "ffmpeg")
+
+
+def _ffmpeg_rtime(stderr: str, wall: float) -> float:
+    """ffmpeg's own -benchmark wall time, excluding process spawn; wall if absent."""
+    m = re.search(r"rtime=([0-9.]+)s", stderr)
+    return float(m.group(1)) if m else wall
 
 CLIPS = [
     ("720p", str(HERE / "data" / "BigBuckBunny.mp4"), 1280, 720, 600),
@@ -106,10 +116,11 @@ def run_nelux(path: str, nframes: int, accelerator: str = "cpu",
     return n, dur
 
 
-def run_torchcodec(path: str, nframes: int):
+def run_torchcodec(path: str, nframes: int, threads: int = 0):
+    """threads=0 lets FFmpeg pick (fair to nelux); 1 is torchcodec's default."""
     if not TORCHCODEC_AVAILABLE:
         return 0, 0.0
-    d = TCVideoDecoder(path, dimension_order="NHWC", num_ffmpeg_threads=0)
+    d = TCVideoDecoder(path, dimension_order="NHWC", num_ffmpeg_threads=threads)
     n = 0
     t0 = time.perf_counter()
     for _ in d:
@@ -121,24 +132,24 @@ def run_torchcodec(path: str, nframes: int):
 
 
 def run_ffmpeg_null(path: str, nframes: int, hw: bool = False):
-    cmd = [FFMPEG, "-hide_banner", "-nostats"]
+    cmd = [FFMPEG, "-hide_banner", "-nostats", "-benchmark"]
     if hw:
         cmd += ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"]
     cmd += ["-i", path, "-frames:v", str(nframes), "-f", "null", "-"]
     t0 = time.perf_counter()
     r = subprocess.run(cmd, capture_output=True, text=True)
-    dur = time.perf_counter() - t0
+    dur = _ffmpeg_rtime(r.stderr, time.perf_counter() - t0)
     return nframes if r.returncode == 0 else 0, dur
 
 
 def run_ffmpeg_rgb(path: str, nframes: int):
     """Decode + libswscale to rgb24 (apples-to-apples nelux comparison)."""
-    cmd = [FFMPEG, "-hide_banner", "-nostats", "-i", path,
+    cmd = [FFMPEG, "-hide_banner", "-nostats", "-benchmark", "-i", path,
            "-vf", "format=rgb24", "-frames:v", str(nframes),
            "-f", "rawvideo", os.devnull]
     t0 = time.perf_counter()
     r = subprocess.run(cmd, capture_output=True, text=True)
-    dur = time.perf_counter() - t0
+    dur = _ffmpeg_rtime(r.stderr, time.perf_counter() - t0)
     return nframes if r.returncode == 0 else 0, dur
 
 
@@ -396,6 +407,8 @@ def main():
         if TORCHCODEC_AVAILABLE:
             bench_set.append(("torchcodec",
                               lambda p=path, n=nf: run_torchcodec(p, n)))
+            bench_set.append(("torchcodec-default",
+                              lambda p=path, n=nf: run_torchcodec(p, n, 1)))
         if nelux.__cuda_support__:
             bench_set.append(("nelux-nvdec",
                               lambda p=path, n=nf: run_nelux(p, n, "nvdec",

@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compiled against. It used to fall back from `avcodec-63.dll` to
   `avcodec-62.dll` (and so on), which loaded libraries whose struct layouts
   don't match the headers nelux was built with.
+- **PyTorch 2.14.1.** Release builds use torch 2.14.1 and torchvision 0.29.1
+  (was 2.14.0 / 0.29.0). Wheels keep the `214torch` tag and still accept any
+  PyTorch 2.14.x at import.
 - **Faster CPU `decode_image()`/`decode_images()`.** Still images are decoded
   once, in memory, instead of being written to a temporary file and opened as
   a video (which also decoded every PNG twice). JPEG and PNG from bytes are
