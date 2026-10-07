@@ -4,6 +4,7 @@
 #include "StreamMuxer.hpp"
 #include "AudioDecoder.hpp"
 #include "ImageCodec.hpp"
+#include "ImageDecode.hpp"
 #include <optional>
 #include <utility>
 #include <pybind11/pybind11.h>
@@ -180,6 +181,12 @@ const char* loadedFFmpegVersion()
 PYBIND11_MODULE(_nelux, m)
 {
     m.def("_decode_jpegs_cuda", &nelux::decodeJpegsCUDA, py::call_guard<py::gil_scoped_release>());
+    m.def("_decode_image_cpu", [](std::optional<py::bytes> encoded, const std::string& source, int channels, bool force8Bit) {
+        std::optional<std::string> data;
+        if (encoded) data = std::string(*encoded);
+        py::gil_scoped_release release;
+        return nelux::decodeImageCPU(data, source, channels, force8Bit);
+    });
     m.def("_encode_jpeg_cuda", &nelux::encodeJpegCUDA, py::call_guard<py::gil_scoped_release>());
     py::class_<nelux::ImageCodecCache>(m, "_ImageCodecCache")
         .def(py::init<>())

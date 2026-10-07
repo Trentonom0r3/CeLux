@@ -1,7 +1,9 @@
 #include <AudioDecoder.hpp>
 #include <CxCore.hpp>
 #include <Frame.hpp>
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <mutex>
 #include <limits>
 #include <vector>
@@ -38,6 +40,11 @@ struct AudioDecoder::Impl {
             format->streams[streamIndex]->codecpar->codec_type != AVMEDIA_TYPE_AUDIO)
             throw std::invalid_argument("stream_index must identify an audio stream");
         auto* stream = format->streams[streamIndex];
+        // Only this stream's packets are decoded; let the demuxer skip the rest
+        // (usually the much larger video) instead of reading it.
+        for (unsigned i = 0; i < format->nb_streams; ++i)
+            if (static_cast<int>(i) != streamIndex)
+                format->streams[i]->discard = AVDISCARD_ALL;
         timeBase = stream->time_base;
         auto* decoder = avcodec_find_decoder(stream->codecpar->codec_id);
         if (!decoder) throw std::runtime_error("No decoder available for audio stream");
@@ -64,21 +71,18 @@ struct AudioDecoder::Impl {
         if (decoded) return;
         try {
             Frame frame;
-            std::vector<torch::Tensor> chunks;
             bool draining = false;
+            bool passthrough = false;
             bool first = true;
             int64_t inputSamples = 0;
+            std::vector<uint8_t*> planes(channels);
             auto convert = [&](const uint8_t** input, int count) {
                 int capacity = swr_get_out_samples(resampler.get(), count);
                 checkAudio(capacity, "estimate resampled output");
-                auto output = torch::empty({channels, static_cast<int64_t>(capacity)},
-                                          torch::TensorOptions().dtype(torch::kFloat32));
-                std::vector<uint8_t*> planes(channels);
-                for (int c = 0; c < channels; ++c)
-                    planes[c] = reinterpret_cast<uint8_t*>(output[c].data_ptr<float>());
+                reserve(capacity, planes);
                 int produced = swr_convert(resampler.get(), planes.data(), capacity, input, count);
                 checkAudio(produced, "resample");
-                if (produced) chunks.push_back(output.narrow(1, 0, produced));
+                blockUsed += produced;
                 return produced;
             };
             for (;;) {
@@ -104,6 +108,12 @@ struct AudioDecoder::Impl {
                         resampler.reset(rawResampler);
                         checkAudio(initialized, "configure resampler");
                         checkAudio(swr_init(resampler.get()), "initialize resampler");
+                        // Planar float in the requested rate and layout needs no
+                        // resampler: copying the planes gives the same samples.
+                        av_channel_layout_default(&outputLayout, channels);
+                        passthrough = inputFormat == AV_SAMPLE_FMT_FLTP && inputRate == rate &&
+                                      !av_channel_layout_compare(&inputLayout, &outputLayout);
+                        av_channel_layout_uninit(&outputLayout);
                         first = false;
                     }
                     if (f->sample_rate != inputRate || f->format != inputFormat ||
@@ -115,7 +125,14 @@ struct AudioDecoder::Impl {
                         if (std::abs(pts * av_q2d(timeBase) - expected) > tolerance)
                             throw std::runtime_error("Audio timeline is discontinuous; cannot align samples without guessing");
                     }
-                    convert(const_cast<const uint8_t**>(f->extended_data), f->nb_samples);
+                    if (passthrough) {
+                        reserve(f->nb_samples, planes);
+                        for (int c = 0; c < channels; ++c)
+                            std::memcpy(planes[c], f->extended_data[c], sizeof(float) * f->nb_samples);
+                        blockUsed += f->nb_samples;
+                    } else {
+                        convert(const_cast<const uint8_t**>(f->extended_data), f->nb_samples);
+                    }
                     inputSamples += f->nb_samples;
                     continue;
                 }
@@ -137,18 +154,63 @@ struct AudioDecoder::Impl {
                     checkAudio(avcodec_send_packet(codec.get(), packet.get()), "send packet");
                 }
             }
-            if (resampler) while (convert(nullptr, 0)) {}
-            data = chunks.empty() ? torch::empty({channels, 0}, torch::kFloat32)
-                                  : torch::cat(chunks, 1);
+            if (resampler && !passthrough) while (convert(nullptr, 0)) {}
+            seal();
             decoded = true;
             format.reset();
             codec.reset();
             packet.reset();
             resampler.reset();
         } catch (...) {
+            block = torch::Tensor();
+            blockUsed = 0;
+            chunks.clear();
+            ends.clear();
+            totalSamples = 0;
             failure = std::current_exception();
             throw;
         }
+    }
+
+    // Decoded samples go into large blocks rather than one tensor per frame;
+    // per-frame allocation cost more than the copies. Points planes at room
+    // for at least `samples` more samples per channel.
+    void reserve(int64_t samples, std::vector<uint8_t*>& planes)
+    {
+        if (!block.defined() || block.size(1) - blockUsed < samples) {
+            seal();
+            blockSize = std::min<int64_t>(blockSize * 2, 1 << 20);
+            block = torch::empty({channels, std::max(blockSize, samples)},
+                                 torch::TensorOptions().dtype(torch::kFloat32));
+        }
+        float* base = block.data_ptr<float>() + blockUsed;
+        for (int c = 0; c < channels; ++c)
+            planes[c] = reinterpret_cast<uint8_t*>(base + c * block.size(1));
+    }
+
+    void seal()
+    {
+        if (blockUsed > 0) {
+            chunks.push_back(block.narrow(1, 0, blockUsed));
+            ends.push_back(totalSamples += blockUsed);
+        }
+        block = torch::Tensor();
+        blockUsed = 0;
+    }
+
+    // Samples [begin, end) as one owned tensor, copied straight from the
+    // decoded chunks rather than through a concatenated copy of the stream.
+    torch::Tensor gather(int64_t begin, int64_t end) const
+    {
+        auto output = torch::empty({channels, end - begin}, torch::TensorOptions().dtype(torch::kFloat32));
+        size_t i = std::upper_bound(ends.begin(), ends.end(), begin) - ends.begin();
+        for (int64_t position = begin; position < end; ++i) {
+            const int64_t start = ends[i] - chunks[i].size(1);
+            const int64_t length = std::min(end, ends[i]) - position;
+            output.narrow(1, position - begin, length).copy_(chunks[i].narrow(1, position - start, length));
+            position += length;
+        }
+        return output;
     }
 
     ~Impl() { av_channel_layout_uninit(&inputLayout); }
@@ -159,7 +221,11 @@ struct AudioDecoder::Impl {
     std::unique_ptr<SwrContext, ResamplerDeleter> resampler;
     AVChannelLayout inputLayout{};
     AVRational timeBase{};
-    torch::Tensor data;
+    std::vector<torch::Tensor> chunks;
+    std::vector<int64_t> ends;  // Cumulative sample count after each chunk.
+    int64_t totalSamples = 0;
+    torch::Tensor block;  // Being filled; sealed into chunks when full.
+    int64_t blockUsed = 0, blockSize = 1 << 13;
     std::exception_ptr failure;
     std::string codecName;
     int streamIndex, rate, channels, inputRate = 0, inputFormat = -1;
@@ -176,7 +242,7 @@ std::tuple<torch::Tensor, double, int> AudioDecoder::samples(double start, std::
 {
     std::lock_guard<std::mutex> lock(impl_->mutex);
     impl_->decode();
-    const int64_t count = impl_->data.size(1);
+    const int64_t count = impl_->totalSamples;
     const double duration = static_cast<double>(count) / impl_->rate;
     double stop = end.value_or(duration);
     if (!std::isfinite(start) || !std::isfinite(stop) || start < 0 ||
@@ -184,7 +250,7 @@ std::tuple<torch::Tensor, double, int> AudioDecoder::samples(double start, std::
         throw std::invalid_argument("Audio range must be inside [0, duration] with start <= stop");
     const int64_t begin = std::min(count, static_cast<int64_t>(std::ceil(start * impl_->rate - 1e-8)));
     const int64_t finish = std::min(count, static_cast<int64_t>(std::ceil(stop * impl_->rate - 1e-8)));
-    return {impl_->data.narrow(1, begin, finish - begin).clone(),
+    return {impl_->gather(begin, finish),
             impl_->origin + static_cast<double>(begin) / impl_->rate, impl_->rate};
 }
 
@@ -192,7 +258,7 @@ std::tuple<int, int, int64_t, double, std::string, int> AudioDecoder::metadata()
 {
     std::lock_guard<std::mutex> lock(impl_->mutex);
     impl_->decode();
-    return {impl_->rate, impl_->channels, impl_->data.size(1), impl_->origin,
+    return {impl_->rate, impl_->channels, impl_->totalSamples, impl_->origin,
             impl_->codecName, impl_->streamIndex};
 }
 
@@ -204,6 +270,7 @@ void AudioDecoder::close()
     impl_->codec.reset();
     impl_->packet.reset();
     impl_->resampler.reset();
-    impl_->data = torch::Tensor();
+    impl_->chunks.clear();
+    impl_->ends.clear();
 }
 }

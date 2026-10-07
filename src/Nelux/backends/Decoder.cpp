@@ -304,6 +304,70 @@ static const AVCodec* selectDecoderForId(AVCodecID codec_id)
     return codec;
 }
 
+// Pixel format negotiation for software decoding. Shared with the in-memory
+// image decoder so both pick the same output format.
+AVPixelFormat preferSoftwareFormat(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts)
+{
+    const enum AVPixelFormat* p;
+
+    // Log all available formats for debugging
+    NELUX_DEBUG("Pixel format negotiation - available formats:");
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
+    {
+        const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(*p);
+        bool is_hw = desc && (desc->flags & AV_PIX_FMT_FLAG_HWACCEL);
+        NELUX_DEBUG("  - {} ({})", av_get_pix_fmt_name(*p),
+                    is_hw ? "hardware" : "software");
+    }
+
+    // First pass: prefer common software-decoded YUV formats that our converter
+    // handles well
+    static const AVPixelFormat preferred_formats[] = {
+        AV_PIX_FMT_YUV420P,     AV_PIX_FMT_YUV420P10LE, AV_PIX_FMT_YUV420P10BE,
+        AV_PIX_FMT_YUV422P,     AV_PIX_FMT_YUV422P10LE, AV_PIX_FMT_YUV444P,
+        AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_NV12,        AV_PIX_FMT_P010LE,
+        AV_PIX_FMT_GBRP,        AV_PIX_FMT_RGB24,       AV_PIX_FMT_BGR24,
+        AV_PIX_FMT_NONE};
+
+    for (int i = 0; preferred_formats[i] != AV_PIX_FMT_NONE; i++)
+    {
+        for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
+        {
+            if (*p == preferred_formats[i])
+            {
+                NELUX_INFO("Selected preferred pixel format: {}",
+                           av_get_pix_fmt_name(*p));
+                return *p;
+            }
+        }
+    }
+
+    // Second pass: accept any software format
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
+    {
+        const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(*p);
+        if (desc && !(desc->flags & AV_PIX_FMT_FLAG_HWACCEL))
+        {
+            NELUX_INFO("Selected software pixel format: {}",
+                       av_get_pix_fmt_name(*p));
+            return *p;
+        }
+    }
+
+    // Last resort: if no software format is available, fail to avoid
+    // returning a hardware-only format (which can crash CPU decode).
+    if (*pix_fmts != AV_PIX_FMT_NONE)
+    {
+        NELUX_ERROR("No software pixel format available (first is {}).",
+                    av_get_pix_fmt_name(*pix_fmts));
+    }
+    else
+    {
+        NELUX_ERROR("No suitable pixel format found!");
+    }
+    return AV_PIX_FMT_NONE;
+}
+
 // Bit depth of the first component of a pixel format (8 when unknown).
 static int bitDepthFromFormat(int fmt)
 {
@@ -927,68 +991,7 @@ void Decoder::initCodecContext()
 
     // Set get_format callback to handle pixel format negotiation
     // This is critical for codecs like AV1 that may try hardware acceleration first
-    codecCtx->get_format = [](AVCodecContext* ctx,
-                              const enum AVPixelFormat* pix_fmts) -> AVPixelFormat
-    {
-        const enum AVPixelFormat* p;
-
-        // Log all available formats for debugging
-        NELUX_DEBUG("Pixel format negotiation - available formats:");
-        for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
-        {
-            const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(*p);
-            bool is_hw = desc && (desc->flags & AV_PIX_FMT_FLAG_HWACCEL);
-            NELUX_DEBUG("  - {} ({})", av_get_pix_fmt_name(*p),
-                        is_hw ? "hardware" : "software");
-        }
-
-        // First pass: prefer common software-decoded YUV formats that our converter
-        // handles well
-        static const AVPixelFormat preferred_formats[] = {
-            AV_PIX_FMT_YUV420P,     AV_PIX_FMT_YUV420P10LE, AV_PIX_FMT_YUV420P10BE,
-            AV_PIX_FMT_YUV422P,     AV_PIX_FMT_YUV422P10LE, AV_PIX_FMT_YUV444P,
-            AV_PIX_FMT_YUV444P10LE, AV_PIX_FMT_NV12,        AV_PIX_FMT_P010LE,
-            AV_PIX_FMT_GBRP,        AV_PIX_FMT_RGB24,       AV_PIX_FMT_BGR24,
-            AV_PIX_FMT_NONE};
-
-        for (int i = 0; preferred_formats[i] != AV_PIX_FMT_NONE; i++)
-        {
-            for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
-            {
-                if (*p == preferred_formats[i])
-                {
-                    NELUX_INFO("Selected preferred pixel format: {}",
-                               av_get_pix_fmt_name(*p));
-                    return *p;
-                }
-            }
-        }
-
-        // Second pass: accept any software format
-        for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
-        {
-            const AVPixFmtDescriptor* desc = av_pix_fmt_desc_get(*p);
-            if (desc && !(desc->flags & AV_PIX_FMT_FLAG_HWACCEL))
-            {
-                NELUX_INFO("Selected software pixel format: {}",
-                           av_get_pix_fmt_name(*p));
-                return *p;
-            }
-        }
-
-        // Last resort: if no software format is available, fail to avoid
-        // returning a hardware-only format (which can crash CPU decode).
-        if (*pix_fmts != AV_PIX_FMT_NONE)
-        {
-            NELUX_ERROR("No software pixel format available (first is {}).",
-                        av_get_pix_fmt_name(*pix_fmts));
-        }
-        else
-        {
-            NELUX_ERROR("No suitable pixel format found!");
-        }
-        return AV_PIX_FMT_NONE;
-    };
+    codecCtx->get_format = preferSoftwareFormat;
 
     // Create codec options dictionary
     AVDictionary* opts = nullptr;

@@ -1,6 +1,7 @@
 """Image tensors with FFmpeg CPU codecs and batched nvJPEG CUDA codecs."""
 import operator
 import atexit
+import os
 from threading import local
 import torch
 from . import _nelux
@@ -45,8 +46,19 @@ def decode_images(sources, *, device="cpu", dimension_order="HWC", color_format=
     if target.type != "cpu":
         raise ValueError("device must be CPU or CUDA")
     from . import VideoReader
+    channels = {"rgb": 3, "gray": 1, "rgba": 4}[color_format]
     result = []
     for source in sources:
+        # One in-memory decode of a still image; anything else, including every
+        # failure, goes through the reader so its behavior and errors still apply.
+        if isinstance(source, (str, os.PathLike)):
+            image = _nelux._decode_image_cpu(None, os.fspath(source), channels, force_8bit)
+        else:
+            source = read_encoded_source(source)  # A stream can be read only once.
+            image = _nelux._decode_image_cpu(source, "input.bin", channels, force_8bit)
+        if image is not None:
+            result.append(image.permute(2, 0, 1) if dimension_order == "CHW" else image)
+            continue
         with VideoReader(source, num_threads=1, convert_workers=0, force_8bit=force_8bit,
                          dimension_order=dimension_order, color_format=color_format) as reader:
             image = reader.read_frame()

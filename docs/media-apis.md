@@ -61,8 +61,11 @@ jpeg_bytes = nelux.encode_image(images[0], format="jpeg", quality=90)
 
 `decode_images` returns independent tensors in a list, allowing mixed sizes. HWC
 is the default; CHW is a view. CPU decoding uses FFmpeg, supports RGB/gray/RGBA,
-and preserves uint8/uint16 precision unless `force_8bit=True`. Animated sources
-return their first frame; use `VideoReader` for all animation frames.
+and preserves uint8/uint16 precision unless `force_8bit=True`. Still images
+(JPEG, PNG, WebP, TIFF, BMP and the other FFmpeg image formats) decode once,
+from memory, without a temporary file; other sources take the `VideoReader`
+path with identical results. Animated sources return their first frame; use
+`VideoReader` for all animation frames.
 
 CUDA decoding accepts complete grayscale/RGB JPEG bitstreams and emits RGB
 uint8. It reads encoded input directly into host memory without a temporary

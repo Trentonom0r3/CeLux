@@ -16,6 +16,8 @@
 
 namespace nelux
 {
+AVPixelFormat preferSoftwareFormat(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts);
+
 
 class BatchDecoder; // Forward declaration
 

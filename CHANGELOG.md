@@ -36,6 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   compiled against. It used to fall back from `avcodec-63.dll` to
   `avcodec-62.dll` (and so on), which loaded libraries whose struct layouts
   don't match the headers nelux was built with.
+- **Faster CPU `decode_image()`/`decode_images()`.** Still images are decoded
+  once, in memory, instead of being written to a temporary file and opened as
+  a video (which also decoded every PNG twice). JPEG and PNG from bytes are
+  2.4-2.6x faster, PNG from a path 2x, JPEG from a path 1.1-1.2x. Output,
+  dtypes and errors are unchanged; GIFs, videos and anything unusual take the
+  previous path.
+- **Faster `AudioReader`.** It no longer reads the other streams' packets,
+  copies planar float audio instead of passing it through the resampler when no
+  conversion is needed, and allocates decoded samples in large blocks. Samples
+  are bit-identical. A full 10-minute AAC track decodes 1.8x faster, resampled
+  to 16 kHz mono 1.6x faster, and range reads 2x faster.
 
 ### Fixed
 
