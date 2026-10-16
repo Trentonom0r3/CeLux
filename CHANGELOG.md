@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`VideoEncoder` no longer forces a GOP of 60 and 2 B-frames.** Every codec
+  now keeps its own defaults, as `ffmpeg` does when `-g`/`-bf` are not given:
+  libx264 keyint 250 / 3 B-frames, x265/SVT-AV1/libvpx their library
+  defaults, NVENC g 250 with the preset's B-frame count (none for `p1`), and
+  12 for codecs without a defaults table such as mpeg4/mpeg2. The forced
+  values cost libx264 2.6 dB at the same CRF (1080p, 45.7 vs 48.3 dB Y) and
+  put B-frames into NVENC `p1`. Pass `options={"g": "60", "bf": "2"}` for the
+  old behaviour. Since `max_b_frames` is now left at NVENC's preset default,
+  nelux no longer adds `b_ref_mode=middle` either.
+
 - **FFmpeg 9.0.2.** Wheels now bundle
   [TAS-FFMPEG](https://github.com/NevermindNilas/TAS-FFMPEG) v9.0.2 instead of
   8.1.2; `nelux.__ffmpeg_version__` reports `9.0.2-tas`. This is a new soname
@@ -23,8 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `cbr_hq`, `cbr_ld_hq`, `vbr_minqp`, `ll_2pass_*`, `vbr_2pass`), and the
     `cbr`, `2pass`, `spatial_aq` and `temporal_aq` options are gone. Use the
     `p1`-`p7` presets and `spatial-aq` / `temporal-aq` instead.
-  - NVENC now rejects `b_ref_mode=middle` (which nelux sets whenever B-frames
-    are on) on a GPU that does not advertise middle B-frame references. 8.x
+  - NVENC now rejects `b_ref_mode=middle` (which nelux no longer sets by
+    default; see the GOP entry above) on a GPU that does not advertise middle B-frame references. 8.x
     only rejected it when no B-frame reference mode was supported.
   - MOV/MP4 `movie_timescale` now defaults to auto, and edit-list durations are
     computed differently, so output bytes differ from 8.x builds.

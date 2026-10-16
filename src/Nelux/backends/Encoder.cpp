@@ -1094,7 +1094,13 @@ void Encoder::initVideoStream()
         av_reduce(&encoderTimeBase.num, &encoderTimeBase.den, encoderTimeBase.num,
                   encoderTimeBase.den, 65535);
     videoCodecCtx->time_base = encoderTimeBase;
-    videoCodecCtx->gop_size = properties.gopSize;
+    // A negative gopSize / maxBFrames leaves the value avcodec_alloc_context3
+    // put there: the encoder's own defaults table, which is what the ffmpeg CLI
+    // uses when -g / -bf are not given. Codecs without B-frame support default
+    // to max_b_frames 0, so the zeroing below only matters for an explicit
+    // request.
+    if (properties.gopSize >= 0)
+        videoCodecCtx->gop_size = properties.gopSize;
     // B-frames are meaningless for intra-only codecs (mjpeg, prores, ffv1, dnxhd,
     // image codecs, ...). Some (notably mjpeg) HARD-REJECT a non-zero
     // max_b_frames at avcodec_open2 ("B-frames not supported by codec"), so a
@@ -1104,10 +1110,11 @@ void Encoder::initVideoStream()
     // on FFmpeg's mpegvideo core reject B-frames too. ff_mpv_encode_init()
     // allows them for exactly three codec IDs -- MPEG-1, MPEG-2 and MPEG-4 --
     // and returns EINVAL ("B-frames not supported by codec") for the rest, so
-    // the forced default of 2 left msmpeg4, msmpeg4v2, wmv1, wmv2, h263p, rv10,
-    // rv20 and flv1 unopenable at any setting. There is no capability flag to
-    // test, and retrying a failed avcodec_open2 is not an option because the
+    // the old forced default of 2 left msmpeg4, msmpeg4v2, wmv1, wmv2, h263p,
+    // rv10, rv20 and flv1 unopenable at any setting. There is no capability flag
+    // to test, and retrying a failed avcodec_open2 is not an option because the
     // failure path unrefs hw_frames_ctx, so the codec IDs are named here.
+    if (properties.maxBFrames >= 0)
     {
         int maxB = properties.maxBFrames;
         const AVCodecDescriptor* desc = avcodec_descriptor_get(videoCodecCtx->codec_id);
@@ -1312,9 +1319,10 @@ void Encoder::initVideoStream()
         // Use B-frames as references for better compression. This is only valid
         // when B-frames are actually enabled — b_ref_mode is meaningless (and, on
         // NVENC codecs/GPUs without B-frame-as-reference support, HARD-REJECTED
-        // at avcodec_open2) when max_b_frames == 0. Guard it the same way the
-        // intra-only max_b_frames zeroing above is guarded. extraOptions can
-        // still override this (applied after these defaults).
+        // at avcodec_open2) when max_b_frames == 0. It is also left alone when
+        // max_b_frames is the NVENC default of -1 (the preset decides), which
+        // matches the ffmpeg CLI. extraOptions can still override this
+        // (applied after these defaults).
         if (videoCodecCtx->max_b_frames > 0)
             av_dict_set(&opts, "b_ref_mode", "middle", 0);
 

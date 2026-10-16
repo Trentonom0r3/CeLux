@@ -546,6 +546,10 @@ class VideoEncoder:
         ffmpeg (e.g. "veryfast", "p4", "medium"). options is a dict of extra
         AVOption key/value pairs applied after the built-in options.
 
+        GOP length and B-frame count are left at the codec's own defaults, as
+        the ffmpeg CLI does (libx264: keyint 250, 3 B-frames); pin them with
+        options={"g": "...", "bf": "..."}.
+
         resize=True lets ``encode_frame`` accept input frames of any spatial
         size and scales them to ``width`` x ``height`` inside the libswscale
         pass the encoder already runs (one fused scale+convert, no separate

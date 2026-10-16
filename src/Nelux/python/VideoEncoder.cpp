@@ -256,8 +256,13 @@ nelux::Encoder::EncodingProperties VideoEncoder::inferEncodingProperties(
     props.height = height.value_or(1080);
     props.bitRate = bitRate.value_or(4000000); // 4 Mbps default
     props.frameRate = frameRateFromDouble(fps.value_or(30.0));
-    props.gopSize = 60;
-    props.maxBFrames = 2;
+    // Leave GOP length and B-frame count to the codec's own defaults, exactly
+    // as the ffmpeg CLI does (x264: keyint 250 / 3 B-frames; NVENC: g 250 and
+    // the preset's B-frame count; x265/SVT-AV1/libvpx: the library's own).
+    // A forced 60/2 cost libx264 ~2.6 dB at the same CRF and put B-frames into
+    // NVENC p1. Callers pin them with options={"g": ..., "bf": ...}.
+    props.gopSize = -1;
+    props.maxBFrames = -1;
 
     // Parse pixel format string
     if (pixelFormat.has_value())

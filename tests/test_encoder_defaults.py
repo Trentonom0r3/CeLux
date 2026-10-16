@@ -19,6 +19,7 @@ Three defects motivated this file:
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -271,3 +272,86 @@ def test_create_encoder_needs_no_codec_argument(tmp_path):
     assert n == 8
     assert out.stat().st_size > 0
     assert _probe(out, "stream=codec_name") == "h264"
+
+
+# --- GOP length and B-frames are the codec's own, as with the ffmpeg CLI ---
+#
+# VideoEncoder used to force gop_size=60 and max_b_frames=2 on every codec.
+# libx264's own defaults are keyint 250 / 3 B-frames, so at the same CRF the
+# forced values cost ~2.6 dB at 1080p, and NVENC p1 -- which uses no B-frames
+# of its own -- got two. A caller that wants a GOP passes options={"g", "bf"}.
+
+_FFMPEG = _find_tool("ffmpeg")
+
+
+def _x264_options(path: Path) -> dict[str, str]:
+    """The ``options: k=v ...`` string libx264 embeds in its SEI banner."""
+    m = re.search(rb"options: ([^\x00]+)", path.read_bytes())
+    assert m, "no x264 SEI banner in the output"
+    pairs = (kv.split("=", 1) for kv in m.group(1).decode("ascii", "replace").split())
+    return {k: v for k, v in (p for p in pairs if len(p) == 2)}
+
+
+def _write_noise(path: Path, *, frames: int, w: int = _W, h: int = _H, **kwargs) -> None:
+    """One noise image panning 2 px a frame: inter-predictable, so no encoder
+    takes a scene cut and every keyframe is a GOP boundary."""
+    enc = VideoEncoder(str(path), width=w, height=h, fps=30.0, **kwargs)
+    gen = torch.Generator().manual_seed(0)
+    base = torch.randint(0, 256, (h, w, 3), dtype=torch.uint8, generator=gen)
+    for i in range(frames):
+        enc.encode_frame(base.roll(2 * i, dims=1).contiguous())
+    enc.close()
+
+
+def test_libx264_keeps_its_own_gop_and_bframes(tmp_path):
+    out = tmp_path / "x264_defaults.mkv"
+    _write_noise(out, frames=8, codec="libx264")
+    opts = _x264_options(out)
+    assert opts["keyint"] == "250", opts
+    assert opts["keyint_min"] == "25", opts
+    assert opts["bframes"] == "3", opts
+
+
+def test_explicit_g_and_bf_still_apply(tmp_path):
+    out = tmp_path / "x264_pinned.mkv"
+    _write_noise(out, frames=8, codec="libx264", options={"g": "48", "bf": "1"})
+    opts = _x264_options(out)
+    assert opts["keyint"] == "48", opts
+    assert opts["bframes"] == "1", opts
+
+
+def test_mpeg4_keyframe_interval_matches_ffmpeg_cli(tmp_path):
+    """mpeg4 has no defaults table of its own, so the generic AVCodecContext
+    default (g=12) applies -- what ``ffmpeg -c:v mpeg4`` writes. The forced 60
+    put one keyframe in 30 frames instead of three."""
+    out = tmp_path / "mpeg4.avi"
+    _write_noise(out, frames=30, codec="mpeg4")
+    r = subprocess.run(
+        [_FFPROBE, "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "packet=flags", "-of", "csv=p=0", str(out)],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert r.returncode == 0, r.stderr
+    flags = r.stdout.split()
+    assert len(flags) == 30
+    assert sum(f.startswith("K") for f in flags) == 3, flags
+
+
+@pytest.mark.skipif(_FFMPEG is None, reason="ffmpeg not found")
+def test_nvenc_bframes_follow_the_preset_like_ffmpeg_cli(tmp_path):
+    """p1 uses no B-frames; nelux used to add two (and b_ref_mode=middle)."""
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA device")
+    w, h = 640, 360
+    ref = tmp_path / "ffmpeg_p1.mp4"
+    r = subprocess.run(
+        [_FFMPEG, "-v", "error", "-y", "-f", "lavfi",
+         "-i", f"testsrc2=size={w}x{h}:rate=30", "-frames:v", "30",
+         "-c:v", "h264_nvenc", "-preset", "p1", "-pix_fmt", "yuv420p", str(ref)],
+        capture_output=True, text=True, timeout=120,
+    )
+    if r.returncode != 0:
+        pytest.skip(f"h264_nvenc unavailable: {r.stderr.strip()[-200:]}")
+    out = tmp_path / "nelux_p1.mp4"
+    _write_noise(out, frames=30, w=w, h=h, codec="h264_nvenc", preset=1)
+    assert _probe(out, "stream=has_b_frames") == _probe(ref, "stream=has_b_frames")

@@ -103,8 +103,10 @@ class Encoder
         int height;
         int bitRate;
         AVPixelFormat pixelFormat;
-        int gopSize;
-        int maxBFrames;
+        // -1 = leave the codec's default (avcodec_alloc_context3 applies the
+        // per-encoder defaults table, e.g. libx264 g=-1/bf=-1 -> 250/3).
+        int gopSize = -1;
+        int maxBFrames = -1;
 
         // Frame rate as an exact rational. It must not be collapsed to an
         // integer: the NTSC rates are 1000/1001 fractions (24000/1001,
