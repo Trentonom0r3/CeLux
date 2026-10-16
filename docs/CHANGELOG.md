@@ -1,4 +1,35 @@
 
+### **Version 0.20.0 (2026-10-17)**
+
+- **Encoder GOP/B-frame defaults (behaviour change):** `VideoEncoder` no longer
+  forces a GOP of 60 and 2 B-frames; every codec keeps its own defaults, as
+  `ffmpeg` does without `-g`/`-bf` (libx264 keyint 250 / 3 B-frames, NVENC g
+  250 with the preset's B-frames, 12 for mpeg4/mpeg2). The forced values cost
+  libx264 2.6 dB at the same CRF and put B-frames into NVENC `p1`. Pass
+  `options={"g": "60", "bf": "2"}` for the old behaviour. At matched
+  parameters nelux now writes the same x264 options string as the ffmpeg CLI
+  and encodes 1080p x264 at 478 vs 400 fps (prores_ks 477 vs 450).
+- **FFmpeg 9.0.2:** wheels bundle TAS-FFMPEG 9.0.2 (avcodec 63, avutil 61,
+  swscale 10, swresample 7); `nelux.__ffmpeg_version__` is `9.0.2-tas`. An
+  external FFmpeg must now be a 9.x build. FFmpeg 9 makes `h264_nvenc` default
+  to High, drops NVENC's legacy preset/rc names (use `p1`-`p7`), and changes
+  MOV edit lists. On Windows the extension only loads the DLL generation it
+  was built against.
+- **PyTorch 2.14.1** / torchvision 0.29.1 release builds; wheels keep the
+  `214torch` tag and load on any 2.14.x.
+- **Audio/image APIs:** `merge_streams()` muxes video and audio from separate
+  files in-process; `probe()`/`properties` report `subtitle_codecs`; numbered
+  PNG/JPEG sequences and 16-bit PNG output are documented and tested. CPU
+  `decode_image()`/`decode_images()` decode stills in memory (JPEG/PNG from
+  bytes 2.4-2.6x faster) and `AudioReader` is 1.6-2x faster, bit-identical.
+- **Fixed:** MOV passthrough of Opus/Vorbis audio now transcodes to AAC with
+  `allow_transcode=True` instead of failing at header write (0-byte file);
+  NVDEC exact random-access reads could hang (lost wake-up); NVDEC
+  limited-range 10/12-bit output was ~0.3% too dark; NVDEC 12-bit 4:2:0 and
+  10/12-bit 4:4:4 HEVC work on FFmpeg 9; HD JPEG output uses JFIF's BT.601
+  matrix; `diagnose_runtime_dlls()` sees delay-loaded DLLs; 16-bit gray PNG
+  decode keeps exact values.
+
 ### **Version 0.19.0 (2026-09-14)**
 
 - **PyTorch 2.14:** release builds use torch 2.14.0 and torchvision 0.29.0;
