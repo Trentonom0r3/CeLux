@@ -62,6 +62,23 @@ inline std::string errorToString(int errorCode)
     return std::string(errBuf);
 }
 
+/**
+ * @brief Whether a demuxed packet's AV_PKT_FLAG_CORRUPT means real damage.
+ *
+ * MPEG-TS sets the flag on any continuity-counter jump, which is what every
+ * splice looks like: `cat a.ts b.ts`, joined HLS segments, broadcast captures.
+ * The payload is intact and ffmpeg decodes straight through it, so for the
+ * formats that allow timestamp discontinuities (mpegts, mpeg-ps, hls, ...)
+ * the flag is not treated as damage. Elsewhere it marks a truncated or broken
+ * sample (mov's partial last sample) and is.
+ */
+inline bool isDamagedPacket(const AVFormatContext* fmt, const AVPacket* pkt)
+{
+    if (!(pkt->flags & AV_PKT_FLAG_CORRUPT))
+        return false;
+    return !(fmt && fmt->iformat && (fmt->iformat->flags & AVFMT_TS_DISCONT));
+}
+
     // Deleters and smart pointers
 struct AVFormatContextDeleter
 {

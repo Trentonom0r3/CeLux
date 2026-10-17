@@ -63,6 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Concatenated MPEG-TS (`cat a.ts b.ts`, joined HLS segments, broadcast
+  captures) raised "Decoding failed part way through" at the splice whenever
+  the continuity counters did not happen to line up, about 15 times in 16. The
+  mpegts demuxer flags the packet at a counter jump as corrupt although its
+  payload is intact; formats that allow timestamp discontinuities no longer
+  treat that flag as damage, matching the ffmpeg CLI. Truncated MP4/MOV files
+  still raise.
 - NVDEC `frame_at()`, `get_batch()` and other exact random-access reads could
   hang forever, intermittently and on any codec. The CUDA decoder woke its
   decoding thread without holding the lock that thread sleeps under, so a

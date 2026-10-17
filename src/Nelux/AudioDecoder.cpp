@@ -149,7 +149,7 @@ struct AudioDecoder::Impl {
                     checkAudio(result, "read packet");
                 } while (packet->stream_index != streamIndex);
                 if (!draining) {
-                    if (packet->flags & AV_PKT_FLAG_CORRUPT)
+                    if (isDamagedPacket(format.get(), packet.get()))
                         throw std::runtime_error("Audio decoding failed: corrupt packet");
                     checkAudio(avcodec_send_packet(codec.get(), packet.get()), "send packet");
                 }

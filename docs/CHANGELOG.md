@@ -22,7 +22,7 @@
   PNG/JPEG sequences and 16-bit PNG output are documented and tested. CPU
   `decode_image()`/`decode_images()` decode stills in memory (JPEG/PNG from
   bytes 2.4-2.6x faster) and `AudioReader` is 1.6-2x faster, bit-identical.
-- **Fixed:** MOV passthrough of Opus/Vorbis audio now transcodes to AAC with
+- **Fixed:** concatenated MPEG-TS (`cat a.ts b.ts`, joined HLS segments) no longer raises "Decoding failed" at the splice when the continuity counters do not line up; MOV passthrough of Opus/Vorbis audio now transcodes to AAC with
   `allow_transcode=True` instead of failing at header write (0-byte file);
   NVDEC exact random-access reads could hang (lost wake-up); NVDEC
   limited-range 10/12-bit output was ~0.3% too dark; NVDEC 12-bit 4:2:0 and

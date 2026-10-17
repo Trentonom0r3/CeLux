@@ -1607,7 +1607,7 @@ torch::Tensor Decoder::decodeNextFrameTensorSync(double* frame_timestamp)
                 av_packet_unref(pkt.get());
                 continue;
             }
-            if (pkt->flags & AV_PKT_FLAG_CORRUPT)
+            if (nelux::isDamagedPacket(formatCtx.get(), pkt.get()))
                 decodeError_.store(AVERROR_INVALIDDATA, std::memory_order_release);
             const int sent = avcodec_send_packet(codecCtx.get(), pkt.get());
             av_packet_unref(pkt.get());
@@ -1761,7 +1761,7 @@ torch::Tensor Decoder::decodeNextFrameTensorSync(double* frame_timestamp)
                 }
                 else
                 {
-                    if (pkt->flags & AV_PKT_FLAG_CORRUPT)
+                    if (nelux::isDamagedPacket(formatCtx.get(), pkt.get()))
                         decodeError_.store(AVERROR_INVALIDDATA, std::memory_order_release);
                     int sret = avcodec_send_packet(codecCtx.get(), pkt.get());
                     av_packet_unref(pkt.get());
@@ -2700,7 +2700,7 @@ void Decoder::decodingLoop()
                 // A decoder may report EOF immediately after a truncated
                 // packet, before another demux read exposes the partial-file
                 // error. Preserve corruption even when the codec conceals it.
-                if (pkt->flags & AV_PKT_FLAG_CORRUPT)
+                if (nelux::isDamagedPacket(formatCtx.get(), pkt.get()))
                     decodeError_.store(AVERROR_INVALIDDATA, std::memory_order_release);
                 int sendRet = avcodec_send_packet(codecCtx.get(), pkt.get());
                 if (sendRet == AVERROR(EAGAIN))

@@ -77,7 +77,7 @@ public:
                 checkedDecode(result, "read indexed packet");
             } while (packet->stream_index != streamIndex);
             if (!draining) {
-                if (packet->flags & AV_PKT_FLAG_CORRUPT)
+                if (isDamagedPacket(format.get(), packet.get()))
                     checkedDecode(AVERROR_INVALIDDATA, "corrupt indexed packet");
                 checkedDecode(avcodec_send_packet(codec.get(), packet.get()), "send indexed packet");
             }
